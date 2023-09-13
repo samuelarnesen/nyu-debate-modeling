@@ -19,4 +19,22 @@ Test Experiment 1:
     train_file_path: "../quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.train"
     val_file_path: "../quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev"
     test_file_path: "../quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test"
-
+Test Experiment 2:
+  topic: Who is the best baseball player of all time?
+  word_limit: 500
+  positions:
+    - Babe Ruth
+    - Barry Bonds
+  prompt_config:
+    file_path: ./agents/prompts/prompts.yaml
+    prompt_name: Base Prompt
+  models:
+    debater_one:
+      model_type: random
+    debater_two:
+      model_type: random
+    judge:
+      model_type: random
+  dataset:
+    dataset_type: quality_debates
+    full_dataset_file_path: "../scratch/debates-readable.jsonl"

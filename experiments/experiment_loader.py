@@ -2,8 +2,8 @@ from agents.agent import Debater, Judge
 from agents.debate_round import DebateRound
 from agents.models.model_utils import ModelType, ModelUtils
 from agents.prompt import Prompt, PromptConfig, PromptParser
-from data.data import DataLoader, Dataset
-from data.loaders.loader_utils import DatasetType, LoaderUtils
+from data.data import DataLoader, Dataset, DatasetType
+from data.loaders.loader_utils import LoaderUtils
 
 from pydantic import BaseModel
 import yaml
@@ -29,9 +29,10 @@ class ModelsConfig(BaseModel):
 
 class DatasetConfig(BaseModel):
     dataset_type: str
-    train_file_path: str
-    val_file_path: str
-    test_file_path: str
+    full_dataset_file_path: Optional[str]
+    train_file_path: Optional[str]
+    val_file_path: Optional[str]
+    test_file_path: Optional[str]
 
 
 class ExperimentConfig(BaseModel):
@@ -106,6 +107,7 @@ class ExperimentLoader:
         dataset_type = DatasetType[dataset_config.dataset_type.upper()]
         loader_cls = LoaderUtils.get_loader_type(dataset_type)
         dataset = loader_cls.load(
+            full_dataset_filepath=dataset_config.full_dataset_file_path,
             train_filepath=dataset_config.train_file_path,
             val_filepath=dataset_config.val_file_path,
             test_filepath=dataset_config.test_file_path,

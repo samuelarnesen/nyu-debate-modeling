@@ -8,7 +8,7 @@ from experiments.results_collector import GraphType, ResultsCollector
 results_collector = ResultsCollector()
 
 debate_round = ExperimentLoader.generate_debate_round(
-    experiment_file_path="./experiments/configs/test_experiment.yaml", name="Test Experiment 1"
+    experiment_file_path="./experiments/configs/test_experiment.yaml", name="Test Experiment 2"
 )
 
 for i in range(1_000):
@@ -18,4 +18,3 @@ for i in range(1_000):
 
 results_collector.graph_results(GraphType.ELO)
 results_collector.graph_results(GraphType.BAR)
-

@@ -1,12 +1,17 @@
 from abc import ABC
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 
 class SplitType(Enum):
     TRAIN = 1
     VAL = 2
     TEST = 3
+
+
+class DatasetType(Enum):
+    QUALITY = 1
+    QUALITY_DEBATES = 2
 
 
 class Dataset(ABC):
@@ -22,5 +27,11 @@ class Dataset(ABC):
 
 class DataLoader(ABC):
     @classmethod
-    def load(cls, train_filepath: str, validation_filepath: str, test_filepath: str) -> Dataset:
+    def load(
+        cls,
+        full_dataset_filepath: Optional[str] = None,
+        train_filepath: Optional[str] = None,
+        validation_filepath: Optional[str] = None,
+        test_filepath: Optional[str] = None,
+    ) -> Dataset:
         pass

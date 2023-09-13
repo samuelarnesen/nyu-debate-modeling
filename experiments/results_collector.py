@@ -41,8 +41,8 @@ class ResultsCollector:
             elo_two.append(elo_two[-1] + ((1 if result == 2 else -1) * delta))
 
         x_axis = [i for i in range(len(elo_one))]
-        plt.plot(x_axis, elo_one, label='Debater_One')
-        plt.plot(x_axis, elo_two, label='Debater_Two')
+        plt.plot(x_axis, elo_one, label="Debater_One")
+        plt.plot(x_axis, elo_two, label="Debater_Two")
         plt.legend()
         plt.show()
 

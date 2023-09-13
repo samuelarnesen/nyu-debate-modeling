@@ -4,8 +4,10 @@ from agents.models.random_model import RandomModel
 from enum import Enum
 from typing import Optional
 
+
 class ModelType(Enum):
     RANDOM = 1
+
 
 class ModelUtils:
     @classmethod
