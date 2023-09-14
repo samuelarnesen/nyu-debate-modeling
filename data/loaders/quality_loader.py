@@ -1,25 +1,55 @@
-from data.data import DataLoader, Dataset, SplitType
+from data.data import DataLoader, DataRow, Dataset, SplitType
 
 from typing import Any, Optional
 import json
 
 
 class QualityDataset(Dataset):
-    def __init__(self, train_data: list[str, Any], val_data: list[str, Any], test_data: list[str, Any]):
-        self.data = {SplitType.TRAIN: train_data, SplitType.VAL: val_data, SplitType.TEST: test_data}
+    def __init__(self, train_data: list[dict[str, Any]], val_data: list[dict[str, Any]], test_data: list[dict[str, Any]]):
+        self.data = {
+            SplitType.TRAIN: self.__convert_batch_to_rows(train_data),
+            SplitType.VAL: self.__convert_batch_to_rows(val_data),
+            SplitType.TEST: self.__convert_batch_to_rows(test_data),
+        }
         self.idxs = {SplitType.TRAIN: 0, SplitType.VAL: 0, SplitType.TEST: 0}
 
-    def get_data(self, split: SplitType = SplitType.TRAIN) -> list[str]:
+    def get_data(self, split: SplitType = SplitType.TRAIN) -> list[DataRow]:
         if split not in self.data:
             raise ValueError(f"Split type {split} is not recognized. Only TRAIN, VAL, and TEST are recognized")
         return self.data[split]
 
-    def get_batch(self, split: SplitType = SplitType.TRAIN, batch_size: int = 1) -> list[str]:
+    def get_batch(self, split: SplitType = SplitType.TRAIN, batch_size: int = 1) -> list[DataRow]:
         if batch_size < 1:
             raise ValueError(f"Batch size must be >= 1. Inputted batch size was {batch_size}")
         data_to_return = self.data[split][self.idxs[split] : min(self.idxs[split] + batch_size, len(self.data[split]))]
         self.idxs[split] = self.idxs[split] + batch_size if self.idxs[split] + batch_size < len(self.data[split]) else 0
-        return [x["article"] for x in data_to_return]
+        return [x for x in data_to_return]
+
+    def get_example(self, split: SplitType = SplitType.TRAIN, idx: int = 0) -> DataRow:
+        return self.data[split][idx]
+
+    def __convert_batch_to_rows(self, batch: list[dict[str, Any]]):
+        rows = []
+        for entry in batch:
+            for i in range(len(entry["questions"])):
+                row = self.__example_to_row(entry, i)
+                if row:
+                    rows.append(row)
+        return rows
+
+    def __example_to_row(self, entry: dict[str, Any], question_idx: int) -> tuple[str, Any]:
+        question = entry["questions"][question_idx]
+        if "gold_label" not in question:
+            return None
+        correct_answer = int(question["gold_label"]) - 1
+        return DataRow(
+            background_text=entry["article"],
+            question=question["question"],
+            positions=(
+                question["options"][correct_answer],
+                question["options"][(correct_answer + 1) % len(question["options"])],
+            ),
+        )
 
 
 class QualityLoader(DataLoader):

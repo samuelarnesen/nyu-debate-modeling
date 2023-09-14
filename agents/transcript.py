@@ -22,6 +22,7 @@ class Transcript:
     def add_speech(self, speaker: str, content: str):
         self.speeches.append(Speech(speaker=speaker, content=content))
 
+    # Note: this only works for debaters
     def to_model_input(self) -> list[ModelInput]:
         def add_to_model_inputs(model_inputs: list[ModelInput], new_addition: ModelInput) -> None:
             if model_inputs and model_inputs[-1].role == new_addition.role:
@@ -55,18 +56,20 @@ class Transcript:
                 model_inputs, ModelInput(role=RoleType.USER, content=self.prompt.messages[PromptTag.PRE_DEBATE].content)
             )
 
-        for speech in self.speeches:
+        for i, speech in enumerate(self.speeches):
             role = RoleType.USER if speech.speaker != self.debater_name else RoleType.ASSISTANT
-            if speech.speaker != self.debater_name:
-                add_to_model_inputs(
-                    model_inputs, ModelInput(role=RoleType.USER, content=self.prompt.messages[PromptTag.PRE_TURN].content)
-                )
+            if speech.speaker == self.debater_name:
+                tag = PromptTag.PRE_OPENING_SPEECH if i == 0 else PromptTag.PRE_LATER_SPEECH
+                add_to_model_inputs(model_inputs, ModelInput(role=RoleType.USER, content=self.prompt.messages[tag].content))
                 add_to_model_inputs(model_inputs, ModelInput(role=RoleType.ASSISTANT, content=speech.content))
             else:
                 add_to_model_inputs(
                     model_inputs,
-                    ModelInput(role=RoleType.USER, content=self.prompt.messages[PromptTag.PRE_OPPONENT_TURN].content),
+                    ModelInput(role=RoleType.USER, content=self.prompt.messages[PromptTag.PRE_OPPONENT_SPEECH].content),
                 )
                 add_to_model_inputs(model_inputs, ModelInput(role=RoleType.USER, content=speech.content))
+
+        tag = PromptTag.PRE_OPENING_SPEECH if not self.speeches else PromptTag.PRE_LATER_SPEECH
+        add_to_model_inputs(model_inputs, ModelInput(role=RoleType.USER, content=self.prompt.messages[tag].content))
 
         return model_inputs

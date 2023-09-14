@@ -15,20 +15,21 @@ class Message(BaseModel):
 class PromptConfig(BaseModel):
     name: str
     opponent_name: str
-    judge_name: str
     word_limit: int
     position: str
     opponent_position: str
     topic: str
+    background_text: str
 
 
 class PromptTag(Enum):
     PRE_DEBATE = 1
-    PRE_TURN = 2
-    PRE_OPPONENT_TURN = 3
+    PRE_OPENING_SPEECH = 2
+    PRE_OPPONENT_SPEECH = 3
     DEBATER_SYSTEM = 4
     JUDGE_SYSTEM = 5
     OVERALL_SYSTEM = 6
+    PRE_LATER_SPEECH = 7
 
 
 class Prompt(BaseModel):
@@ -57,9 +58,9 @@ class PromptParser:
         return PromptConfig(
             name=config.opponent_name,
             opponent_name=config.name,
-            judge_name=config.judge_name,
             word_limit=config.word_limit,
             position=config.opponent_position,
             opponent_position=config.position,
             topic=config.topic,
+            background_text=config.background_text,
         )

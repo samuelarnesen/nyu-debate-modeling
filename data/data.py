@@ -2,6 +2,8 @@ from abc import ABC
 from enum import Enum
 from typing import Any, Optional
 
+from pydantic import BaseModel
+
 
 class SplitType(Enum):
     TRAIN = 1
@@ -14,15 +16,22 @@ class DatasetType(Enum):
     QUALITY_DEBATES = 2
 
 
+class DataRow(BaseModel):
+    background_text: str
+    question: Optional[str]
+    positions: Optional[tuple[str, str]]
+    speeches: Optional[list[str]]
+
+
 class Dataset(ABC):
-    def get_data(self, split: SplitType = SplitType.TRAIN) -> list[dict[str, Any]]:
+    def get_data(self, split: SplitType = SplitType.TRAIN) -> list[tuple[str, Any]]:
         pass
 
-    def get_batch(self, split: SplitType = SplitType.TRAIN, batch_size: int = 1) -> list[str]:
+    def get_batch(self, split: SplitType = SplitType.TRAIN, batch_size: int = 1) -> list[tuple[str, Any]]:
         pass
 
-    def get_example(self, split: SplitType = SplitType.TRAIN) -> dict[str]:
-        return self.get_batch(split=split, batch_size=1)[0]
+    def get_example(self, split: SplitType = SplitType.TRAIN, idx: int = 0) -> DataRow:
+        pass
 
 
 class DataLoader(ABC):

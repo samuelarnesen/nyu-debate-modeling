@@ -1,4 +1,4 @@
-from data.data import DataLoader, Dataset, SplitType
+from data.data import DataLoader, DataRow, Dataset, SplitType
 
 from typing import Any, Optional
 import json
@@ -6,20 +6,38 @@ import json
 
 class QualityDebatesDataset(Dataset):
     def __init__(self, train_data: list[str, Any], val_data: list[str, Any], test_data: list[str, Any]):
-        self.data = {SplitType.TRAIN: train_data, SplitType.VAL: val_data, SplitType.TEST: test_data}
+        self.data = {
+            SplitType.TRAIN: self.__convert_batch_to_rows(train_data),
+            SplitType.VAL: self.__convert_batch_to_rows(val_data),
+            SplitType.TEST: self.__convert_batch_to_rows(test_data),
+        }
         self.idxs = {SplitType.TRAIN: 0, SplitType.VAL: 0, SplitType.TEST: 0}
 
-    def get_data(self, split: SplitType = SplitType.TRAIN) -> list[str]:
+    def get_data(self, split: SplitType = SplitType.TRAIN) -> list[DataRow]:
         if split not in self.data:
             raise ValueError(f"Split type {split} is not recognized. Only TRAIN, VAL, and TEST are recognized")
         return self.data[split]
 
-    def get_batch(self, split: SplitType = SplitType.TRAIN, batch_size: int = 1) -> list[str]:
+    def get_batch(self, split: SplitType = SplitType.TRAIN, batch_size: int = 1) -> list[DataRow]:
         if batch_size < 1:
             raise ValueError(f"Batch size must be >= 1. Inputted batch size was {batch_size}")
         data_to_return = self.data[split][self.idxs[split] : min(self.idxs[split] + batch_size, len(self.data[split]))]
         self.idxs[split] = self.idxs[split] + batch_size if self.idxs[split] + batch_size < len(self.data[split]) else 0
-        return [x["story"] for x in data_to_return]
+        return [x for x in self.data[split]]
+
+    def get_example(self, split: SplitType = SplitType.TRAIN, idx: int = 0) -> DataRow:
+        return self.data[split][idx]
+
+    def __convert_batch_to_rows(self, batch: list[dict[str, Any]]):
+        return [self.__example_to_row(entry) for entry in batch]
+
+    def __example_to_row(self, entry: dict[str, Any]) -> tuple[str, Any]:
+        return DataRow(
+            background_text=entry["story"],
+            question=entry["question"],
+            positions=entry["answers"],
+            speeches=[speech["text"] for speech in filter(lambda x: x["role"] == "Debater", entry["turns"])],
+        )
 
 
 class QualityDebatesLoader(DataLoader):

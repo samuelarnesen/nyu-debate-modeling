@@ -1,9 +1,12 @@
 Test Experiment 1:
   topic: Who is the best basketball player of all time?
   word_limit: 500
-  positions:
-    - Michael Jordan
-    - LeBron James
+  topic_config:
+    topic_type: hard_coded
+    topic: Who is the best basketball player of all time?
+    positions:
+      - Michael Jordan
+      - LeBron James
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
     prompt_name: Base Prompt
@@ -16,15 +19,13 @@ Test Experiment 1:
       model_type: random
   dataset:
     dataset_type: quality
-    train_file_path: "../quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.train"
-    val_file_path: "../quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev"
-    test_file_path: "../quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test"
+    train_file_path: "../debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.train"
+    val_file_path: "../debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev"
+    test_file_path: "../debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test"
 Test Experiment 2:
-  topic: Who is the best baseball player of all time?
+  topic_config:
+    topic_type: from_dataset
   word_limit: 500
-  positions:
-    - Babe Ruth
-    - Barry Bonds
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
     prompt_name: Base Prompt
@@ -37,4 +38,5 @@ Test Experiment 2:
       model_type: random
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: "../scratch/debates-readable.jsonl"
+    full_dataset_file_path: "../debate-data/debates-readable.jsonl"
+

@@ -8,6 +8,7 @@ from data.loaders.loader_utils import LoaderUtils
 from pydantic import BaseModel
 import yaml
 
+from enum import Enum
 from typing import Optional
 
 
@@ -35,10 +36,20 @@ class DatasetConfig(BaseModel):
     test_file_path: Optional[str]
 
 
+class TopicConfigType(Enum):
+    HARD_CODED = 1
+    FROM_DATASET = 2
+
+
+class TopicConfig(BaseModel):
+    topic_type: str
+    topic: Optional[str]
+    positions: Optional[tuple[str, str]]
+
+
 class ExperimentConfig(BaseModel):
-    topic: str
+    topic_config: TopicConfig
     word_limit: int
-    positions: tuple[str, str]
     prompt_config: PromptLoadingConfig
     models: ModelsConfig
     dataset: DatasetConfig
@@ -47,6 +58,7 @@ class ExperimentConfig(BaseModel):
 DEFAULT_DEBATER_ONE_NAME = "Debater_One"
 DEFAULT_DEBATER_TWO_NAME = "Debater_Two"
 DEFAULT_JUDGE_NAME = "Judge"
+DEFAULT_BACKGROUND_TEXT = "None provided"
 
 
 class ExperimentLoader:
@@ -57,14 +69,39 @@ class ExperimentLoader:
 
         experiment = ExperimentConfig(**loaded_yaml[name])
 
+        dataset_config = experiment.dataset
+        dataset_type = DatasetType[dataset_config.dataset_type.upper()]
+        loader_cls = LoaderUtils.get_loader_type(dataset_type)
+        dataset = loader_cls.load(
+            full_dataset_filepath=dataset_config.full_dataset_file_path,
+            train_filepath=dataset_config.train_file_path,
+            val_filepath=dataset_config.val_file_path,
+            test_filepath=dataset_config.test_file_path,
+        )
+
+        topic_config_type = TopicConfigType[experiment.topic_config.topic_type.upper()]
+        if topic_config_type == TopicConfigType.FROM_DATASET:
+            example = dataset.get_example()
+            topic = example.question
+            position = example.positions[0]
+            opponent_position = example.positions[1]
+            background_text = example.background_text
+        elif topic_config_type == TopicConfigType.HARD_CODED:
+            topic = experiment.topic_config.topic
+            position = experiment.topic_config.positions[0]
+            opponent_position = experiment.topic_config.positions[1]
+            background_text = DEFAULT_BACKGROUND_TEXT
+        else:
+            raise Exception(f"Topic config type {topic_config_type} is not recognized")
+
         config_one = PromptConfig(
             name=DEFAULT_DEBATER_ONE_NAME,  # TODO: change defaults?
             opponent_name=DEFAULT_DEBATER_TWO_NAME,
-            judge_name=DEFAULT_JUDGE_NAME,
             word_limit=experiment.word_limit,
-            position=experiment.positions[0],
-            opponent_position=experiment.positions[1],
-            topic=experiment.topic,
+            position=position,
+            opponent_position=opponent_position,
+            topic=topic,
+            background_text=background_text,
         )
 
         config_two = PromptParser.generate_opponent_config(config_one)
@@ -101,16 +138,6 @@ class ExperimentLoader:
             name=DEFAULT_JUDGE_NAME,
             prompt=prompt_judge,
             model=ModelUtils.instantiate_model(model_type=ModelType[experiment.models.judge.model_type.upper()]),
-        )
-
-        dataset_config = experiment.dataset
-        dataset_type = DatasetType[dataset_config.dataset_type.upper()]
-        loader_cls = LoaderUtils.get_loader_type(dataset_type)
-        dataset = loader_cls.load(
-            full_dataset_filepath=dataset_config.full_dataset_file_path,
-            train_filepath=dataset_config.train_file_path,
-            val_filepath=dataset_config.val_file_path,
-            test_filepath=dataset_config.test_file_path,
         )
 
         return DebateRound(first_debater=debater_one, second_debater=debater_two, judge=judge, dataset=dataset)
