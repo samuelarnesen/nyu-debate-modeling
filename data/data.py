@@ -23,7 +23,7 @@ class DataRow(BaseModel):
     speeches: Optional[list[str]]
 
 
-class Dataset(ABC):
+class RawDataset(ABC):
     def get_data(self, split: SplitType = SplitType.TRAIN) -> list[tuple[str, Any]]:
         pass
 
@@ -34,7 +34,7 @@ class Dataset(ABC):
         pass
 
 
-class DataLoader(ABC):
+class RawDataLoader(ABC):
     @classmethod
     def load(
         cls,
@@ -42,5 +42,5 @@ class DataLoader(ABC):
         train_filepath: Optional[str] = None,
         validation_filepath: Optional[str] = None,
         test_filepath: Optional[str] = None,
-    ) -> Dataset:
+    ) -> RawDataset:
         pass

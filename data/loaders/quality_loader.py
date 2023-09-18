@@ -1,10 +1,10 @@
-from data.data import DataLoader, DataRow, Dataset, SplitType
+from data.data import DataRow, RawDataLoader, RawDataset, SplitType
 
 from typing import Any, Optional
 import json
 
 
-class QualityDataset(Dataset):
+class QualityDataset(RawDataset):
     def __init__(self, train_data: list[dict[str, Any]], val_data: list[dict[str, Any]], test_data: list[dict[str, Any]]):
         self.data = {
             SplitType.TRAIN: self.__convert_batch_to_rows(train_data),
@@ -52,7 +52,7 @@ class QualityDataset(Dataset):
         )
 
 
-class QualityLoader(DataLoader):
+class QualityLoader(RawDataLoader):
     @classmethod
     def load(
         cls, full_dataset_filepath: Optional[str], train_filepath: str, val_filepath: str, test_filepath: str

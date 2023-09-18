@@ -1,2 +1,8 @@
+bitsandbytes==0.41.1
+datasets==2.14.5
+pandas==1.5.3
+peft==0.5.0
 pydantic==1.10.7
 pyyaml==6.0.1
+transformers==2.2.0.dev20230915
+trl==0.7.1

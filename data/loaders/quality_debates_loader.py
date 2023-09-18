@@ -1,10 +1,10 @@
-from data.data import DataLoader, DataRow, Dataset, SplitType
+from data.data import DataRow, RawDataLoader, RawDataset, SplitType
 
 from typing import Any, Optional
 import json
 
 
-class QualityDebatesDataset(Dataset):
+class QualityDebatesDataset(RawDataset):
     def __init__(self, train_data: list[str, Any], val_data: list[str, Any], test_data: list[str, Any]):
         self.data = {
             SplitType.TRAIN: self.__convert_batch_to_rows(train_data),
@@ -40,7 +40,7 @@ class QualityDebatesDataset(Dataset):
         )
 
 
-class QualityDebatesLoader(DataLoader):
+class QualityDebatesLoader(RawDataLoader):
     @classmethod
     def load(
         cls,

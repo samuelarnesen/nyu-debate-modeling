@@ -1,9 +1,9 @@
 from agents.agent import Debater, Judge
 from agents.prompt import Prompt, PromptConfig, PromptParser
 from data.data import Dataset, SplitType
-from utils.logger_utils import get_default_logger
+from utils.logger_utils import LoggerUtils
 
-LOGGER = get_default_logger(__name__)
+LOGGER = LoggerUtils.get_default_logger(__name__)
 
 
 class DebateRound:

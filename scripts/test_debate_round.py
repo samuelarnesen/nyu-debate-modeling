@@ -1,6 +1,6 @@
-from script_utils import set_parent_as_path
+from script_utils import ScriptUtils
 
-set_parent_as_path()
+ScriptUtils.set_parent_as_path()
 
 from experiments.experiment_loader import ExperimentLoader
 from experiments.results_collector import GraphType, ResultsCollector

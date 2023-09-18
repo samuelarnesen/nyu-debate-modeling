@@ -1,4 +1,6 @@
 from agents.model import RoleType
+from data.data import DataRow
+import utils.constants as constants
 
 from pydantic import BaseModel
 import yaml
@@ -63,4 +65,16 @@ class PromptParser:
             opponent_position=config.position,
             topic=config.topic,
             background_text=config.background_text,
+        )
+
+    @classmethod
+    def convert_data_row_to_default_prompt_config(cls, row: DataRow) -> PromptConfig:
+        return PromptConfig(
+            name=constants.DEFAULT_DEBATER_ONE_NAME,
+            opponent_name=constants.DEFAULT_DEBATER_TWO_NAME,
+            word_limit=constants.DEFAULT_WORD_LIMIT,
+            position=row.positions[0],
+            opponent_position=row.positions[1],
+            topic=row.question,
+            background_text=row.background_text,
         )

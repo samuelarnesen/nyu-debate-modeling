@@ -2,8 +2,9 @@ from agents.agent import Debater, Judge
 from agents.debate_round import DebateRound
 from agents.models.model_utils import ModelType, ModelUtils
 from agents.prompt import Prompt, PromptConfig, PromptParser
-from data.data import DataLoader, Dataset, DatasetType
+from data.data import DatasetType, RawDataLoader, RawDataset
 from data.loaders.loader_utils import LoaderUtils
+import utils.constants as constants
 
 from pydantic import BaseModel
 import yaml
@@ -55,12 +56,6 @@ class ExperimentConfig(BaseModel):
     dataset: DatasetConfig
 
 
-DEFAULT_DEBATER_ONE_NAME = "Debater_One"
-DEFAULT_DEBATER_TWO_NAME = "Debater_Two"
-DEFAULT_JUDGE_NAME = "Judge"
-DEFAULT_BACKGROUND_TEXT = "None provided"
-
-
 class ExperimentLoader:
     @classmethod
     def generate_debate_round(cls, experiment_file_path: str, name: str) -> DebateRound:
@@ -90,13 +85,13 @@ class ExperimentLoader:
             topic = experiment.topic_config.topic
             position = experiment.topic_config.positions[0]
             opponent_position = experiment.topic_config.positions[1]
-            background_text = DEFAULT_BACKGROUND_TEXT
+            background_text = constants.DEFAULT_BACKGROUND_TEXT
         else:
             raise Exception(f"Topic config type {topic_config_type} is not recognized")
 
         config_one = PromptConfig(
-            name=DEFAULT_DEBATER_ONE_NAME,  # TODO: change defaults?
-            opponent_name=DEFAULT_DEBATER_TWO_NAME,
+            name=constants.DEFAULT_DEBATER_ONE_NAME,
+            opponent_name=constants.DEFAULT_DEBATER_TWO_NAME,
             word_limit=experiment.word_limit,
             position=position,
             opponent_position=opponent_position,
@@ -125,17 +120,17 @@ class ExperimentLoader:
         )
 
         debater_one = Debater(
-            name=DEFAULT_DEBATER_ONE_NAME,
+            name=constants.DEFAULT_DEBATER_ONE_NAME,
             prompt=prompt_one,
             model=ModelUtils.instantiate_model(model_type=ModelType[experiment.models.debater_one.model_type.upper()]),
         )
         debater_two = Debater(
-            name=DEFAULT_DEBATER_TWO_NAME,
+            name=constants.DEFAULT_DEBATER_TWO_NAME,
             prompt=prompt_two,
             model=ModelUtils.instantiate_model(model_type=ModelType[experiment.models.debater_two.model_type.upper()]),
         )
         judge = Judge(
-            name=DEFAULT_JUDGE_NAME,
+            name=constants.DEFAULT_JUDGE_NAME,
             prompt=prompt_judge,
             model=ModelUtils.instantiate_model(model_type=ModelType[experiment.models.judge.model_type.upper()]),
         )
