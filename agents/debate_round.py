@@ -1,13 +1,13 @@
 from agents.agent import Debater, Judge
 from agents.prompt import Prompt, PromptConfig, PromptParser
-from data.data import Dataset, SplitType
+from data.data import RawDataset, SplitType
 from utils.logger_utils import LoggerUtils
 
 LOGGER = LoggerUtils.get_default_logger(__name__)
 
 
 class DebateRound:
-    def __init__(self, first_debater: Debater, second_debater: Debater, judge: Judge, dataset: Dataset):
+    def __init__(self, first_debater: Debater, second_debater: Debater, judge: Judge, dataset: RawDataset):
         self.first_debater = first_debater
         self.second_debater = second_debater
         self.judge = judge

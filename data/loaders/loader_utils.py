@@ -1,4 +1,4 @@
-from data.data import DataLoader, DatasetType
+from data.data import RawDataLoader, DatasetType
 from data.loaders.quality_loader import QualityLoader
 from data.loaders.quality_debates_loader import QualityDebatesLoader
 
@@ -8,7 +8,7 @@ from typing import Type
 
 class LoaderUtils:
     @classmethod
-    def get_loader_type(cls, dataset_type: DatasetType) -> Type[DataLoader]:
+    def get_loader_type(cls, dataset_type: DatasetType) -> Type[RawDataLoader]:
         if dataset_type == DatasetType.QUALITY:
             return QualityLoader
         elif dataset_type == DatasetType.QUALITY_DEBATES:
