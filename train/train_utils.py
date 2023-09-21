@@ -82,7 +82,7 @@ class TrainUtils:
                 {llama_input.instruction}
                 {constants.INPUT_PREFIX}
                 {llama_input.input}
-                {constants.RESPONSE_PREFIX}
+                {constants.INSTRUCTION_SUFFIX}
                 {llama_input.output}"""
             instructions.append(instruction)
         return instructions
@@ -102,7 +102,6 @@ class TrainUtils:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = "right"
 
-        # TODO: make configurable
         if not is_local:
             peft_config = LoraConfig(
                 lora_alpha=16,
@@ -132,7 +131,6 @@ class TrainUtils:
                 revision="main",
             )
 
-        # make this configurable
         training_args = TrainingArguments(
             output_dir=config.logging_and_saving_config.output_dir,
             num_train_epochs=config.training_hyperparameters.num_train_epochs,
@@ -143,8 +141,6 @@ class TrainUtils:
             logging_steps=config.logging_and_saving_config.logging_steps,
             save_strategy="epoch",
             learning_rate=config.training_hyperparameters.learning_rate,
-            bf16=True,
-            tf32=not is_local,
             max_grad_norm=config.training_hyperparameters.max_grad_norm,
             warmup_ratio=config.training_hyperparameters.warmup_ratio,
             lr_scheduler_type=config.training_hyperparameters.lr_scheduler_type,
@@ -154,7 +150,7 @@ class TrainUtils:
 
         collator = DataCollatorForCompletionOnlyLM(
             instruction_template=constants.INSTRUCTION_PREFIX,
-            response_template=constants.RESPONSE_PREFIX,
+            response_template=constants.INSTRUCTION_SUFFIX,
             tokenizer=tokenizer,
         )
 
@@ -171,5 +167,6 @@ class TrainUtils:
             tokenizer=tokenizer,
             data_collator=collator,
             formatting_func=TrainUtils.format_instruction,
+            max_seq_length=32_000,
             args=training_args,
         )

@@ -16,11 +16,15 @@ class Transcript:
         self.debater_name = debater_name
         self.speeches = []
 
-    def reset(self):
+    def reset(self) -> None:
         self.speeches = []
 
-    def add_speech(self, speaker: str, content: str):
+    def add_speech(self, speaker: str, content: str) -> None:
         self.speeches.append(Speech(speaker=speaker, content=content))
+
+    def save(self, save_file_path: str) -> None:
+        with open(save_file_path, "w") as f:
+            f.write(str(self))
 
     # Note: this only works for debaters
     def to_model_input(self) -> list[ModelInput]:
@@ -73,3 +77,6 @@ class Transcript:
         add_to_model_inputs(model_inputs, ModelInput(role=RoleType.USER, content=self.prompt.messages[tag].content))
 
         return model_inputs
+
+    def __str__(self):
+        return f"Name: {self.debater_name}\n\n" + "\n\n".join([str(speech) for speech in self.speeches])

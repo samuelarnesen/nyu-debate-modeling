@@ -7,16 +7,18 @@ from experiments.results_collector import GraphType, ResultsCollector
 
 from datetime import datetime
 
+import sys
+
 args = ScriptUtils.get_args()
 results_collector = ResultsCollector()
 start_time = str(datetime.now()).replace(" ", "_")
 
-experiment_name = "Test Experiment 2"
-experiment_file_path = "experiments/configs/test_experiment.yaml"
+experiment_name = args.configuration or "SFT Experiment Extended - Local"
+experiment_file_path = "experiments/configs/sft_experiment.yaml"
 save_path_base = "../debate-data/transcripts"
 if not args.local:
     experiment_file_path = "/home/spa9663/debate/" + experiment_file_path
-    experiment_name = "Test Experiment 2 - HPC"
+    experiment_name = args.configuration or "SFT Experiment Extended - HPC"
     save_path_base = "/home/spa9663/debate-data/transcripts"
 
 debate_rounds = ExperimentLoader.generate_debate_rounds(

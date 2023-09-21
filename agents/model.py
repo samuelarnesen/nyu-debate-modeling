@@ -16,5 +16,5 @@ class ModelInput(BaseModel):
 
 
 class Model(ABC):
-    def predict(self, inputs: list[ModelInput], max_length: 250) -> str:
+    def predict(self, inputs: list[ModelInput], max_new_tokens: 250) -> str:
         pass

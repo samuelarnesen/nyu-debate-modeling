@@ -26,7 +26,7 @@ class QualityDataset(RawDataset):
         return [x for x in data_to_return]
 
     def get_example(self, split: SplitType = SplitType.TRAIN, idx: int = 0) -> DataRow:
-        return self.data[split][idx]
+        return self.data[split][idx % len(self.data[split])]
 
     def __convert_batch_to_rows(self, batch: list[dict[str, Any]]):
         rows = []

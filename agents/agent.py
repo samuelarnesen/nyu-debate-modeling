@@ -18,8 +18,19 @@ class Agent:
     def receive_message(self, speaker: str, content: str):
         self.transcript.add_speech(speaker=speaker, content=content)
 
+    def generate(self) -> Optional[str]:
+        pass
+
     def reset(self):
         self.transcript = Transcript(debater_name=self.name, is_debater=self.is_debater, prompt=self.prompt)
+
+    def save(self, save_file_path: str):
+        self.transcript.save(save_file_path=save_file_path)
+
+
+class Debater(Agent):
+    def __init__(self, name: str, prompt: Prompt, model: Model):
+        super().__init__(name=name, is_debater=True, prompt=prompt, model=model)
 
     def generate(self) -> Optional[str]:
         if self.transcript:
@@ -27,11 +38,6 @@ class Agent:
             return self.model.predict(model_input)
         else:
             return None
-
-
-class Debater(Agent):
-    def __init__(self, name: str, prompt: Prompt, model: Model):
-        super().__init__(name=name, is_debater=True, prompt=prompt, model=model)
 
 
 class Judge(Agent):

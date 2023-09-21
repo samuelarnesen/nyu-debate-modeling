@@ -1,3 +1,5 @@
+from utils.logger_utils import LoggerUtils
+
 import matplotlib.pyplot as plt
 
 from enum import Enum
@@ -11,6 +13,7 @@ class GraphType(Enum):
 class ResultsCollector:
     def __init__(self):
         self.results = []
+        self.logger = LoggerUtils.get_default_logger(__name__)
 
     def reset(self) -> None:
         self.results = []
@@ -18,7 +21,7 @@ class ResultsCollector:
     def record_result(self, result: int) -> None:
         self.results.append(result)
 
-    def __graph_bar(self) -> None:
+    def __graph_bar(self) -> dict[int, int]:
         results_dict = {1: 0, 2: 0}
         for entry in self.results:
             results_dict[entry] += 1
@@ -27,8 +30,9 @@ class ResultsCollector:
 
         plt.bar(categories, values)
         plt.show()
+        return results_dict
 
-    def __graph_elo(self) -> None:
+    def __graph_elo(self) -> dict[int, float]:
         k = 16
         default = 1_000
         elo_one = [default]
@@ -45,11 +49,14 @@ class ResultsCollector:
         plt.plot(x_axis, elo_two, label="Debater_Two")
         plt.legend()
         plt.show()
+        return {1: elo_one[-1], 2: elo_two[-1]}
 
     def graph_results(self, graph_type: GraphType) -> None:
         if graph_type == GraphType.BAR:
-            self.__graph_bar()
+            results = self.__graph_bar()
+            self.logger.info(results)
         elif graph_type == GraphType.ELO:
-            self.__graph_elo()
+            results = self.__graph_elo()
+            self.logger.info(results)
         else:
             raise Exception(f"Graph type {graph_type} is not implemented")
