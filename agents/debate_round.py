@@ -1,18 +1,36 @@
 from agents.agent import Debater, Judge
 from agents.prompt import Prompt, PromptConfig, PromptParser
+from agents.transcript import Transcript
 from data.data import RawDataset, SplitType
 from utils.logger_utils import LoggerUtils
+import utils.constants as constants
 
-from typing import Optional
+from pydantic import BaseModel
 
-import sys
+from typing import Optional, Any, Union
+
+
+class DebateRoundSummary(BaseModel):
+    debater_one_wins: Union[Any, bool]
+    question_idx: Union[Any, int]
+    split: SplitType
+    transcript: Union[Any]
 
 
 class DebateRound:
-    def __init__(self, first_debater: Debater, second_debater: Debater, judge: Judge):
+    def __init__(
+        self,
+        first_debater: Debater,
+        second_debater: Debater,
+        judge: Judge,
+        idx: int,
+        split: SplitType = SplitType.TRAIN,
+    ):
         self.first_debater = first_debater
         self.second_debater = second_debater
         self.judge = judge
+        self.idx = idx
+        self.split = split
         self.debaters = [self.first_debater, self.second_debater]
         self.participants = [self.first_debater, self.second_debater, self.judge]
         self.logger = LoggerUtils.get_default_logger(__name__)
@@ -21,10 +39,12 @@ class DebateRound:
         for participant in self.participants:
             participant.reset()
 
-    def run(self, split: SplitType = SplitType.TRAIN, num_speeches=3, save_file_path: str = None) -> bool:
+    def run(self, num_speeches=3, save_file_path: str = None) -> bool:
         self.first_debater.reset()
         self.second_debater.reset()
         self.judge.reset()
+
+        self.logger.debug(self.judge.get_transcript().full_string_value())
 
         for speech_num in range(num_speeches):
             responses = []
@@ -42,9 +62,16 @@ class DebateRound:
 
         response, debater_one_wins = self.judge.generate()
         self.logger.debug(f"{self.judge.name}: {response}\n")
-        self.logger.debug(f"Winner is {'Debater_One' if debater_one_wins else 'Debater_Two'}")
+        self.logger.debug(
+            f"Winner is {constants.DEFAULT_DEBATER_ONE_NAME if debater_one_wins else constants.DEFAULT_DEBATER_TWO_NAME}"
+        )
 
         if save_file_path:
             self.judge.save(save_file_path=save_file_path)
 
-        return debater_one_wins
+        return DebateRoundSummary(
+            debater_one_wins=debater_one_wins,
+            question_idx=self.idx,
+            split=self.split,
+            transcript=self.judge.get_transcript(),
+        )

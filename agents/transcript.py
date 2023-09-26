@@ -55,28 +55,54 @@ class Transcript:
                 ModelInput(role=RoleType.SYSTEM, content=self.prompt.messages[PromptTag.JUDGE_SYSTEM].content),
             )
 
-        if self.prompt.messages[PromptTag.PRE_DEBATE]:
-            add_to_model_inputs(
-                model_inputs, ModelInput(role=RoleType.USER, content=self.prompt.messages[PromptTag.PRE_DEBATE].content)
-            )
+        if self.is_debater:
+            if self.prompt.messages[PromptTag.PRE_DEBATE]:
+                add_to_model_inputs(
+                    model_inputs, ModelInput(role=RoleType.USER, content=self.prompt.messages[PromptTag.PRE_DEBATE].content)
+                )
+        else:
+            if self.prompt.messages[PromptTag.PRE_DEBATE_JUDGE]:
+                add_to_model_inputs(
+                    model_inputs,
+                    ModelInput(role=RoleType.USER, content=self.prompt.messages[PromptTag.PRE_DEBATE_JUDGE].content),
+                )
 
         for i, speech in enumerate(self.speeches):
             role = RoleType.USER if speech.speaker != self.debater_name else RoleType.ASSISTANT
-            if speech.speaker == self.debater_name:
-                tag = PromptTag.PRE_OPENING_SPEECH if i == 0 else PromptTag.PRE_LATER_SPEECH
-                add_to_model_inputs(model_inputs, ModelInput(role=RoleType.USER, content=self.prompt.messages[tag].content))
-                add_to_model_inputs(model_inputs, ModelInput(role=RoleType.ASSISTANT, content=speech.content))
+            if self.is_debater:
+                if speech.speaker == self.debater_name:
+                    tag = PromptTag.PRE_OPENING_SPEECH if i == 0 else PromptTag.PRE_LATER_SPEECH
+                    add_to_model_inputs(
+                        model_inputs, ModelInput(role=RoleType.USER, content=self.prompt.messages[tag].content)
+                    )
+                    add_to_model_inputs(model_inputs, ModelInput(role=RoleType.ASSISTANT, content=speech.content))
+                else:
+                    add_to_model_inputs(
+                        model_inputs,
+                        ModelInput(role=RoleType.USER, content=self.prompt.messages[PromptTag.PRE_OPPONENT_SPEECH].content),
+                    )
+                    add_to_model_inputs(model_inputs, ModelInput(role=RoleType.USER, content=speech.content))
             else:
+                tag = (
+                    PromptTag.PRE_DEBATER_A_SPEECH_JUDGE
+                    if speech.speaker == self.debater_name
+                    else PromptTag.PRE_DEBATER_B_SPEECH_JUDGE
+                )
                 add_to_model_inputs(
                     model_inputs,
-                    ModelInput(role=RoleType.USER, content=self.prompt.messages[PromptTag.PRE_OPPONENT_SPEECH].content),
+                    ModelInput(role=RoleType.USER, content=self.prompt.messages[tag].content),
                 )
                 add_to_model_inputs(model_inputs, ModelInput(role=RoleType.USER, content=speech.content))
-
-        tag = PromptTag.PRE_OPENING_SPEECH if not self.speeches else PromptTag.PRE_LATER_SPEECH
-        add_to_model_inputs(model_inputs, ModelInput(role=RoleType.USER, content=self.prompt.messages[tag].content))
+        if not self.is_debater:
+            add_to_model_inputs(
+                model_inputs,
+                ModelInput(role=RoleType.USER, content=self.prompt.messages[PromptTag.POST_ROUND_JUDGE].content),
+            )
 
         return model_inputs
 
     def __str__(self):
         return f"Name: {self.debater_name}\n\n" + "\n\n".join([str(speech) for speech in self.speeches])
+
+    def full_string_value(self):
+        return "\n\n".join([x.content for x in self.to_model_input()])

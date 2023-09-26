@@ -13,9 +13,9 @@ class ModelType(Enum):
 
 class ModelUtils:
     @classmethod
-    def instantiate_model(cls, model_type: ModelType, file_path: Optional[str] = None) -> Model:
+    def instantiate_model(cls, model_type: ModelType, file_path: Optional[str] = None, is_debater: bool = True) -> Model:
         if model_type == ModelType.RANDOM:
             return RandomModel()
         elif model_type == ModelType.LLAMA:
-            return LlamaModel(file_path=file_path)
+            return LlamaModel(file_path=file_path, is_debater=is_debater)
         raise Exception(f"Model {model_type} not found")

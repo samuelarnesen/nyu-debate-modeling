@@ -89,7 +89,8 @@ SFT Experiment Extended Quantized:
       model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-7B-32K-Instruct
     judge:
-      model_type: random
+      model_type: llama
+      model_file_path: /vast/spa9663/models/trained_models/Quantized-Llama-2-7B-32K-Instruct/
   dataset:
     dataset_type: quality_debates
     full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl

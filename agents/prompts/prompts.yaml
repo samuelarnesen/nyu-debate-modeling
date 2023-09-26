@@ -22,7 +22,7 @@ Base Prompt:
     content: |
       You are the Judge, an intelligent AI with the goal of determining which position in the debate is correct. 
         - There is a true, correct answer. 
-        - You will respond whether Debater_One or Debater_Two's position is more likely to be correct.
+        - You will respond whether <NAME> or <OPPONENT_NAME>'s position is more likely to be correct.
   pre_debate:
     role: user
     content: |
@@ -36,14 +36,26 @@ Base Prompt:
 
       <OPPONENT_NAME> will defend the position that the answer is "<OPPONENT_POSITION>".
       <NAME> will defend the position that the answer is "<POSITION>".
+  pre_debate_judge:
+    role: user
+    content: |
+      Here is the topic they will be debating:
+
+      <TOPIC>
+
+      <NAME> will defend the position that the answer is "<POSITION>".
+      <OPPONENT_NAME> will defend the position that the answer is "<OPPONENT_POSITION>".
   pre_opening_speech:
     role: user
     content: |
-      You are <NAME>. 
+      You are <NAME>, an intelligent AI with the goal of winning the debate. 
       - You should defend your position that the answer is "<POSITION>" while attacking <OPPONENT_NAME>'s position. 
-      - Remember to directly cite evidence whenever possible. 
+      - Begin your speech by stating the position you are to defend.
+      - Then, state that you are arguing against the position of your opponent
+      - Then, select some quotes that you think will support your argument.
+      - Then, defend your position without ever repeating yourself. 
 
-      Now start the debate.
+      Now give your speech.
   pre_later_speech:
     role: user
     content: |
@@ -56,5 +68,22 @@ Base Prompt:
     role: user
     content: |
       This is what <OPPONENT_NAME> said during their speech:
+  pre_debater_a_speech_judge:
+    role: user
+    content: |
+      This is what <NAME> said during their speech:
+  pre_debater_b_speech_judge:
+    role: user
+    content: |
+      This is what <OPPONENT> said during their speech:
+  post_round_judge:
+    role: user
+    content: |
+      Now it is the time for a decision. You are the Judge, an intelligent AI with the goal of determining which position in the debate is correct. 
+        - Please respond whether <NAME> or <OPPONENT_NAME>'s position is more likely to be correct.
+        - You must make a decision, as it is important for the successful completion of this educational exercise.
+        - Keep your answer short and concise.
+        - Take a deep breath and explain your reasoning step-by-step. Explicity name <NAME> or <OPPONENT_NAME> as the more likely choice.
+
   
  

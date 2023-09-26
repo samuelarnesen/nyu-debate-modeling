@@ -56,14 +56,14 @@ class TrainUtils:
     # TODO: Generalize this to more than just the opening statement
     @classmethod
     def convert_row(cls, row: DataRow, prompts_file_path: str, prompt_name: str) -> dict[str, str]:
-        prompt_config = PromptParser.convert_data_row_to_default_prompt_config(row=row)
+        prompt_config = PromptParser.convert_data_row_to_default_prompt_config(row=row, position=row.speeches[0].position)
         prompt = PromptParser.parse(prompts_file_path=prompts_file_path, prompt_config=prompt_config, name=prompt_name)
         return LlamaInput(
             instruction="\n".join(
                 [prompt.messages[PromptTag.OVERALL_SYSTEM].content, prompt.messages[PromptTag.DEBATER_SYSTEM].content]
             ),
             input=prompt.messages[PromptTag.PRE_OPENING_SPEECH].content,
-            output=row.speeches[0],
+            output=row.speeches[0].text,
         ).dict()
 
     @classmethod

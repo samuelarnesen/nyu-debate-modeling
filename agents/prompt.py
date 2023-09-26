@@ -32,6 +32,10 @@ class PromptTag(Enum):
     JUDGE_SYSTEM = 5
     OVERALL_SYSTEM = 6
     PRE_LATER_SPEECH = 7
+    PRE_DEBATE_JUDGE = 8
+    PRE_DEBATER_A_SPEECH_JUDGE = 9
+    PRE_DEBATER_B_SPEECH_JUDGE = 10
+    POST_ROUND_JUDGE = 11
 
 
 class Prompt(BaseModel):
@@ -68,13 +72,13 @@ class PromptParser:
         )
 
     @classmethod
-    def convert_data_row_to_default_prompt_config(cls, row: DataRow) -> PromptConfig:
+    def convert_data_row_to_default_prompt_config(cls, row: DataRow, position: int) -> PromptConfig:
         return PromptConfig(
-            name=constants.DEFAULT_DEBATER_ONE_NAME,
-            opponent_name=constants.DEFAULT_DEBATER_TWO_NAME,
+            name=constants.DEFAULT_DEBATER_ONE_NAME if position == 0 else constants.DEFAULT_DEBATER_TWO_NAME,
+            opponent_name=constants.DEFAULT_DEBATER_TWO_NAME if position == 0 else constants.DEFAULT_DEBATER_ONE_NAME,
             word_limit=constants.DEFAULT_WORD_LIMIT,
-            position=row.positions[0],
-            opponent_position=row.positions[1],
+            position=row.positions[position],
+            opponent_position=row.positions[(position - 1) * -1],
             topic=row.question,
             background_text=row.background_text,
         )

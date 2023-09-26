@@ -35,7 +35,7 @@ Default - HPC:
 Extended - HPC:
     model_name: /vast/spa9663/models/base_models/Llama-2-7B-32K-Instruct/
     training_hyperparameters:
-        num_train_epochs: 1
+        num_train_epochs: 16
         per_device_train_batch_size: 8
         gradient_accumulation_steps: 2
         optim: paged_adamw_32bit

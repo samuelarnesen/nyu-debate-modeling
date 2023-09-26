@@ -2,9 +2,10 @@ from data.data import DataRow, RawDataLoader, RawDataset, Speech, SplitType
 
 from typing import Any, Optional
 import json
+import pickle
 
 
-class QualityDebatesDataset(RawDataset):
+class QualityDebatesQuotesDataset(RawDataset):
     def __init__(self, train_data: list[str, Any], val_data: list[str, Any], test_data: list[str, Any]):
         self.data = {
             SplitType.TRAIN: self.__convert_batch_to_rows(train_data),
@@ -35,15 +36,12 @@ class QualityDebatesDataset(RawDataset):
         return DataRow(
             background_text=entry["story"],
             question=entry["question"],
-            positions=entry["answers"],
-            speeches=[
-                Speech(text=turn["text"], position=turn["index"])
-                for turn in filter(lambda x: x["role"] == "Debater", entry["turns"])
-            ],
+            positions=entry["positions"],
+            speeches=[Speech(text="\n".join(quotes), position=i) for i, quotes in enumerate(entry["quotes"])],
         )
 
 
-class QualityDebatesLoader(RawDataLoader):
+class QualityDebatesQuotesLoader(RawDataLoader):
     @classmethod
     def load(
         cls,
@@ -51,21 +49,16 @@ class QualityDebatesLoader(RawDataLoader):
         train_filepath: Optional[str] = None,
         val_filepath: Optional[str] = None,
         test_filepath: Optional[str] = None,
-    ) -> QualityDebatesDataset:
-        def __should_keep(row: dict[str, Any]) -> bool:
-            roles = [turn["role"] for turn in row["turns"]]
-            return len(roles) >= 3 and "GPT-4" not in roles
-
+    ) -> QualityDebatesQuotesDataset:
         def __get_filtered_rows(file_path: str):
             rows = []
-            with open(file_path) as f:
-                for line in f.readlines():
-                    rows.append(json.loads(line))
-            return [row for row in filter(__should_keep, rows)]
+            with open(file_path, "rb") as f:
+                data = pickle.load(f)
+            return data
 
         filtered_rows = __get_filtered_rows(file_path=full_dataset_filepath)
         length = len(filtered_rows)
-        return QualityDebatesDataset(
+        return QualityDebatesQuotesDataset(
             train_data=filtered_rows[0 : int(0.8 * length)],
             val_data=filtered_rows[int(0.8 * length) : int(0.9 * length)],
             test_data=filtered_rows[int(0.9 * length) :],

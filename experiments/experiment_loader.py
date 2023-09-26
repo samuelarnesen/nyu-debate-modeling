@@ -2,7 +2,7 @@ from agents.agent import Debater, Judge
 from agents.debate_round import DebateRound
 from agents.models.model_utils import ModelType, ModelUtils
 from agents.prompt import Prompt, PromptConfig, PromptParser
-from data.data import DatasetType, RawDataLoader, RawDataset
+from data.data import DatasetType, RawDataLoader, RawDataset, SplitType
 from data.loaders.loader_utils import LoaderUtils
 import utils.constants as constants
 
@@ -79,24 +79,25 @@ class ExperimentLoader:
         debater_one_model_type = ModelType[experiment.models.debater_one.model_type.upper()]
         debater_two_model_type = ModelType[experiment.models.debater_two.model_type.upper()]
         judge_model_type = ModelType[experiment.models.judge.model_type.upper()]
-        debater_one_model = ModelUtils.instantiate_model(
-            model_type=debater_one_model_type, file_path=experiment.models.debater_one.model_file_path
-        )
+        debater_one_model_path = experiment.models.debater_one.model_file_path
+        debater_two_model_path = experiment.models.debater_two.model_file_path
+        judge_model_path = experiment.models.judge.model_file_path
+        debater_one_model = ModelUtils.instantiate_model(model_type=debater_one_model_type, file_path=debater_one_model_path)
         debater_two_model = (
             debater_one_model
-            if debater_two_model_type == debater_one_model_type
+            if debater_two_model_type == debater_one_model_type and debater_one_model_path == debater_two_model_path
             else ModelUtils.instantiate_model(
                 model_type=debater_two_model_type, file_path=experiment.models.debater_two.model_file_path
             )
         )
         judge_model = (
             debater_one_model
-            if judge_model_type == debater_one_model_type
+            if judge_model_type == debater_one_model_type and debater_one_model_path == judge_model_path
             else (
                 debater_two_model
-                if judge_model_type == debater_two_model_type
+                if judge_model_type == debater_two_model_type and debater_two_model_path == judge_model_path
                 else ModelUtils.instantiate_model(
-                    model_type=judge_model_type, file_path=experiment.models.judge.model_file_path
+                    model_type=judge_model_type, file_path=experiment.models.judge.model_file_path, is_debater=False
                 )
             )
         )
@@ -166,7 +167,9 @@ class ExperimentLoader:
                 model=judge_model,
             )
 
-            debate_round = DebateRound(first_debater=debater_one, second_debater=debater_two, judge=judge)
+            debate_round = DebateRound(
+                first_debater=debater_one, second_debater=debater_two, judge=judge, idx=i, split=SplitType.TRAIN
+            )
             rounds.append(debate_round)
 
         return rounds

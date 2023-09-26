@@ -1,10 +1,11 @@
 from agents.model import Model
 from agents.prompt import Prompt
 from agents.transcript import Transcript
+import utils.constants as constants
 
 from typing import Optional
 
-import random  # remove when judge is no longer stupid
+import random
 
 
 class Agent:
@@ -27,6 +28,9 @@ class Agent:
     def save(self, save_file_path: str):
         self.transcript.save(save_file_path=save_file_path)
 
+    def get_transcript(self) -> Transcript:
+        return self.transcript
+
 
 class Debater(Agent):
     def __init__(self, name: str, prompt: Prompt, model: Model):
@@ -45,7 +49,18 @@ class Judge(Agent):
         super().__init__(name=name, is_debater=False, prompt=prompt, model=model)
 
     def generate(self) -> Optional[tuple[str, bool]]:
-        if self.transcript:
-            text = super().generate()
-            return text, random.random() < 0.5
-        return None
+        model_input = self.transcript.to_model_input()
+        texts = self.model.predict(inputs=model_input)
+
+        results = {DEFAULT_DEBATER_ONE_NAME: 0, DEFAULT_DEBATER_TWO_NAME: 0}
+        for text in texts:
+            if DEFAULT_DEBATER_ONE_NAME in text:
+                results[DEFAULT_DEBATER_ONE_NAME] += 1
+            if DEFAULT_DEBATER_TWO_NAME in text:
+                results[DEFAULT_DEBATER_TWO_NAME] += 1
+        debater_a_wins = (
+            True
+            if results[DEFAULT_DEBATER_ONE_NAME] > results[DEFAULT_DEBATER_TWO_NAME]
+            else (False if results[DEFAULT_DEBATER_ONE_NAME] < results[DEFAULT_DEBATER_TWO_NAME] else random.random() < 0.5)
+        )
+        return text, debater_a_wins
