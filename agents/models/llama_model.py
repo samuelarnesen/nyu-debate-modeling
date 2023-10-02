@@ -2,7 +2,6 @@ from agents.model import Model, ModelInput, RoleType
 from utils.logger_utils import LoggerUtils
 import utils.constants as constants
 
-from peft import prepare_model_for_kbit_training
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, pipeline
 import torch
 
@@ -27,9 +26,11 @@ class LlamaModel(Model):
         self.model = AutoModelForCausalLM.from_pretrained(
             file_path, device_map="auto", quantization_config=bnb_config, trust_remote_code=False, local_files_only=True
         )
+
         self.generator_pipeline = pipeline(
-            "text-generation", model=self.model, tokenizer=self.tokenizer, trust_remote_code=False, device_map="auto"
+            "text-generation", model=self.model, tokenizer=self.tokenizer, trust_remote_code=False, device_map='auto'
         )
+
         self.logger = LoggerUtils.get_default_logger(__name__)
 
     def predict(self, inputs: list[ModelInput], max_new_tokens=450) -> Union[str, list[str]]:
@@ -42,6 +43,7 @@ class LlamaModel(Model):
             ("\n\n" + constants.JUDGING_PREFIX) if not self.is_debater else "",
         )
 
+        torch.cuda.empty_cache()
         self.model.eval()
         with torch.no_grad():
             start = time.time()

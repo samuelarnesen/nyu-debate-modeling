@@ -52,15 +52,19 @@ class Judge(Agent):
         model_input = self.transcript.to_model_input()
         texts = self.model.predict(inputs=model_input)
 
-        results = {DEFAULT_DEBATER_ONE_NAME: 0, DEFAULT_DEBATER_TWO_NAME: 0}
+        results = {constants.DEFAULT_DEBATER_ONE_NAME: 0, constants.DEFAULT_DEBATER_TWO_NAME: 0}
         for text in texts:
-            if DEFAULT_DEBATER_ONE_NAME in text:
-                results[DEFAULT_DEBATER_ONE_NAME] += 1
-            if DEFAULT_DEBATER_TWO_NAME in text:
-                results[DEFAULT_DEBATER_TWO_NAME] += 1
+            if constants.DEFAULT_DEBATER_ONE_NAME in text:
+                results[constants.DEFAULT_DEBATER_ONE_NAME] += 1
+            if constants.DEFAULT_DEBATER_TWO_NAME in text:
+                results[constants.DEFAULT_DEBATER_TWO_NAME] += 1
         debater_a_wins = (
             True
-            if results[DEFAULT_DEBATER_ONE_NAME] > results[DEFAULT_DEBATER_TWO_NAME]
-            else (False if results[DEFAULT_DEBATER_ONE_NAME] < results[DEFAULT_DEBATER_TWO_NAME] else random.random() < 0.5)
+            if results[constants.DEFAULT_DEBATER_ONE_NAME] > results[constants.DEFAULT_DEBATER_TWO_NAME]
+            else (
+                False
+                if results[constants.DEFAULT_DEBATER_ONE_NAME] < results[constants.DEFAULT_DEBATER_TWO_NAME]
+                else random.random() < 0.5
+            )
         )
         return text, debater_a_wins
