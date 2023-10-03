@@ -31,6 +31,21 @@ class QualityDebatesDataset(RawDataset):
     def __convert_batch_to_rows(self, batch: list[dict[str, Any]]):
         return [self.__example_to_row(entry) for entry in batch]
 
+    def __get_correct_answer(self, entry: dict[str, Any]) -> int:
+        judge_probs = entry["turns"][-1]["probabilities"]
+        judge_correct = entry["isJudgeCorrect"]
+        judge_probs = [
+            turn["probabilities"] for turn in filter(lambda x: "Judge" in x["role"] and x["probabilities"], entry["turns"])
+        ][-1]
+        return (
+            0
+            if (
+                (judge_probs[0] > judge_probs[1] and judge_correct)
+                or (judge_probs[0] < judge_probs[1] and not judge_correct)
+            )
+            else 1
+        )
+
     def __example_to_row(self, entry: dict[str, Any]) -> tuple[str, Any]:
         return DataRow(
             background_text=entry["story"],
@@ -40,6 +55,7 @@ class QualityDebatesDataset(RawDataset):
                 Speech(text=turn["text"], position=turn["index"])
                 for turn in filter(lambda x: x["role"] == "Debater", entry["turns"])
             ],
+            correct_index=self.__get_correct_answer(entry),
         )
 
 

@@ -38,7 +38,7 @@ Test Experiment 2:
       model_type: random
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: ../debate-data/debates-readable.jsonl
+    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
 Test Experiment 2 - HPC:
   topic_config:
     topic_type: from_dataset

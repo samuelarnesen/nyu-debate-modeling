@@ -7,7 +7,7 @@ SFT Experiment - Local:
     prompt_name: Base Prompt
   models:
     debater_one:
-      model_type: llama
+      model_type: random
       model_file_path: ../llama.cpp/models/Llama-2-7b-chat-hf/
     debater_two:
       model_type: llama
@@ -16,7 +16,7 @@ SFT Experiment - Local:
       model_type: random
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: ../debate-data/debates-readable.jsonl
+    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
 SFT Experiment - HPC:
   topic_config:
     topic_type: from_dataset
@@ -54,7 +54,7 @@ SFT Experiment Extended - Local:
       model_type: random
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: ../debate-data/debates-readable.jsonl
+    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
 SFT Experiment Extended - HPC:
   topic_config:
     topic_type: from_dataset
@@ -90,7 +90,7 @@ SFT Experiment Extended Quantized:
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-7B-32K-Instruct
     judge:
       model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Quantized-Llama-2-7B-32K-Instruct/
+      model_file_path: /vast/spa9663/models/trained_models/Llama-2-7B-32K-Instruct
   dataset:
     dataset_type: quality_debates
     full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl

@@ -1,5 +1,6 @@
 from agents.prompt import Prompt, PromptParser, PromptTag
 from data.data import DataRow, RawDataset, SplitType
+from utils.flash_attn_utils import replace_attn_with_flash_attn, upcast_layer_for_flash_attention
 import utils.constants as constants
 
 from pydantic import BaseModel
@@ -15,9 +16,6 @@ import yaml
 
 import os
 from typing import Optional
-
-from pynvml import * # DELETE THIS
-from deepspeed.runtime.utils import see_memory_usage # delete this
 
 
 class LlamaInput(BaseModel):
@@ -53,13 +51,6 @@ class TrainingConfig(BaseModel):
     logging_and_saving_config: Optional[LoggingAndSavingConfig]
     training_hyperparameters: Optional[TrainingHyperParameterConfig]
     deepspeed: Optional[str]
-
-# DELETE THIS
-def print_gpu_utilization():
-    nvmlInit()
-    handle = nvmlDeviceGetHandleByIndex(0)
-    info = nvmlDeviceGetMemoryInfo(handle)
-    print(f"GPU memory occupied: {info.used//1024**2} MB.")
 
 
 class TrainUtils:
@@ -121,8 +112,8 @@ class TrainUtils:
 
     @classmethod
     def load_model(cls, config: TrainingConfig, is_local: bool = False):
-        local_rank = int(os.environ.get('LOCAL_RANK', '0'))
-        device_map = {'': local_rank}
+        local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+        device_map = {"": local_rank}
         if not is_local:
             bnb_config = BitsAndBytesConfig(
                 load_in_4bit=True,
@@ -131,12 +122,11 @@ class TrainUtils:
                 bnb_4bit_compute_dtype=torch.float16,
             )
 
-            print("MODEL PATH", config.model_name)
             return AutoModelForCausalLM.from_pretrained(
                 pretrained_model_name_or_path=config.model_name,
                 quantization_config=bnb_config,
                 use_cache=False,
-                device_map=device_map
+                device_map=device_map,
             )
         else:
             return AutoModelForCausalLM.from_pretrained(
@@ -148,31 +138,16 @@ class TrainUtils:
 
     @classmethod
     def get_tokenizer(cls, config: TrainingConfig) -> AutoTokenizer:
-
-        tokenizer = AutoTokenizer.from_pretrained(config.model_name) # change this
+        tokenizer = AutoTokenizer.from_pretrained(config.model_name)  # change this
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = "right"
         return tokenizer
 
     @classmethod
     def get_trainer(cls, config: TrainingConfig, raw_dataset: RawDataset, is_local: bool = False) -> SFTTrainer:
-
-        print("INITIAL GPU UTILIZATION")
-        print_gpu_utilization()
-
+        replace_attn_with_flash_attn()
         tokenizer = TrainUtils.get_tokenizer(config=config)
         model = TrainUtils.load_model(config=config, is_local=is_local)
-
-        print("POST LOAD UTILIZATION")
-        print_gpu_utilization()
-
-        torch.cuda.empty_cache()
-
-        print("POST CACHE CLEAR")
-        print_gpu_utilization()
-
-        print("Device Map: ")
-        print(model.hf_device_map)
 
         training_args = TrainingArguments(
             output_dir=config.logging_and_saving_config.output_dir,
@@ -190,7 +165,7 @@ class TrainUtils:
             disable_tqdm=False,
             ddp_find_unused_parameters=False,
             use_cpu=is_local,
-            deepspeed=config.deepspeed if not is_local else None, # change this
+            deepspeed=config.deepspeed if not is_local else None,  # change this
         )
 
         collator = DataCollatorForCompletionOnlyLM(
@@ -213,12 +188,8 @@ class TrainUtils:
             task_type="CAUSAL_LM",
         )
 
-        print("is model loaded in 4bit?", model.is_loaded_in_4bit)
-
         model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
-
-        print("GPU UTILIZATION")
-        print_gpu_utilization()
+        model = upcast_layer_for_flash_attention(model, torch.bfloat16)
 
         trainer = SFTTrainer(
             model=model,
@@ -231,13 +202,7 @@ class TrainUtils:
             args=training_args,
         )
 
-        print("POST TRAINER")
-        print_gpu_utilization()
-
         torch.cuda.empty_cache()
-        print("POST CLEAR #2")
-        print_gpu_utilization()
-        see_memory_usage(f'memory usage before training', force=True)
 
         return trainer
 

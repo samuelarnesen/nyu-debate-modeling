@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 
 import argparse
-import deepspeed
 import logging
 import os
 import sys
@@ -36,7 +35,6 @@ class ScriptUtils:
         parser.add_argument("--random", action="store_true", default=False)
         parser.add_argument("--load_only", action="store_true", default=False)
         parser.add_argument("--local_rank", type=int, default=0)
-        parser = deepspeed.add_config_arguments(parser)
         args = parser.parse_args()
         ScriptUtils.set_log_level(args)
         return args
@@ -63,8 +61,8 @@ class ScriptUtils:
         if args.random:
             experiment_name = args.configuration or "Test Experiment 2"
             experiment_file_path = "experiments/configs/test_experiment.yaml"
-            save_path_base = "../debate-data/transcripts"
-            quotes_file_path = "../debate-data/quotes_dataset.p"
+            save_path_base = "../../debate-data/transcripts"
+            quotes_file_path = "../../debate-data/quotes_dataset.p"
             if not args.local:
                 experiment_name = "Test Experiment 2 - HPC"
                 experiment_file_path = "/home/spa9663/debate/" + experiment_file_path
@@ -73,8 +71,8 @@ class ScriptUtils:
         else:
             experiment_name = args.configuration or "SFT Experiment Extended - Local"
             experiment_file_path = "experiments/configs/sft_experiment.yaml"
-            save_path_base = "../debate-data/transcripts"
-            quotes_file_path = "../debate-data/quotes_dataset.p"
+            save_path_base = "../../debate-data/transcripts"
+            quotes_file_path = "../../debate-data/quotes_dataset.p"
             if not args.local:
                 experiment_name = args.configuration or "SFT Experiment Extended - HPC"
                 experiment_file_path = "/home/spa9663/debate/" + experiment_file_path
@@ -90,7 +88,7 @@ class ScriptUtils:
     @classmethod
     def get_model_run_script_config(cls, args) -> ModelRunScriptConfig:
         config_filepath = "train/configs/training_config.yaml"
-        full_dataset_filepath = "../debate-data/debates-readable.jsonl"
+        full_dataset_filepath = "../../debate-data/debates-readable.jsonl"
         config_name = args.configuration or "Default - Local"
         if not args.local:
             config_filepath = "/home/spa9663/debate/" + config_filepath

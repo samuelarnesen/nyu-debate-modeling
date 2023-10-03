@@ -10,27 +10,24 @@ from pydantic import BaseModel
 from typing import Optional, Any, Union
 
 
+class DebateRoundMetadata(BaseModel):
+    debater_one_correct: bool
+    question_idx: int
+    split: SplitType = SplitType.TRAIN
+
+
 class DebateRoundSummary(BaseModel):
     debater_one_wins: Union[Any, bool]
-    question_idx: Union[Any, int]
-    split: SplitType
+    metadata: DebateRoundMetadata
     transcript: Union[Any]
 
 
 class DebateRound:
-    def __init__(
-        self,
-        first_debater: Debater,
-        second_debater: Debater,
-        judge: Judge,
-        idx: int,
-        split: SplitType = SplitType.TRAIN,
-    ):
+    def __init__(self, first_debater: Debater, second_debater: Debater, judge: Judge, metadata: DebateRoundMetadata):
         self.first_debater = first_debater
         self.second_debater = second_debater
         self.judge = judge
-        self.idx = idx
-        self.split = split
+        self.metadata = metadata
         self.debaters = [self.first_debater, self.second_debater]
         self.participants = [self.first_debater, self.second_debater, self.judge]
         self.logger = LoggerUtils.get_default_logger(__name__)
@@ -70,8 +67,5 @@ class DebateRound:
             self.judge.save(save_file_path=save_file_path)
 
         return DebateRoundSummary(
-            debater_one_wins=debater_one_wins,
-            question_idx=self.idx,
-            split=self.split,
-            transcript=self.judge.get_transcript(),
+            debater_one_wins=debater_one_wins, transcript=self.judge.get_transcript(), metadata=self.metadata
         )

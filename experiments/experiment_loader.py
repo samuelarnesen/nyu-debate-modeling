@@ -1,5 +1,5 @@
 from agents.agent import Debater, Judge
-from agents.debate_round import DebateRound
+from agents.debate_round import DebateRound, DebateRoundMetadata
 from agents.models.model_utils import ModelType, ModelUtils
 from agents.prompt import Prompt, PromptConfig, PromptParser
 from data.data import DatasetType, RawDataLoader, RawDataset, SplitType
@@ -112,11 +112,13 @@ class ExperimentLoader:
                 position = example.positions[0]
                 opponent_position = example.positions[1]
                 background_text = example.background_text
+                correct_index = example.correct_index
             elif topic_config_type == TopicConfigType.HARD_CODED:
                 topic = experiment.topic_config.topic
                 position = experiment.topic_config.positions[0]
                 opponent_position = experiment.topic_config.positions[1]
                 background_text = constants.DEFAULT_BACKGROUND_TEXT
+                correct_index = None
             else:
                 raise Exception(f"Topic config type {topic_config_type} is not recognized")
 
@@ -167,9 +169,8 @@ class ExperimentLoader:
                 model=judge_model,
             )
 
-            debate_round = DebateRound(
-                first_debater=debater_one, second_debater=debater_two, judge=judge, idx=i, split=SplitType.TRAIN
-            )
+            metadata = DebateRoundMetadata(debater_one_correct=correct_index == 0, question_idx=i, split=SplitType.TRAIN)
+            debate_round = DebateRound(first_debater=debater_one, second_debater=debater_two, judge=judge, metadata=metadata)
             rounds.append(debate_round)
 
         return rounds

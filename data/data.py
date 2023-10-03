@@ -27,6 +27,7 @@ class DataRow(BaseModel):
     question: Optional[str]
     positions: Optional[tuple[str, str]]
     speeches: Optional[list[Speech]]
+    correct_index: Optional[int]
 
 
 class RawDataset(ABC):

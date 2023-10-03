@@ -67,4 +67,4 @@ class Judge(Agent):
                 else random.random() < 0.5
             )
         )
-        return text, debater_a_wins
+        return "\t".join(texts), debater_a_wins

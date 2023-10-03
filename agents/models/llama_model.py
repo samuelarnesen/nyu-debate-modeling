@@ -28,7 +28,7 @@ class LlamaModel(Model):
         )
 
         self.generator_pipeline = pipeline(
-            "text-generation", model=self.model, tokenizer=self.tokenizer, trust_remote_code=False, device_map='auto'
+            "text-generation", model=self.model, tokenizer=self.tokenizer, trust_remote_code=False, device_map="auto"
         )
 
         self.logger = LoggerUtils.get_default_logger(__name__)
