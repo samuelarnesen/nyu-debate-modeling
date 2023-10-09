@@ -55,6 +55,7 @@ class ExperimentConfig(BaseModel):
     topic_config: TopicConfig
     word_limit: int
     batch_size: int
+    num_speeches: int
     prompt_config: PromptLoadingConfig
     models: ModelsConfig
     dataset: DatasetConfig

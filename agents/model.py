@@ -23,7 +23,7 @@ class Model(ABC):
         self.alias = alias
         self.is_debater = is_debater
 
-    def predict(self, inputs: list[list[ModelInput]], max_new_tokens: 250) -> str:
+    def predict(self, inputs: list[list[ModelInput]], max_new_tokens: 250, **kwargs) -> str:
         pass
 
     def copy(self, is_debater: Optional[bool] = None) -> Model:

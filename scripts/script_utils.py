@@ -34,6 +34,7 @@ class ScriptUtils:
         parser.add_argument("--configuration", type=str, default="")
         parser.add_argument("--random", action="store_true", default=False)
         parser.add_argument("--load_only", action="store_true", default=False)
+        parser.add_argument("--suppress_graphs", action="store_true", default=False)
         parser.add_argument("--local_rank", type=int, default=0)
         args = parser.parse_args()
         ScriptUtils.set_log_level(args)

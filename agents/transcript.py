@@ -79,19 +79,28 @@ class Transcript:
                     )
                     add_to_model_inputs(model_inputs, ModelInput(role=RoleType.ASSISTANT, content=speech.content))
                 else:
+                    tag = (
+                        PromptTag.PRE_OPPONENT_SPEECH
+                        if speech.speaker != constants.DEFAULT_JUDGE_NAME
+                        else PromptTag.PRE_JUDGE_QUESTIONS
+                    )
                     add_to_model_inputs(
                         model_inputs,
-                        ModelInput(role=RoleType.USER, content=self.prompt.messages[PromptTag.PRE_OPPONENT_SPEECH].content),
+                        ModelInput(role=RoleType.USER, content=self.prompt.messages[tag].content),
                     )
                     add_to_model_inputs(model_inputs, ModelInput(role=RoleType.USER, content=speech.content))
             else:
                 tag = (
                     PromptTag.POST_ROUND_JUDGE
-                    if speech.speaker == self.debater_name
+                    if speech.speaker == self.debater_name and i == len(self.speeches) - 1
                     else (
-                        PromptTag.PRE_DEBATER_A_SPEECH_JUDGE
-                        if speech.speaker == constants.DEFAULT_DEBATER_A_NAME
-                        else PromptTag.PRE_DEBATER_B_SPEECH_JUDGE
+                        PromptTag.PRE_JUDGE_QUESTIONS
+                        if speech.speaker == self.debater_name
+                        else (
+                            PromptTag.PRE_DEBATER_A_SPEECH_JUDGE
+                            if speech.speaker == constants.DEFAULT_DEBATER_A_NAME
+                            else PromptTag.PRE_DEBATER_B_SPEECH_JUDGE
+                        )
                     )
                 )
                 add_to_model_inputs(

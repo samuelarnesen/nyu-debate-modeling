@@ -19,7 +19,10 @@ results_collector = ResultsCollector(
 )
 
 for i, debate_round in enumerate(debate_rounds):
-    summary = debate_round.run(num_speeches=1, save_file_path_prefix=f"{config.save_path_base}/{start_time}_{i}")
+    summary = debate_round.run(
+        num_speeches=experiment.num_speeches, save_file_path_prefix=f"{config.save_path_base}/{start_time}_{i}"
+    )
     results_collector.record_result(summary)
 
-results_collector.graph_results()
+if not args.suppress_graphs:
+    results_collector.graph_results()

@@ -89,6 +89,7 @@ class ResultsCollector:
         plt.tight_layout()
         self.__save("Judge")
         plt.show()
+        return alias_to_stats
 
     def __graph_wins(self) -> dict[str, float]:
         alias_to_stats = {}

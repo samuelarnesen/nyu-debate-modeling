@@ -1,6 +1,7 @@
 from agents.model import Model
 from agents.models.deterministic_model import DeterministicModel
 from agents.models.llama_model import LlamaModel
+from agents.models.openai_model import OpenAIModel
 from agents.models.random_model import RandomModel
 
 from enum import Enum
@@ -11,6 +12,7 @@ class ModelType(Enum):
     RANDOM = 1
     LLAMA = 2
     DETERMINISTIC = 3
+    OPENAI = 4
 
 
 class ModelUtils:
@@ -24,4 +26,6 @@ class ModelUtils:
             return LlamaModel(alias=alias, file_path=file_path, is_debater=is_debater)
         elif model_type == ModelType.DETERMINISTIC:
             return DeterministicModel(alias=alias, is_debater=is_debater)
+        elif model_type == ModelType.OPENAI:
+            return OpenAIModel(alias=alias, is_debater=is_debater)
         raise Exception(f"Model {model_type} not found")

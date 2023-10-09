@@ -51,7 +51,7 @@ class LlamaModel(Model):
 
         self.logger = LoggerUtils.get_default_logger(__name__)
 
-    def predict(self, inputs: list[list[ModelInput]], max_new_tokens=450) -> list[str]:
+    def predict(self, inputs: list[list[ModelInput]], max_new_tokens=450, decide: bool = False) -> list[str]:
         def generate_input_str(input_list: list[ModelInput]) -> str:
             return "{}\n\n{}\n\n{}\n\n{}\n\n{}{}".format(
                 constants.INSTRUCTION_PREFIX,
@@ -59,7 +59,7 @@ class LlamaModel(Model):
                 constants.INPUT_PREFIX,
                 "\n".join(model_input.content for model_input in filter(lambda x: x.role != RoleType.SYSTEM, input_list)),
                 constants.INSTRUCTION_SUFFIX,
-                ("\n\n" + constants.JUDGING_PREFIX) if not self.is_debater else "",
+                ("\n\n" + constants.JUDGING_PREFIX) if not self.is_debater and decide else "",
             )
 
         def get_string_log_prob(target_string: list[str], scores: torch.Tensor, batch_index: int) -> float:
@@ -76,7 +76,7 @@ class LlamaModel(Model):
 
             decoded_outputs = []
             for i, row in enumerate(outputs.sequences):
-                if self.is_debater:
+                if self.is_debater or not decide:
                     decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[i] :])
                     new_tokens = decoded.split(constants.INSTRUCTION_SUFFIX)[-1]
                     decoded_outputs.append(new_tokens.rstrip())

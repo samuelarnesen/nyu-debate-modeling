@@ -59,15 +59,21 @@ class DebateRound:
                     for speaker, response, idx in responses:
                         participant.receive_message(speaker=speaker, content=response, idx=idx)
 
-        responses = self.judge.generate()
-        for i, ((response, _)) in enumerate(responses):
-            self.judge.receive_message(speaker=self.judge.name, content=response, idx=i)
+            if speech_num < (num_speeches - 1):
+                batch_response = self.judge.generate()
+                for participant in self.participants:
+                    for idx, response in enumerate(batch_response):
+                        participant.receive_message(speaker=self.judge.name, content=response, idx=idx)
 
-        for i, ((response, first_debater_wins)) in enumerate(responses):
+        responses = self.judge.judge()
+        first_debater_win_list = []
+        for i, debater_a_wins in enumerate(responses):
+            winner = constants.DEFAULT_DEBATER_A_NAME if debater_a_wins else constants.DEFAULT_DEBATER_B_NAME
+            response_to_use = f"{winner} wins the debate"
+            first_debater_win_list.append(winner == self.first_debater.name)
+            self.judge.receive_message(speaker=self.judge.name, content=response_to_use, idx=i)
             self.logger.debug(self.judge.get_transcript(idx=i).full_string_value())
-            self.logger.debug(
-                f"Winner is {constants.DEFAULT_DEBATER_A_NAME if first_debater_wins else constants.DEFAULT_DEBATER_B_NAME}"
-            )
+            self.logger.debug(response_to_use)
 
         if save_file_path_prefix:
             self.judge.save(save_file_path_prefix=save_file_path_prefix)
@@ -83,5 +89,5 @@ class DebateRound:
                 first_debater_wins=first_debater_wins,
                 judge_alias=self.judge.get_alias(),
             )
-            for i, ((_, first_debater_wins)) in enumerate(responses)
+            for i, first_debater_wins in enumerate(first_debater_win_list)
         ]
