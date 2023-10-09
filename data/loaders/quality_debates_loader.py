@@ -1,7 +1,7 @@
 from data.data import DataRow, RawDataLoader, RawDataset, Speech, SplitType
 
 from typing import Any, Optional
-import json
+import json, sys
 
 
 class QualityDebatesDataset(RawDataset):

@@ -74,8 +74,8 @@ class PromptParser:
     @classmethod
     def convert_data_row_to_default_prompt_config(cls, row: DataRow, position: int) -> PromptConfig:
         return PromptConfig(
-            name=constants.DEFAULT_DEBATER_ONE_NAME if position == 0 else constants.DEFAULT_DEBATER_TWO_NAME,
-            opponent_name=constants.DEFAULT_DEBATER_TWO_NAME if position == 0 else constants.DEFAULT_DEBATER_ONE_NAME,
+            name=constants.DEFAULT_DEBATER_A_NAME if position == 0 else constants.DEFAULT_DEBATER_B_NAME,
+            opponent_name=constants.DEFAULT_DEBATER_B_NAME if position == 0 else constants.DEFAULT_DEBATER_A_NAME,
             word_limit=constants.DEFAULT_WORD_LIMIT,
             position=row.positions[position],
             opponent_position=row.positions[(position - 1) * -1],

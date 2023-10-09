@@ -75,7 +75,7 @@ Base Prompt:
   pre_debater_b_speech_judge:
     role: user
     content: |
-      This is what <OPPONENT> said during their speech:
+      This is what <OPPONENT_NAME> said during their speech:
   post_round_judge:
     role: user
     content: |

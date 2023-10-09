@@ -69,12 +69,12 @@ class ScriptUtils:
                 save_path_base = "/home/spa9663/debate-data/transcripts"
                 quotes_file_path = "/home/spa9663/debate-data/quotes_dataset.p"
         else:
-            experiment_name = args.configuration or "SFT Experiment Extended - Local"
+            experiment_name = args.configuration or "Local Experiment"
             experiment_file_path = "experiments/configs/sft_experiment.yaml"
             save_path_base = "../../debate-data/transcripts"
             quotes_file_path = "../../debate-data/quotes_dataset.p"
             if not args.local:
-                experiment_name = args.configuration or "SFT Experiment Extended - HPC"
+                experiment_name = args.configuration or "7B-Base Experiment"
                 experiment_file_path = "/home/spa9663/debate/" + experiment_file_path
                 save_path_base = "/home/spa9663/debate-data/transcripts"
                 quotes_file_path = "/home/spa9663/debate-data/quotes_dataset.p"

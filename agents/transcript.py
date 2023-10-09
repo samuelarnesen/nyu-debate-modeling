@@ -1,5 +1,6 @@
 from agents.model import ModelInput, RoleType
 from agents.prompt import Prompt, PromptTag
+import utils.constants as constants
 
 from pydantic import BaseModel
 
@@ -15,6 +16,7 @@ class Transcript:
         self.is_debater = is_debater
         self.debater_name = debater_name
         self.speeches = []
+        self.complete = False
 
     def reset(self) -> None:
         self.speeches = []
@@ -24,14 +26,14 @@ class Transcript:
 
     def save(self, save_file_path: str) -> None:
         with open(save_file_path, "w") as f:
-            f.write(str(self))
+            f.write(str(self.full_string_value()))
 
     # Note: this only works for debaters
     def to_model_input(self) -> list[ModelInput]:
         def add_to_model_inputs(model_inputs: list[ModelInput], new_addition: ModelInput) -> None:
             if model_inputs and model_inputs[-1].role == new_addition.role:
                 model_inputs[-1] = ModelInput(
-                    role=new_addition.role, content=f"{model_inputs[-1].content}\n{new_addition.content}"
+                    role=new_addition.role, content=f"{model_inputs[-1].content}\n\n{new_addition.content}"
                 )
             else:
                 model_inputs.append(new_addition)
@@ -84,16 +86,25 @@ class Transcript:
                     add_to_model_inputs(model_inputs, ModelInput(role=RoleType.USER, content=speech.content))
             else:
                 tag = (
-                    PromptTag.PRE_DEBATER_A_SPEECH_JUDGE
+                    PromptTag.POST_ROUND_JUDGE
                     if speech.speaker == self.debater_name
-                    else PromptTag.PRE_DEBATER_B_SPEECH_JUDGE
+                    else (
+                        PromptTag.PRE_DEBATER_A_SPEECH_JUDGE
+                        if speech.speaker == constants.DEFAULT_DEBATER_A_NAME
+                        else PromptTag.PRE_DEBATER_B_SPEECH_JUDGE
+                    )
                 )
                 add_to_model_inputs(
                     model_inputs,
-                    ModelInput(role=RoleType.USER, content=self.prompt.messages[tag].content),
+                    ModelInput(
+                        role=RoleType.ASSISTANT if speech.speaker == self.debater_name else RoleType.USER,
+                        content=self.prompt.messages[tag].content,
+                    ),
                 )
                 add_to_model_inputs(model_inputs, ModelInput(role=RoleType.USER, content=speech.content))
-        if not self.is_debater:
+                self.complete = True
+
+        if not self.is_debater and not self.complete:
             add_to_model_inputs(
                 model_inputs,
                 ModelInput(role=RoleType.USER, content=self.prompt.messages[PromptTag.POST_ROUND_JUDGE].content),
