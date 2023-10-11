@@ -38,6 +38,7 @@ class PromptTag(Enum):
     POST_ROUND_JUDGE = 11
     JUDGE_QUESTION_INSTRUCTIONS = 12
     PRE_JUDGE_QUESTIONS = 13
+    JUDGE_DECISION = 14
 
 
 class Prompt(BaseModel):

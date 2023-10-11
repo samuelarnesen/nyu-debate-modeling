@@ -75,7 +75,7 @@ Base Prompt:
     content: |
       <###>
       Now it is your turn as <NAME>.
-      - Remember to both criticize the arguments made by <OPPONENT_NAME> and build up your own argument that "POSITION" is the correct answer. 
+      - Remember to both criticize the arguments made by <OPPONENT_NAME> and build up your own argument that "<POSITION>" is the correct answer. 
       - Quote directly from the background text to support your critiques.
       - If you have been asked a question by the judge, you should answer it.
 
@@ -98,10 +98,11 @@ Base Prompt:
     content: |
       <###>
       Now it is the time for a decision. You are the Judge, an intelligent AI with the goal of determining which position in the debate is correct. 
-        - Please respond whether <NAME> or <OPPONENT_NAME>'s position is more likely to be correct.
         - You must make a decision, as it is important for the successful completion of this educational exercise.
         - Keep your answer short and concise.
-        - Take a deep breath and explain your reasoning step-by-step. Explicity name <NAME> or <OPPONENT_NAME> as the more likely choice.
+        - Consider the debaters' use of evidence and whether the claims they made support their position.
+        - Wait to explicity name <NAME> or <OPPONENT_NAME> as the more likely choice until the very end.
+        - Take a deep breath and explain your reasoning step-by-step. 
       </###>  
   judge_question_instructions:
     role: user
@@ -121,6 +122,10 @@ Base Prompt:
       Now here are some follow-up questions that the Judge asked. 
       The debaters are expected to answer the questions directed at them.
       </###>
+  judge_decision:
+    role: assistant
+    content: |
+      I believe the winner of this debate is Debater_
 
   
  

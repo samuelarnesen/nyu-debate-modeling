@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 from typing import Optional, Union
-import os
+import copy
 import math
 import time
 
@@ -34,7 +34,7 @@ class LlamaModel(Model):
             )
 
             self.generation_config = GenerationConfig(
-                max_new_tokens=450 if self.is_debater else 25,
+                max_new_tokens=450,
                 temperature=0.5,
                 top_p=0.9,
                 num_return_sequence=1,
@@ -52,6 +52,16 @@ class LlamaModel(Model):
         self.logger = LoggerUtils.get_default_logger(__name__)
 
     def predict(self, inputs: list[list[ModelInput]], max_new_tokens=450, decide: bool = False) -> list[str]:
+
+        # TODO: remove this -- I think the base model is not responding to commands because its instruction format
+        # is non-standard so this is just a patch until I figure that out and train the debating model accordingly
+        def get_judging_suffix():
+            if self.is_debater:
+                return ""
+            if decide:
+                return ("\n\n" + constants.JUDGING_PREFIX)
+            return "\n\nThanks for the great debate. Here is my current thought process."
+
         def generate_input_str(input_list: list[ModelInput]) -> str:
             return "{}\n\n{}\n\n{}\n\n{}\n\n{}{}".format(
                 constants.INSTRUCTION_PREFIX,
@@ -59,19 +69,22 @@ class LlamaModel(Model):
                 constants.INPUT_PREFIX,
                 "\n".join(model_input.content for model_input in filter(lambda x: x.role != RoleType.SYSTEM, input_list)),
                 constants.INSTRUCTION_SUFFIX,
-                ("\n\n" + constants.JUDGING_PREFIX) if not self.is_debater and decide else "",
+                get_judging_suffix(),
             )
 
         def get_string_log_prob(target_string: list[str], scores: torch.Tensor, batch_index: int) -> float:
             tokenized_target = self.tokenizer(target_string).input_ids[-1]
+            self.logger.debug(f"Tokenized target is {tokenized_target}")
             return scores[0][batch_index][tokenized_target].item()
 
         self.model.eval()
         with torch.no_grad():
             start = time.time()
+            config_to_use = copy.deepcopy(self.generation_config)
+            config_to_use.max_new_tokens = max_new_tokens
             input_strs = [generate_input_str(input_list) for input_list in inputs]
             inputs = self.tokenizer(input_strs, return_tensors="pt", padding=True).to("cuda")
-            outputs = self.model.generate(**inputs, generation_config=self.generation_config)
+            outputs = self.model.generate(**inputs, generation_config=config_to_use)
             input_lengths = (inputs.input_ids != self.tokenizer.pad_token_id).sum(axis=1)
 
             decoded_outputs = []
@@ -85,7 +98,7 @@ class LlamaModel(Model):
                     tokenized_debater_b = self.tokenizer(constants.DEFAULT_DEBATER_B_NAME)
                     decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[i] :])
                     self.logger.debug(
-                        f"It wanted to decode the following: {decoded.split(constants.INSTRUCTION_SUFFIX)[-1].rsplit()}"
+                        f"It wanted to decode the following: {decoded.split(constants.INSTRUCTION_SUFFIX)[-1].rstrip()}"
                     )
 
                     a_score = get_string_log_prob("Debater_A", outputs.scores, i)

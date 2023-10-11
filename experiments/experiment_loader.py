@@ -95,16 +95,19 @@ class ExperimentLoader:
             name=debate_rounds[0].first_debater.name,
             prompt=first_debater_prompts,
             model=debate_rounds[0].first_debater.model,
+            num_speeches=debate_rounds[0].first_debater.num_speeches,
         )
         second_debater = Debater(
             name=debate_rounds[0].second_debater.name,
             prompt=second_debater_prompts,
             model=debate_rounds[0].second_debater.model,
+            num_speeches=debate_rounds[0].first_debater.num_speeches,
         )
         judge = Judge(
             name=debate_rounds[0].judge.name,
             prompt=judge_prompts,
             model=debate_rounds[0].judge.model,
+            num_speeches=debate_rounds[0].first_debater.num_speeches,
         )
 
         return DebateRound(first_debater=first_debater, second_debater=second_debater, judge=judge, metadata=metadata_list)
@@ -230,18 +233,21 @@ class ExperimentLoader:
                 name=constants.DEFAULT_DEBATER_A_NAME,
                 prompt=prompt_a,
                 model=debater_one_model,
+                num_speeches=experiment.num_speeches,
             )
 
             debater_b = Debater(
                 name=constants.DEFAULT_DEBATER_B_NAME,
                 prompt=prompt_b,
                 model=debater_two_model,
+                num_speeches=experiment.num_speeches,
             )
 
             judge = Judge(
                 name=constants.DEFAULT_JUDGE_NAME,
                 prompt=prompt_judge,
                 model=judge_model,
+                num_speeches=experiment.num_speeches,
             )
 
             debate_round = DebateRound(
@@ -255,12 +261,14 @@ class ExperimentLoader:
                 name=constants.DEFAULT_DEBATER_A_NAME,
                 prompt=prompt_a,
                 model=debater_two_model,
+                num_speeches=experiment.num_speeches,
             )
 
             flipped_debater_b = Debater(
                 name=constants.DEFAULT_DEBATER_B_NAME,
                 prompt=prompt_b,
                 model=debater_one_model,
+                num_speeches=experiment.num_speeches,
             )
 
             flipped_round = DebateRound(

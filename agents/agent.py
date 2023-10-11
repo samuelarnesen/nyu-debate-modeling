@@ -5,18 +5,20 @@ from utils.logger_utils import LoggerUtils
 import utils.constants as constants
 
 from typing import Optional, Union
-
 import random
 
-
 class Agent:
-    def __init__(self, name: str, is_debater: bool, prompt: Union[Prompt, list[Prompt]], model: Model):
+    def __init__(self, name: str, is_debater: bool, prompt: Union[Prompt, list[Prompt]], model: Model, num_speeches: int):
         self.name = name
         self.is_debater = is_debater
         self.model = model
+        self.num_speeches = num_speeches
 
         self.prompts = prompt if type(prompt) == list else [prompt]
-        self.transcripts = [Transcript(debater_name=self.name, is_debater=self.is_debater, prompt=p) for p in self.prompts]
+        self.transcripts = [
+            Transcript(debater_name=self.name, is_debater=self.is_debater, prompt=p, num_speeches=num_speeches)
+            for p in self.prompts
+        ]
 
     def receive_message(self, speaker: str, content: str, idx: int = 0):
         self.transcripts[idx].add_speech(speaker=speaker, content=content)
@@ -36,8 +38,8 @@ class Agent:
 
 
 class Debater(Agent):
-    def __init__(self, name: str, prompt: Union[Prompt, list[Prompt]], model: Model):
-        super().__init__(name=name, is_debater=True, prompt=prompt, model=model)
+    def __init__(self, name: str, prompt: Union[Prompt, list[Prompt]], model: Model, num_speeches: int):
+        super().__init__(name=name, is_debater=True, prompt=prompt, model=model, num_speeches=num_speeches)
 
     def generate(self) -> Optional[list[str]]:
         model_inputs = [transcript.to_model_input() for transcript in self.transcripts]
@@ -45,21 +47,27 @@ class Debater(Agent):
 
 
 class Judge(Agent):
-    def __init__(self, name: str, prompt: Union[Prompt, list[Prompt]], model: Model):
-        super().__init__(name=name, is_debater=False, prompt=prompt, model=model)
+    def __init__(self, name: str, prompt: Union[Prompt, list[Prompt]], model: Model, num_speeches: int):
+        super().__init__(name=name, is_debater=False, prompt=prompt, model=model, num_speeches=num_speeches)
         self.logger = LoggerUtils.get_default_logger(__name__)
 
     def generate(self) -> [list[str]]:
         model_inputs = [transcript.to_model_input() for transcript in self.transcripts]
-        return self.model.predict(inputs=model_inputs, max_new_tokens=150, decide=False)
+        return self.model.predict(inputs=model_inputs, max_new_tokens=450, decide=False)
 
     def judge(self) -> list[bool]:
         def validate_responses(predictions) -> None:
             for prediction in filter(lambda x: x not in ["Debater_A", "Debater_B"], predictions):
                 self.logger.warn("Response of {} was invalid".format(prediction))
 
+        batch_reasoning = self.generate()
+        self.logger.debug("Finished computing the reasoning: " + batch_reasoning[0])
+        for i, reasoning in enumerate(batch_reasoning):
+            super().receive_message(speaker=self.name, content=reasoning, idx=i)
+
         model_inputs = [transcript.to_model_input() for transcript in self.transcripts]
         predictions = self.model.predict(inputs=model_inputs, max_new_tokens=15, decide=True)
+
         validate_responses(predictions)
 
         return ["Debater_A" in prediction for prediction in predictions]

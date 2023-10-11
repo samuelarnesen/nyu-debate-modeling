@@ -45,19 +45,27 @@ class DebateRound:
 
     def run(self, num_speeches=3, save_file_path_prefix: str = None) -> list[DebateRoundSummary]:
         for speech_num in range(num_speeches):
-            responses = []
+            responses = {}
             for debater in self.debaters:
                 batch_response = debater.generate()
                 for idx, response in enumerate(batch_response):
                     if speech_num == 0:
-                        responses.append((debater.name, response, idx))
+                        responses.setdefault(debater.name, []).append((response, idx))
                     else:
                         for participant in self.participants:
                             participant.receive_message(speaker=debater.name, content=response, idx=idx)
             if speech_num == 0:
                 for participant in self.participants:
-                    for speaker, response, idx in responses:
-                        participant.receive_message(speaker=speaker, content=response, idx=idx)
+                    if participant in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_JUDGE_NAME]:
+                        for response, idx in responses[constants.DEFAULT_DEBATER_A_NAME]:
+                            participant.receive_message(speaker=constants.DEFAULT_DEBATER_A_NAME, content=response, idx=idx)
+                        for response, idx in responses[constants.DEFAULT_DEBATER_B_NAME]:
+                            participant.receive_message(speaker=constants.DEFAULT_DEBATER_B_NAME, content=response, idx=idx)
+                    else:
+                        for response, idx in responses[constants.DEFAULT_DEBATER_B_NAME]:
+                            participant.receive_message(speaker=constants.DEFAULT_DEBATER_B_NAME, content=response, idx=idx)
+                        for response, idx in responses[constants.DEFAULT_DEBATER_A_NAME]:
+                            participant.receive_message(speaker=constants.DEFAULT_DEBATER_A_NAME, content=response, idx=idx)
 
             if speech_num < (num_speeches - 1):
                 batch_response = self.judge.generate()
