@@ -71,4 +71,54 @@ Test Experiment 2 - HPC:
   dataset:
     dataset_type: quality_debates
     full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
+Test Experiment 3:
+  topic_config:
+    topic_type: from_dataset
+  word_limit: 500
+  batch_size: 1
+  num_speeches: 1
+  prompt_config:
+    file_path: ./agents/prompts/prompts.yaml
+    prompt_name: Base Prompt
+  models:
+    debater_one:
+      model_type: random
+      alias: random-debater
+    debater_two:
+      model_type: deterministic
+      alias: deterministic-debater
+    judge:
+      model_type: openai
+      alias: openai-judge
+  dataset:
+    dataset_type: quality_debates
+    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+    split_type: val
+Test Experiment 4:
+  topic_config:
+    topic_type: from_dataset
+  word_limit: 500
+  batch_size: 1
+  num_speeches: 1
+  prompt_config:
+    file_path: ./agents/prompts/prompts.yaml
+    prompt_name: Base Prompt
+  models:
+    debater_one:
+      model_type: random
+      alias: offline-debater-1
+    debater_two:
+      model_type: random
+      alias: offline-debater-2
+    judge:
+      model_type: random
+      alias: random-judge
+  dataset:
+    dataset_type: quality_debates
+    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+  offline:
+    debater_one: true
+    debater_two: true
+    file_path: /Users/samarnesen/nyu/debate-data/transcripts/2023-10-11_23:56:19.859778
+
 

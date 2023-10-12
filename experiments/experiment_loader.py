@@ -1,4 +1,5 @@
-from agents.agent import Debater, Judge
+from agents.debater import Debater, OfflineDebater
+from agents.judge import Judge
 from agents.debate_round import DebateRound, QuestionMetadata
 from agents.models.model_utils import ModelType, ModelUtils
 from agents.prompt import Prompt, PromptConfig, PromptParser
@@ -51,6 +52,12 @@ class TopicConfig(BaseModel):
     positions: Optional[tuple[str, str]]
 
 
+class OfflineConfig(BaseModel):
+    debater_one: bool
+    debater_two: bool
+    file_path: str
+
+
 class ExperimentConfig(BaseModel):
     topic_config: TopicConfig
     word_limit: int
@@ -59,6 +66,7 @@ class ExperimentConfig(BaseModel):
     prompt_config: PromptLoadingConfig
     models: ModelsConfig
     dataset: DatasetConfig
+    offline: Optional[OfflineConfig]
 
 
 class ExperimentLoader:
@@ -277,6 +285,26 @@ class ExperimentLoader:
                 judge=judge,
                 metadata=[QuestionMetadata(first_debater_correct=correct_index == 0, question_idx=i, split=split_type)],
             )
+
+            if experiment.offline:
+                if experiment.offline.debater_one:
+                    debate_round.first_debater = OfflineDebater(
+                        debater=debate_round.first_debater, file_path=experiment.offline.file_path,
+                        first_debater_prompt=prompt_a
+                    )
+                    flipped_round.second_debater = OfflineDebater(
+                        debater=flipped_round.second_debater, file_path=experiment.offline.file_path,
+                        first_debater_prompt=prompt_a
+                    )
+                if experiment.offline.debater_two:
+                    debate_round.second_debater = OfflineDebater(
+                        debater=debate_round.second_debater, file_path=experiment.offline.file_path,
+                        first_debater_prompt=prompt_a
+                    )
+                    flipped_round.first_debater = OfflineDebater(
+                        debater=flipped_round.first_debater, file_path=experiment.offline.file_path,
+                        first_debater_prompt=prompt_a
+                    )
 
             rounds.append(debate_round)
             rounds.append(flipped_round)

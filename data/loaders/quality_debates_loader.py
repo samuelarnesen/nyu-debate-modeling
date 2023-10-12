@@ -1,7 +1,7 @@
 from data.data import DataRow, RawDataLoader, RawDataset, Speech, SplitType
 
 from typing import Any, Optional
-import json, sys
+import json
 
 
 class QualityDebatesDataset(RawDataset):
@@ -23,7 +23,7 @@ class QualityDebatesDataset(RawDataset):
             raise ValueError(f"Batch size must be >= 1. Inputted batch size was {batch_size}")
         data_to_return = self.data[split][self.idxs[split] : min(self.idxs[split] + batch_size, len(self.data[split]))]
         self.idxs[split] = self.idxs[split] + batch_size if self.idxs[split] + batch_size < len(self.data[split]) else 0
-        return [x for x in self.data[split]]
+        return data_to_return
 
     def get_example(self, split: SplitType = SplitType.TRAIN, idx: int = 0) -> DataRow:
         return self.data[split][idx % len(self.data[split])]

@@ -1,6 +1,6 @@
 from script_utils import ScriptUtils
 
-ScriptUtils.set_parent_as_path()
+ScriptUtils.setup_script()
 
 from data.data import RawDataset
 from data.loaders.quality_debates_loader import QualityDebatesLoader

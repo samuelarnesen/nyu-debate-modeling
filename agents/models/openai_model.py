@@ -21,31 +21,35 @@ class OpenAIModel(Model):
         openai.organization = os.getenv("OPENAI_ORGANIZATION")
         openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    def predict(self, inputs: list[list[ModelInput]], max_new_tokens=450, decide: bool = False) -> list[str]:
+    def predict(self, inputs: list[list[ModelInput]], max_new_tokens=450, decide: bool = False, **kwargs) -> list[str]:
+        def model_input_to_openai_format(model_input: ModelInput) -> dict[str, str]:
+            return {"role": model_input.role.name.lower(), "content": model_input.content}
+
         decision_addendum = (
-            "\nPlease finish your answer by stating the winner in the following format: "
+            "\n\nPlease answer exclusively in this format:\n"
             + "Winner:[DEBATER_NAME] (Example 1 - Winner: Debater_A. Example 2: Winner: Debater_B)"
         )
 
         responses = []
-        for model_input in inputs:
-            messages = [entry.dict() for entry in model_input]
+        for model_input_list in inputs:
+            messages = [model_input_to_openai_format(model_input) for model_input in model_input_list]
             if not self.is_debater and decide:
                 if messages[-1]["role"] == "user":
                     messages[-1]["content"] = "\n".join([messages[-1]["content"], decision_addendum])
                 else:
                     messages.append({"role": "user", "content": decision_addendum})
 
+            self.logger.debug(f"OpenAI is being invoked with decide={decide}")
             completion = openai.ChatCompletion.create(
                 model="gpt-4",  # change this
                 messages=messages,
                 max_tokens=max_new_tokens,
             )
 
-            message = completions.choices[0].message
+            message = completion.choices[0].message["content"]
 
             if decide:
-                winner = constants.DEFAULT_DEBATER_A_NAME if random.random() < 0.5 else constants.DEFAULT_DEBATER_B_NAME
+                self.logger.debug("Deciding on a winner. The message was {}".format(message))
                 match = re.match(".*Winner: (Debater_[AB])", message)
                 if match:
                     responses.append(match.group(1))

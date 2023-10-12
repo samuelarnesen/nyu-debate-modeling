@@ -1,6 +1,6 @@
 from script_utils import ScriptUtils
 
-ScriptUtils.set_parent_as_path()
+ScriptUtils.setup_script()
 
 from experiments.experiment_loader import ExperimentLoader
 from experiments.results_collector import ResultsCollector

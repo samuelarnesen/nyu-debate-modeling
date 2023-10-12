@@ -12,7 +12,7 @@ class RandomModel(Model):
         super().__init__(alias=alias, is_debater=is_debater)
         self.alphabet = "abcdefghijklmnopqrstuvwxyz"
 
-    def predict(self, inputs: list[list[ModelInput]], max_new_tokens=250, decide: bool = False) -> str:
+    def predict(self, inputs: list[list[ModelInput]], max_new_tokens=250, decide: bool = False, **kwargs) -> list[str]:
         def generate_random_text():
             return " ".join(
                 [

@@ -13,12 +13,18 @@ class ModelType(Enum):
     LLAMA = 2
     DETERMINISTIC = 3
     OPENAI = 4
+    OFFLINE = 5
 
 
 class ModelUtils:
     @classmethod
     def instantiate_model(
-        cls, alias: str, model_type: ModelType, file_path: Optional[str] = None, is_debater: bool = True
+        cls,
+        alias: str,
+        model_type: ModelType,
+        file_path: Optional[str] = None,
+        is_debater: bool = True,
+        speeches: Optional[list[str]] = None,
     ) -> Model:
         if model_type == ModelType.RANDOM:
             return RandomModel(alias=alias, is_debater=is_debater)
@@ -28,4 +34,6 @@ class ModelUtils:
             return DeterministicModel(alias=alias, is_debater=is_debater)
         elif model_type == ModelType.OPENAI:
             return OpenAIModel(alias=alias, is_debater=is_debater)
+        elif model_type == ModelType.OFFLINE:
+            raise Exception("Offline model cannot be directly instantiated")
         raise Exception(f"Model {model_type} not found")

@@ -1,4 +1,5 @@
-from agents.agent import Debater, Judge
+from agents.debater import Debater
+from agents.judge import Judge
 from agents.prompt import Prompt, PromptConfig, PromptParser
 from agents.transcript import Transcript
 from data.data import RawDataset, SplitType
@@ -81,7 +82,6 @@ class DebateRound:
             first_debater_win_list.append(winner == self.first_debater.name)
             self.judge.receive_message(speaker=self.judge.name, content=response_to_use, idx=i)
             self.logger.debug(self.judge.get_transcript(idx=i).full_string_value())
-            self.logger.debug(response_to_use)
 
         if save_file_path_prefix:
             self.judge.save(save_file_path_prefix=save_file_path_prefix)

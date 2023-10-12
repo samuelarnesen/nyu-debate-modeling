@@ -51,15 +51,14 @@ class LlamaModel(Model):
 
         self.logger = LoggerUtils.get_default_logger(__name__)
 
-    def predict(self, inputs: list[list[ModelInput]], max_new_tokens=450, decide: bool = False) -> list[str]:
-
+    def predict(self, inputs: list[list[ModelInput]], max_new_tokens=450, decide: bool = False, **kwargs) -> list[str]:
         # TODO: remove this -- I think the base model is not responding to commands because its instruction format
         # is non-standard so this is just a patch until I figure that out and train the debating model accordingly
         def get_judging_suffix():
             if self.is_debater:
                 return ""
             if decide:
-                return ("\n\n" + constants.JUDGING_PREFIX)
+                return "\n\n" + constants.JUDGING_PREFIX
             return "\n\nThanks for the great debate. Here is my current thought process."
 
         def generate_input_str(input_list: list[ModelInput]) -> str:

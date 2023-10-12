@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 from pydantic import BaseModel
 
 import argparse
@@ -22,8 +23,9 @@ class ModelRunScriptConfig(BaseModel):
 class ScriptUtils:
     # Add the parent directory to sys.path
     @classmethod
-    def set_parent_as_path(cls):
+    def setup_script(cls):
         sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+        load_dotenv()
 
     @classmethod
     def get_args(cls):
