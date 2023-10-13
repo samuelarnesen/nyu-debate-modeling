@@ -293,6 +293,11 @@ class QuotesCollector:
                 speaker != constants.DEFAULT_DEBATER_A_NAME and not summary.metadata.first_debater_correct
             )
 
+        def is_winner(speaker: str):
+            return (speaker == constants.DEFAULT_DEBATER_A_NAME and summary.first_debater_wins) or (
+                speaker != constants.DEFAULT_DEBATER_A_NAME and not summary.first_debater_wins
+            )
+
         def get_alias_from_speaker(speaker: str):
             if speech.speaker == constants.DEFAULT_DEBATER_A_NAME:
                 return summary.first_debater_alias
@@ -315,14 +320,15 @@ class QuotesCollector:
             if alias == constants.DEFAULT_JUDGE_NAME:
                 continue
             correct = is_correct(speech.speaker)
+            winner = is_winner(speech.speaker)
             for quote in outputted_quotes:
                 if quote in background_text:
                     self.alias_to_results[alias][constants.OVERALL].number_of_valid_quotes += 1
                     self.alias_to_results[alias][constants.OVERALL].total_valid_quote_length += len(quote.split())
-                    if alias == summary.winning_alias:
+                    if winner:
                         self.alias_to_results[alias][constants.WINNER].number_of_valid_quotes += 1
                         self.alias_to_results[alias][constants.WINNER].total_valid_quote_length += len(quote.split())
-                    if alias == summary.losing_alias:
+                    else:
                         self.alias_to_results[alias][constants.LOSER].number_of_valid_quotes += 1
                         self.alias_to_results[alias][constants.LOSER].total_valid_quote_length += len(quote.split())
                     if correct:

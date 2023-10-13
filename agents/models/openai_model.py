@@ -53,6 +53,7 @@ class OpenAIModel(Model):
                 match = re.match(".*Winner: (Debater_[AB])", message)
                 if match:
                     responses.append(match.group(1))
+                    self.logger.debug(f"The logged winner was {responses[-1]}")
                 else:
                     responses.append(
                         constants.DEFAULT_DEBATER_A_NAME if random.random() < 0.5 else constants.DEFAULT_DEBATER_B_NAME

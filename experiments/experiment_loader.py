@@ -63,6 +63,7 @@ class ExperimentConfig(BaseModel):
     word_limit: int
     batch_size: int
     num_speeches: int
+    flip: Optional[bool]
     prompt_config: PromptLoadingConfig
     models: ModelsConfig
     dataset: DatasetConfig
@@ -307,7 +308,8 @@ class ExperimentLoader:
                     )
 
             rounds.append(debate_round)
-            rounds.append(flipped_round)
+            if experiment.flip:
+                rounds.append(flipped_round)
 
         # batches the debate rounds for efficient generation
         batched_rounds = []

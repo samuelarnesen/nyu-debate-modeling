@@ -57,7 +57,7 @@ class DebateRound:
                             participant.receive_message(speaker=debater.name, content=response, idx=idx)
             if speech_num == 0:
                 for participant in self.participants:
-                    if participant in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_JUDGE_NAME]:
+                    if participant.name in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_JUDGE_NAME]:
                         for response, idx in responses[constants.DEFAULT_DEBATER_A_NAME]:
                             participant.receive_message(speaker=constants.DEFAULT_DEBATER_A_NAME, content=response, idx=idx)
                         for response, idx in responses[constants.DEFAULT_DEBATER_B_NAME]:

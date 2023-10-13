@@ -56,6 +56,8 @@ class LlamaModel(Model):
         # is non-standard so this is just a patch until I figure that out and train the debating model accordingly
         def get_judging_suffix():
             if self.is_debater:
+                if "base" in self.alias:
+                    return "\n\nHere is my first argument:\n"
                 return ""
             if decide:
                 return "\n\n" + constants.JUDGING_PREFIX

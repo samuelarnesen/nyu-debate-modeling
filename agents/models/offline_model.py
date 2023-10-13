@@ -46,8 +46,6 @@ class OfflineModel(Model):
             for speaker, speech in debate_round:
                 debater_to_speech_map[i].setdefault(speaker, [])
                 debater_to_speech_map[i][speaker].append(speech)
-                if i == 0 and speaker == "Debater_B" and len(debater_to_speech_map[i][speaker]) == 1:
-                    in_there = "This is what Debater_B said during their speech" in debater_to_speech_map[0]["Debater_B"][0]
 
         return debater_to_speech_map
 

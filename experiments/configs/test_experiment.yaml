@@ -3,6 +3,7 @@ Test Experiment 1:
   word_limit: 500
   batch_size: 8
   num_speeches: 1
+  flip: True
   topic_config:
     topic_type: hard_coded
     topic: Who is the best basketball player of all time?
@@ -34,6 +35,7 @@ Test Experiment 2:
   word_limit: 500
   batch_size: 8
   num_speeches: 3
+  flip: True
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
     prompt_name: Base Prompt
@@ -51,32 +53,13 @@ Test Experiment 2:
     dataset_type: quality_debates
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
     split_type: val
-Test Experiment 2 - HPC:
-  topic_config:
-    topic_type: from_dataset
-  word_limit: 500
-  prompt_config:
-    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
-    debater_one:
-      model_type: random
-      alias: random-debater
-    debater_two:
-      model_type: random
-      alias: random-debater
-    judge:
-      model_type: random
-      alias: random-judge
-  dataset:
-    dataset_type: quality_debates
-    full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
 Test Experiment 3:
   topic_config:
     topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 1
+  flip: False
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
     prompt_name: Base Prompt
@@ -88,18 +71,18 @@ Test Experiment 3:
       model_type: deterministic
       alias: deterministic-debater
     judge:
-      model_type: openai
-      alias: openai-judge
+      model_type: random
+      alias: random-judge
   dataset:
     dataset_type: quality_debates
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
-    split_type: val
 Test Experiment 4:
   topic_config:
     topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 1
+  flip: True
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
     prompt_name: Base Prompt
