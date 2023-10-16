@@ -1,5 +1,8 @@
+from agents.models.llama_model import LlamaInput, LlamaModel
 from agents.prompt import Prompt, PromptParser, PromptTag
 from data.data import DataRow, RawDataset, SplitType
+from train.row_converter import RowConverter
+
 from utils.flash_attn_utils import replace_attn_with_flash_attn, upcast_layer_for_flash_attention
 import utils.constants as constants
 
@@ -16,12 +19,6 @@ import yaml
 
 import os
 from typing import Optional
-
-
-class LlamaInput(BaseModel):
-    instruction: str
-    input: str
-    output: str
 
 
 class PromptConfig(BaseModel):
@@ -55,55 +52,37 @@ class TrainingConfig(BaseModel):
 
 class TrainUtils:
     @classmethod
-    def parse_config(cls, config_name: str, config_filepath: str):
+    def parse_config(cls, config_name: str, config_filepath: str) -> TrainingConfig:
         with open(config_filepath) as f:
             loaded_yaml = yaml.safe_load(f)
         return TrainingConfig(**loaded_yaml[config_name])
 
-    # TODO: Generalize this to more than just the opening statement
     @classmethod
-    def convert_row(cls, row: DataRow, prompts_file_path: str, prompt_name: str) -> dict[str, str]:
-        prompt_config = PromptParser.convert_data_row_to_default_prompt_config(row=row, position=row.speeches[0].position)
-        prompt = PromptParser.parse(prompts_file_path=prompts_file_path, prompt_config=prompt_config, name=prompt_name)
-        return LlamaInput(
-            instruction="\n".join(
-                [prompt.messages[PromptTag.OVERALL_SYSTEM].content, prompt.messages[PromptTag.DEBATER_SYSTEM].content]
-            ),
-            input="\n".join(
-                [prompt.messages[PromptTag.PRE_DEBATE].content, prompt.messages[PromptTag.PRE_OPENING_SPEECH].content]
-            ),
-            output=row.speeches[0].text,
-        ).dict()
+    def convert_row(cls, row: DataRow, prompts_file_path: str, prompt_name: str) -> list[dict[str, str]]:
+        return RowConverter.convert_all_speeches(row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name)
 
     @classmethod
     def format_instruction(cls, llama_dictionary: dict[str, list[str]]) -> str:
         instructions = []
-        for instruction_val, input_val, output_val in zip(
-            llama_dictionary.get("instruction"), llama_dictionary.get("input"), llama_dictionary.get("output")
+        for instruction_val, input_val, extra_suffix in zip(
+            llama_dictionary.get("instruction"), llama_dictionary.get("input"), llama_dictionary.get("extra_suffix")
         ):
-            llama_input = LlamaInput(
-                instruction=instruction_val,
-                input=input_val,
-                output=output_val,
+            instructions.append(
+                LlamaModel.generate_input_str(
+                    LlamaInput(instruction=instruction_val, input=input_val, extra_suffix=extra_suffix)
+                )
             )
-            instruction = f"""Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
-                {constants.INSTRUCTION_PREFIX}
-                {llama_input.instruction}
-                {constants.INPUT_PREFIX}
-                {llama_input.input}
-                {constants.INSTRUCTION_SUFFIX}
-                {llama_input.output}"""
-            instructions.append(instruction)
         return instructions
 
     @classmethod
     def convert_dataset(
         cls, raw_dataset: RawDataset, prompts_file_path: str, prompt_name: str, merge_instructions: bool = False
     ) -> Dataset:
-        llama_inputs = map(
-            lambda row: TrainUtils.convert_row(row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name),
-            raw_dataset.get_data(split=SplitType.TRAIN),
-        )
+        llama_input_lists = [
+            TrainUtils.convert_row(row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name)
+            for row in raw_dataset.get_data(split=SplitType.TRAIN)
+        ]
+        llama_inputs = [item for llama_input_list in llama_input_lists for item in llama_input_list]
         df = pd.DataFrame(data=llama_inputs)
         if merge_instructions:
             df["prompt"] = df["instruction"] + " " + df["input"]
@@ -127,6 +106,8 @@ class TrainUtils:
                 quantization_config=bnb_config,
                 use_cache=False,
                 device_map=device_map,
+                trust_remote_code=True,
+                use_flash_attention_2=True,
             )
         else:
             return AutoModelForCausalLM.from_pretrained(
@@ -169,8 +150,7 @@ class TrainUtils:
         )
 
         collator = DataCollatorForCompletionOnlyLM(
-            instruction_template=constants.INSTRUCTION_PREFIX,
-            response_template=constants.INSTRUCTION_SUFFIX,
+            response_template=tokenizer.encode("\n " + constants.INSTRUCTION_SUFFIX, add_special_tokens=False)[2:],
             tokenizer=tokenizer,
         )
 
@@ -198,7 +178,7 @@ class TrainUtils:
             tokenizer=tokenizer,
             data_collator=collator,
             formatting_func=TrainUtils.format_instruction,
-            max_seq_length=32_000,
+            max_seq_length=32_768,
             args=training_args,
         )
 

@@ -116,12 +116,12 @@
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
       alias: "13b-32k-sft-debater"
     debater_two:
-      model_type: deterministic
-      alias: "deterministic-debater"
-    judge:
       model_type: llama
-      model_file_path: /vast/spa9663/models/base_models/Llama-2-13B-32K
-      alias: "13b-32k-base-judge"
+      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
+      alias: "13b-32k-sft-debater"
+    judge:
+      model_type: random
+      alias: "random-judge"
   dataset:
     dataset_type: quality_debates
     full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
@@ -151,7 +151,7 @@
     dataset_type: quality_debates
     full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
     split_type: val
-13B Validation - OpenAI:
+13B Validation - OpenAI - Full:
   topic_config:
     topic_type: from_dataset
   word_limit: 500
@@ -164,17 +164,16 @@
   models:
     debater_one:
       model_type: llama
+      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
+      alias: "13b-32k-sft-debater-full"
+    debater_two:
+      model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
       alias: "13b-32k-sft-debater"
-    debater_two:
-      model_type: deterministic
-      alias: "deterministic-debater"
     judge:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/base_models/Llama-2-7B-32K-Instruct
-      alias: "llama-judge"
+      model_type: openai
+      alias: "openai-judge"
   dataset:
     dataset_type: quality_debates
     full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
     split_type: val
-    

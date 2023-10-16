@@ -290,21 +290,25 @@ class ExperimentLoader:
             if experiment.offline:
                 if experiment.offline.debater_one:
                     debate_round.first_debater = OfflineDebater(
-                        debater=debate_round.first_debater, file_path=experiment.offline.file_path,
-                        first_debater_prompt=prompt_a
+                        debater=debate_round.first_debater,
+                        file_path=experiment.offline.file_path,
+                        first_debater_prompt=prompt_a,
                     )
                     flipped_round.second_debater = OfflineDebater(
-                        debater=flipped_round.second_debater, file_path=experiment.offline.file_path,
-                        first_debater_prompt=prompt_a
+                        debater=flipped_round.second_debater,
+                        file_path=experiment.offline.file_path,
+                        first_debater_prompt=prompt_a,
                     )
                 if experiment.offline.debater_two:
                     debate_round.second_debater = OfflineDebater(
-                        debater=debate_round.second_debater, file_path=experiment.offline.file_path,
-                        first_debater_prompt=prompt_a
+                        debater=debate_round.second_debater,
+                        file_path=experiment.offline.file_path,
+                        first_debater_prompt=prompt_a,
                     )
                     flipped_round.first_debater = OfflineDebater(
-                        debater=flipped_round.first_debater, file_path=experiment.offline.file_path,
-                        first_debater_prompt=prompt_a
+                        debater=flipped_round.first_debater,
+                        file_path=experiment.offline.file_path,
+                        first_debater_prompt=prompt_a,
                     )
 
             rounds.append(debate_round)

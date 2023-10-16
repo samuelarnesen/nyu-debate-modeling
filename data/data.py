@@ -14,19 +14,24 @@ class SplitType(Enum):
 class DatasetType(Enum):
     QUALITY = 1
     QUALITY_DEBATES = 2
-    QUALITY_DEBATES_QUOTES = 3
 
 
-class Speech(BaseModel):
+class SpeakerType(Enum):
+    DEBATER = 1
+    JUDGE = 2
+
+
+class SpeechData(BaseModel):
     text: str
     position: int
+    speaker_type: SpeakerType
 
 
 class DataRow(BaseModel):
     background_text: str
     question: Optional[str]
     positions: Optional[tuple[str, str]]
-    speeches: Optional[list[Speech]]
+    speeches: Optional[list[SpeechData]]
     correct_index: Optional[int]
 
 

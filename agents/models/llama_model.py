@@ -4,6 +4,7 @@ from agents.model import Model, ModelInput, RoleType
 from utils.logger_utils import LoggerUtils
 import utils.constants as constants
 
+from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig, pipeline
 import numpy as np
 import torch
@@ -12,6 +13,12 @@ from typing import Optional, Union
 import copy
 import math
 import time
+
+
+class LlamaInput(BaseModel):
+    instruction: str
+    input: str
+    extra_suffix: Optional[str]
 
 
 class LlamaModel(Model):
@@ -30,7 +37,11 @@ class LlamaModel(Model):
                 bnb_4bit_compute_dtype=torch.bfloat16,
             )
             self.model = AutoModelForCausalLM.from_pretrained(
-                file_path, device_map="auto", quantization_config=bnb_config, trust_remote_code=False, local_files_only=True
+                file_path,
+                device_map="auto",
+                quantization_config=bnb_config,
+                trust_remote_code=True,
+                use_flash_attention_2=True,
             )
 
             self.generation_config = GenerationConfig(
@@ -42,6 +53,7 @@ class LlamaModel(Model):
                 return_dict_in_generate=True,
                 repetition_penalty=1.1,
                 do_sample=True,
+                use_cache=True,
             )
         else:
             self.is_debater = False
@@ -51,28 +63,54 @@ class LlamaModel(Model):
 
         self.logger = LoggerUtils.get_default_logger(__name__)
 
-    def predict(self, inputs: list[list[ModelInput]], max_new_tokens=450, decide: bool = False, **kwargs) -> list[str]:
+        if self.model:
+            self.model.config.max_position_embeddings = 32768
+            self.model.config.transformers_version = "4.34.0"
+            self.model.generation_config.transformers_version = "4.34.0"
+            self.logger.debug(self.model.config)
+            self.logger.debug(f"Flash attention 2 enabled? {self.model.config._flash_attn_2_enabled}")
+
+    @classmethod
+    def generate_input_str(cls, llama_input: LlamaInput) -> str:
+        return "{}\n\n {} \n\n{}\n\n {} {}".format(
+            llama_input.instruction,
+            constants.INSTRUCTION_PREFIX,
+            llama_input.input,
+            constants.INSTRUCTION_SUFFIX,
+            llama_input.extra_suffix,
+        )
+
+    @classmethod
+    def generate_llama_input_from_model_inputs(cls, input_list: list[ModelInput], extra_suffix: str = "") -> LlamaInput:
+        return LlamaInput(
+            instruction="\n".join(
+                model_input.content for model_input in filter(lambda x: x.role == RoleType.SYSTEM, input_list)
+            ),
+            input="\n".join(model_input.content for model_input in filter(lambda x: x.role != RoleType.SYSTEM, input_list)),
+            extra_suffix=extra_suffix,
+        )
+
+    @classmethod
+    def generate_input_str_from_model_inputs(
+        cls, input_list: list[ModelInput], is_debater: bool = True, alias: str = "", decide: bool = False
+    ) -> LlamaInput:
         # TODO: remove this -- I think the base model is not responding to commands because its instruction format
         # is non-standard so this is just a patch until I figure that out and train the debating model accordingly
         def get_judging_suffix():
-            if self.is_debater:
-                if "base" in self.alias:
+            if is_debater:
+                if "base" in alias:
                     return "\n\nHere is my first argument:\n"
                 return ""
             if decide:
                 return "\n\n" + constants.JUDGING_PREFIX
             return "\n\nThanks for the great debate. Here is my current thought process."
 
-        def generate_input_str(input_list: list[ModelInput]) -> str:
-            return "{}\n\n{}\n\n{}\n\n{}\n\n{}{}".format(
-                constants.INSTRUCTION_PREFIX,
-                "\n".join(model_input.content for model_input in filter(lambda x: x.role == RoleType.SYSTEM, input_list)),
-                constants.INPUT_PREFIX,
-                "\n".join(model_input.content for model_input in filter(lambda x: x.role != RoleType.SYSTEM, input_list)),
-                constants.INSTRUCTION_SUFFIX,
-                get_judging_suffix(),
-            )
+        return LlamaModel.generate_input_str(
+            LlamaModel.generate_llama_input_from_model_inputs(input_list=input_list, extra_suffix=get_judging_suffix())
+        )
 
+    @torch.inference_mode()
+    def predict(self, inputs: list[list[ModelInput]], max_new_tokens=450, decide: bool = False, **kwargs) -> list[str]:
         def get_string_log_prob(target_string: list[str], scores: torch.Tensor, batch_index: int) -> float:
             tokenized_target = self.tokenizer(target_string).input_ids[-1]
             self.logger.debug(f"Tokenized target is {tokenized_target}")
@@ -83,7 +121,10 @@ class LlamaModel(Model):
             start = time.time()
             config_to_use = copy.deepcopy(self.generation_config)
             config_to_use.max_new_tokens = max_new_tokens
-            input_strs = [generate_input_str(input_list) for input_list in inputs]
+            input_strs = [
+                LlamaModel.generate_input_str_from_model_inputs(input_list, self.is_debater, self.alias, decide)
+                for input_list in inputs
+            ]
             inputs = self.tokenizer(input_strs, return_tensors="pt", padding=True).to("cuda")
             outputs = self.model.generate(**inputs, generation_config=config_to_use)
             input_lengths = (inputs.input_ids != self.tokenizer.pad_token_id).sum(axis=1)
@@ -102,8 +143,8 @@ class LlamaModel(Model):
                         f"It wanted to decode the following: {decoded.split(constants.INSTRUCTION_SUFFIX)[-1].rstrip()}"
                     )
 
-                    a_score = get_string_log_prob("Debater_A", outputs.scores, i)
-                    b_score = get_string_log_prob("Debater_B", outputs.scores, i)
+                    a_score = get_string_log_prob(constants.DEFAULT_DEBATER_A_NAME, outputs.scores, i)
+                    b_score = get_string_log_prob(constants.DEFAULT_DEBATER_B_NAME, outputs.scores, i)
 
                     decoded_outputs.append(
                         constants.DEFAULT_DEBATER_A_NAME if a_score > b_score else constants.DEFAULT_DEBATER_B_NAME

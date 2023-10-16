@@ -1,4 +1,4 @@
-from data.data import DataRow, RawDataLoader, RawDataset, Speech, SplitType
+from data.data import DataRow, RawDataLoader, RawDataset, SpeakerType, SpeechData, SplitType
 
 from typing import Any, Optional
 import json
@@ -52,8 +52,12 @@ class QualityDebatesDataset(RawDataset):
             question=entry["question"],
             positions=entry["answers"],
             speeches=[
-                Speech(text=turn["text"], position=turn["index"])
-                for turn in filter(lambda x: x["role"] == "Debater", entry["turns"])
+                SpeechData(
+                    text=turn["text"],
+                    position=turn["index"] if turn["role"] == "Debater" else -1,
+                    speaker_type=SpeakerType.DEBATER if turn["role"] == "Debater" else SpeakerType.JUDGE,
+                )
+                for turn in entry["turns"]
             ],
             correct_index=self.__get_correct_answer(entry),
         )
@@ -70,7 +74,8 @@ class QualityDebatesLoader(RawDataLoader):
     ) -> QualityDebatesDataset:
         def __should_keep(row: dict[str, Any]) -> bool:
             roles = [turn["role"] for turn in row["turns"]]
-            return len(roles) >= 3 and "GPT-4" not in roles
+            positions = set([turn.get("index") for turn in row["turns"]])
+            return len(roles) >= 3 and "GPT-4" not in roles and 0 in positions and 1 in positions
 
         def __get_filtered_rows(file_path: str):
             rows = []
