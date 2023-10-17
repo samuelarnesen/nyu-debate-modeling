@@ -130,11 +130,11 @@ class ResultsCollector:
         for i, alias in enumerate(alias_to_stats):
             stats = alias_to_stats[alias]
             values = [
-                stats.wins / stats.matches,
-                stats.correct_wins / stats.correct_matches,
-                (stats.wins - stats.correct_wins) / (stats.matches - stats.correct_matches),
-                stats.first_wins / stats.first_matches,
-                (stats.wins - stats.first_wins) / (stats.matches - stats.first_matches),
+                stats.wins / max(stats.matches, 1),
+                stats.correct_wins / max(stats.correct_matches, 1),
+                (stats.wins - stats.correct_wins) / max((stats.matches - stats.correct_matches), 1),
+                stats.first_wins / max(stats.first_matches, 1),
+                (stats.wins - stats.first_wins) / max((stats.matches - stats.first_matches), 1),
             ]
             plt.bar(index + (i * bar_width), values, bar_width, label=alias)
 
@@ -306,6 +306,9 @@ class QuotesCollector:
             else:
                 return constants.DEFAULT_JUDGE_NAME
 
+        def simplify_text(text: str):
+            return text.replace(",", "").replace(".", "").replace('"', "").replace("'", "").lower()
+
         if summary.first_debater_alias not in self.alias_to_results:
             add_new_alias(summary.first_debater_alias)
 
@@ -322,7 +325,7 @@ class QuotesCollector:
             correct = is_correct(speech.speaker)
             winner = is_winner(speech.speaker)
             for quote in outputted_quotes:
-                if quote in background_text:
+                if quote in background_text or simplify_text(quote) in simplify_text(background_text):
                     self.alias_to_results[alias][constants.OVERALL].number_of_valid_quotes += 1
                     self.alias_to_results[alias][constants.OVERALL].total_valid_quote_length += len(quote.split())
                     if winner:

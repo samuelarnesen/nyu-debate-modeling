@@ -73,14 +73,20 @@ Base Prompt:
   pre_later_speech:
     role: user
     content: |
-      <###>
       Now it is your turn as <NAME>.
       - Remember to both criticize the arguments made by <OPPONENT_NAME> and build up your own argument that "<POSITION>" is the correct answer. 
       - Quote directly from the background text to support your critiques.
+      - Begin your speech by repeating the questions that the Judge last asked you, and then answer them line-by-line.
       - If you have been asked a question by the judge, you should answer it.
 
+      Some examples of criticism include:
+      - My opponent tries to use X quote to support their claim, but that quote was taken out of context. Here is the rest of the quote.
+      - My opponent is trying to claim the X is true, but they have no evidence to support that. Meanwhile, this quote says the opposite.
+
+      Some examples answering the judge's question include:
+      - Good question -- here is the rest of the quote as requestion.
+
       Now begin your speech.
-      </###>
   pre_opponent_speech:
     role: user
     content: |
@@ -102,7 +108,16 @@ Base Prompt:
         - Keep your answer short and concise.
         - Consider the debaters' use of evidence and whether the claims they made support their position.
         - Wait to explicitly name <NAME> or <OPPONENT_NAME> as the more likely choice until the very end.
-        - Take a deep breath and explain your reasoning step-by-step. 
+        - Do not quote using <quote> tags or otherwise unless that quote is explicitly provided by a debater.
+        - Take a deep breath and explain your reasoning step-by-step.
+
+        Here are some samples of a judge's responses from previous debates about different topics:
+        - Debater_A hasn't really provided me any of the ev that I've asked and just keeps bringing up the one quote. Debater_B gives me clear ev what Peter's discovery is and why he wants to return to Earth. I get a story but just random assorted arguments from Debater_A. The winner is Debater_A
+        - Debater_A got sloppy though. Debater_A’s last sentence — "After leaving swamp city they only traveled until night when they stopped around the campfire." — is obviously false from the quote in Debater_B’s first speech, and implicitly concedes that the heat ray attack was in Swamp City. So Debater_A has helped me settle this debate. Unless I'm wrong, in which case I'll be mad, lol. The winner is Debater_B
+        - Ending for Debater_A. B didn't really answer my last question, and the preponderance of evidence seems in Debater_A’s favor. The winner is Debater_A
+        - That last quote makes it even clearer that Debater_B is correct. Debater_A didn't even present any extra evidence in favor of the "he was the only survivor of the disaster" answer in this turn, which they would have if they had any extra evidence.  The winner is Debater_B
+
+        Now give your justification.
       </###>  
   judge_question_instructions:
     role: user
@@ -113,6 +128,12 @@ Base Prompt:
       Here are some ideas of questions you might want to ask:
         - I think Debater_X may be taking Y quote out of context. Please provide the rest of the quote.
         - Doesn't claim X contradict this quote Y that you provided later on?
+
+      Here are some samples of judge questions from previous debates:
+        - Debater_A, can you prove that what the kids said happened actually happened? If you just prove that the weapons getting too cold objectively happened, I'm down to vote for you. Debater_B: can you paste the rest of the paragraph, idk if I can fully trust that bc of the disconnect
+        - I hate being the kind of judge who sees more evidence as persuasive but the evidence for Debater_A has been far less specific, while as Debater_B gave multiple pieces of evidence that seem sort of contextualized to the idea of centaurs. Still I am open to the possibility of Debater_A proving that Debater_B’s pieces of evidence were out of context.  I would like to see a piece of evidence explain that they are in "a hurry".  
+        - Debater_A can you quote more fast paced incidents throughout the story to show how the story is not calm; Debater_B can you show calm throughout the story, and quotes that demonstrate calm from the middle of the story? 
+      
       Now ask your questions:
       </###>
   pre_judge_questions:

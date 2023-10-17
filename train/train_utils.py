@@ -17,8 +17,14 @@ import pandas as pd
 import torch
 import yaml
 
+from enum import Enum
+from typing import Optional, Union
 import os
-from typing import Optional
+
+
+class TrainingTarget(Enum):
+    DEBATER = 1
+    JUDGE = 2
 
 
 class PromptConfig(BaseModel):
@@ -47,6 +53,7 @@ class TrainingConfig(BaseModel):
     prompt_config: PromptConfig
     logging_and_saving_config: Optional[LoggingAndSavingConfig]
     training_hyperparameters: Optional[TrainingHyperParameterConfig]
+    target: Union[str, TrainingTarget]
     deepspeed: Optional[str]
 
 
@@ -58,8 +65,19 @@ class TrainUtils:
         return TrainingConfig(**loaded_yaml[config_name])
 
     @classmethod
-    def convert_row(cls, row: DataRow, prompts_file_path: str, prompt_name: str) -> list[dict[str, str]]:
-        return RowConverter.convert_all_speeches(row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name)
+    def convert_row(
+        cls, row: DataRow, prompts_file_path: str, prompt_name: str, target: TrainingTarget
+    ) -> list[dict[str, str]]:
+        if target == TrainingTarget.DEBATER:
+            return RowConverter.convert_all_speeches_for_debater(
+                row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name
+            )
+        elif target == TrainingTarget.JUDGE:
+            return RowConverter.convert_all_speeches_for_debater(
+                row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name
+            )
+        else:
+            raise Exception(f"Tried to train on an ineligible training target of {target}. This line should not be reached.")
 
     @classmethod
     def format_instruction(cls, llama_dictionary: dict[str, list[str]]) -> str:
@@ -76,17 +94,17 @@ class TrainUtils:
 
     @classmethod
     def convert_dataset(
-        cls, raw_dataset: RawDataset, prompts_file_path: str, prompt_name: str, merge_instructions: bool = False
+        cls, raw_dataset: RawDataset, prompts_file_path: str, prompt_name: str, target: TrainingTarget
     ) -> Dataset:
         llama_input_lists = [
-            TrainUtils.convert_row(row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name)
+            TrainUtils.convert_row(row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name, target=target)
             for row in raw_dataset.get_data(split=SplitType.TRAIN)
         ]
         llama_inputs = [item for llama_input_list in llama_input_lists for item in llama_input_list]
         df = pd.DataFrame(data=llama_inputs)
-        if merge_instructions:
-            df["prompt"] = df["instruction"] + " " + df["input"]
-            df = df.drop(columns=["instruction", "input"])
+
+        if target == TrainingTarget.JUDGE:
+            df = df.iloc[: int(len(df) / 4)]  # TODO: should make configurable
         return Dataset.from_pandas(df)
 
     @classmethod
@@ -154,10 +172,12 @@ class TrainUtils:
             tokenizer=tokenizer,
         )
 
+        target = TrainingTarget[config.target.upper()]
         train_dataset = TrainUtils.convert_dataset(
             raw_dataset=raw_dataset,
             prompts_file_path=config.prompt_config.prompts_file_path,
             prompt_name=config.prompt_config.prompt_name,
+            target=target,
         )
 
         peft_config = LoraConfig(
@@ -185,22 +205,3 @@ class TrainUtils:
         torch.cuda.empty_cache()
 
         return trainer
-
-    @classmethod
-    def run_inference_loop(cls, config: TrainingConfig, raw_dataset: RawDataset, is_local: bool = False) -> None:
-        tokenizer = TrainUtils.get_tokenizer(config=config)
-        model = TrainUtils.load_model(config=config, is_local=is_local)
-
-        inference_dataset = TrainUtils.convert_dataset(
-            raw_dataset=raw_dataset,
-            prompts_file_path=config.prompt_config.prompts_file_path,
-            prompt_name=config.prompt_config.prompt_name,
-            merge_instructions=True,
-        )
-
-        generator_pipeline = pipeline(
-            "text-generation", model=model, tokenizer=tokenizer, trust_remote_code=False, device_map="auto"
-        )
-
-        for out in tqdm(generator_pipeline(KeyDataset(inference_dataset, "prompt"), batch_size=2, max_new_tokens=450)):
-            print(out)  # change this

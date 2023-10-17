@@ -39,12 +39,19 @@ class OpenAIModel(Model):
                 else:
                     messages.append({"role": "user", "content": decision_addendum})
 
-            self.logger.debug(f"OpenAI is being invoked with decide={decide}")
-            completion = openai.ChatCompletion.create(
-                model="gpt-4",  # change this
-                messages=messages,
-                max_tokens=max_new_tokens,
-            )
+            try:
+                completion = openai.ChatCompletion.create(
+                    model="gpt-4",
+                    messages=messages,
+                    max_tokens=max_new_tokens,
+                )
+            except Exception as e:
+                self.logger.warn(f"Received an error while calling OpenAI: {e}")
+                completion = openai.ChatCompletion.create(
+                    model="gpt-4",
+                    messages=messages,
+                    max_tokens=max_new_tokens,
+                )
 
             message = completion.choices[0].message["content"]
 

@@ -40,7 +40,7 @@ class Transcript:
                 None,
                 PromptTag.PRE_OPPONENT_SPEECH,
                 None,
-            ]  # Note: this will interact poorly for Debater B on the opening speech order
+            ]
             speech_progression = []
             for i in range(self.num_speeches - 1):
                 speech_progression += [PromptTag.PRE_JUDGE_QUESTIONS, None]

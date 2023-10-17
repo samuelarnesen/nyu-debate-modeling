@@ -51,7 +51,7 @@ class LlamaModel(Model):
                 num_return_sequence=1,
                 output_scores=True,
                 return_dict_in_generate=True,
-                repetition_penalty=1.1,
+                repetition_penalty=1.2,
                 do_sample=True,
                 use_cache=True,
             )
@@ -103,7 +103,9 @@ class LlamaModel(Model):
                 return ""
             if decide:
                 return "\n\n" + constants.JUDGING_PREFIX
-            return "\n\nThanks for the great debate. Here is my current thought process."
+            if "base" in alias:
+                return "\n\nOk here is what I'm thinking."
+            return ""
 
         return LlamaModel.generate_input_str(
             LlamaModel.generate_llama_input_from_model_inputs(input_list=input_list, extra_suffix=get_judging_suffix())

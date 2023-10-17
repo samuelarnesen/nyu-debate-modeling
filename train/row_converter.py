@@ -1,20 +1,13 @@
 from agents.models.llama_model import LlamaInput, LlamaModel
 from agents.prompt import Prompt, PromptParser, PromptTag
 from agents.transcript import Transcript
-
-
 from data.data import DataRow, SpeakerType, SpeechData
 import utils.constants as constants
 
+from typing import Any, Callable
+
 
 class RowConverter:
-    """
-    This class exists so that we can convert a human debate round into a row into an actual training dataset.
-    Despite the only function that's relevant externally being convert_all_speeches(), I'm keeping this as
-    a separate class for now in case we want to construct other datasets such as having only opening speeches,
-    only rebuttals, or only judge decisions.
-    """
-
     @classmethod
     def generate_prompt_from_speech(
         cls, row: DataRow, speech: SpeechData, prompts_file_path: str, prompt_name: str
@@ -25,10 +18,21 @@ class RowConverter:
 
     @classmethod
     def get_speaker_from_speech(cls, speech: SpeechData) -> str:
-        return constants.DEFAULT_DEBATER_A_NAME if speech.position == 0 else constants.DEFAULT_DEBATER_B_NAME
+        return (
+            constants.DEFAULT_DEBATER_A_NAME
+            if speech.position == 0
+            else (constants.DEFAULT_DEBATER_B_NAME if speech.position == 1 else constants.DEFAULT_JUDGE_NAME)
+        )
 
     @classmethod
-    def convert_all_speeches(cls, row: DataRow, prompts_file_path: str, prompt_name: str) -> list[dict[str, str]]:
+    def convert_transcript(
+        cls,
+        row: DataRow,
+        prompts_file_path: str,
+        prompt_name: str,
+        skipping_func: Callable[[SpeechData], bool],
+        is_debater: bool,
+    ):
         llama_inputs = []
 
         only_judge_has_spoken = True
@@ -44,12 +48,14 @@ class RowConverter:
 
             if speech.speaker_type == SpeakerType.JUDGE and previous_speaker_type == SpeakerType.DEBATER:
                 rounds += 1
+
+            if skipping_func(speech):
                 speeches_so_far.append(speech)
                 continue
 
             transcript = Transcript(
-                is_debater=True,
-                debater_name=constants.DEFAULT_DEBATER_A_NAME if speech.position == 0 else constants.DEFAULT_DEBATER_B_NAME,
+                is_debater=is_debater,
+                debater_name=RowConverter.get_speaker_from_speech(speech),
                 prompt=RowConverter.generate_prompt_from_speech(
                     row=row, speech=speech, prompts_file_path=prompts_file_path, prompt_name=prompt_name
                 ),
@@ -71,3 +77,25 @@ class RowConverter:
             previous_speaker_type = speech.speaker_type
             speeches_so_far.append(speech)
         return llama_inputs
+
+    @classmethod
+    def convert_all_speeches_for_debater(
+        cls, row: DataRow, prompts_file_path: str, prompt_name: str
+    ) -> list[dict[str, str]]:
+        return RowConverter.convert_transcript(
+            row=row,
+            prompts_file_path=prompts_file_path,
+            prompt_name=prompt_name,
+            skipping_func=lambda speech: speech.speaker_type == SpeakerType.JUDGE,
+            is_debater=True,
+        )
+
+    @classmethod
+    def convert_all_speeches_for_judge(cls, row: DataRow, prompts_file_path: str, prompt_name: str) -> list[dict[str, str]]:
+        return RowConverter.convert_transcript(
+            row=row,
+            prompts_file_path=prompts_file_path,
+            prompt_name=prompt_name,
+            skipping_func=lambda speech: speech.speaker_type == SpeakerType.DEBATER,
+            is_debater=False,
+        )
