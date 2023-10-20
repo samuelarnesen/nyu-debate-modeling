@@ -1,22 +1,27 @@
 from agents.model import Model
 from agents.prompt import Prompt
-from agents.transcript import Transcript
+from agents.transcript import SpeechFormat, Transcript
 
 from typing import Optional, Union
 
 
 class Agent:
-    def __init__(self, name: str, is_debater: bool, prompt: Union[Prompt, list[Prompt]], model: Model, num_speeches: int):
+    def __init__(
+        self,
+        name: str,
+        is_debater: bool,
+        prompt: Union[Prompt, list[Prompt]],
+        model: Model,
+        num_speeches: int,
+        speech_format: SpeechFormat,
+    ):
         self.name = name
         self.is_debater = is_debater
         self.model = model
         self.num_speeches = num_speeches
 
         self.prompts = prompt if type(prompt) == list else [prompt]
-        self.transcripts = [
-            Transcript(debater_name=self.name, is_debater=self.is_debater, prompt=p, num_speeches=num_speeches)
-            for p in self.prompts
-        ]
+        self.transcripts = [Transcript(name=self.name, prompt=p, speech_format=speech_format) for p in self.prompts]
 
     def receive_message(self, speaker: str, content: str, idx: int = 0):
         self.transcripts[idx].add_speech(speaker=speaker, content=content)

@@ -182,8 +182,8 @@
     topic_type: from_dataset
   word_limit: 500
   batch_size: 1
-  num_speeches: 3
-  flip: False
+  num_speeches: 1
+  flip: True
   prompt_config:
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
     prompt_name: Base Prompt
@@ -192,10 +192,12 @@
       model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
       alias: "13b-32k-sft-debater-full"
+      use_scratchpad: false
     debater_two:
       model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
       alias: "13b-32k-sft-debater-full"
+      use_scratchpad: false
     judge:
       model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full-Judge

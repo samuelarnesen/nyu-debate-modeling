@@ -1,5 +1,5 @@
 from agents.debater import Debater, OfflineDebater
-from agents.judge import Judge
+from agents.judge import BoNJudge, Judge
 from agents.debate_round import DebateRound, QuestionMetadata
 from agents.models.model_utils import ModelType, ModelUtils
 from agents.prompt import Prompt, PromptConfig, PromptParser
@@ -24,6 +24,7 @@ class ModelConfig(BaseModel):
     model_type: str
     model_file_path: Optional[str]
     alias: str
+    use_scratchpad: Optional[bool]
 
 
 class ModelsConfig(BaseModel):
@@ -58,6 +59,10 @@ class OfflineConfig(BaseModel):
     file_path: str
 
 
+class BoNConfig(BaseModel):
+    count: int
+
+
 class ExperimentConfig(BaseModel):
     topic_config: TopicConfig
     word_limit: int
@@ -68,6 +73,7 @@ class ExperimentConfig(BaseModel):
     models: ModelsConfig
     dataset: DatasetConfig
     offline: Optional[OfflineConfig]
+    best_of_n: Optional[BoNConfig]
 
 
 class ExperimentLoader:
@@ -243,6 +249,7 @@ class ExperimentLoader:
                 prompt=prompt_a,
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
+                use_scratchpad=experiment.models.debater_one.use_scratchpad or False,
             )
 
             debater_b = Debater(
@@ -250,6 +257,7 @@ class ExperimentLoader:
                 prompt=prompt_b,
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
+                use_scratchpad=experiment.models.debater_two.use_scratchpad or False,
             )
 
             judge = Judge(
@@ -271,6 +279,7 @@ class ExperimentLoader:
                 prompt=prompt_a,
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
+                use_scratchpad=experiment.models.debater_two.use_scratchpad or False,
             )
 
             flipped_debater_b = Debater(
@@ -278,6 +287,7 @@ class ExperimentLoader:
                 prompt=prompt_b,
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
+                use_scratchpad=experiment.models.debater_one.use_scratchpad or False,
             )
 
             flipped_round = DebateRound(
@@ -311,9 +321,18 @@ class ExperimentLoader:
                         first_debater_prompt=prompt_a,
                     )
 
+            if experiment.best_of_n:
+                if experiment.num_speeches > 1:
+                    raise Exception("For now, there can only be 1 speech when doing BoN")
+                debate_round.judge = BoNJudge(judge=debate_round.judge, n=experiment.best_of_n.count)
+                flipped_round.judge = BoNJudge(judge=flipped_round.judge, n=experiment.best_of_n.count)
+
             rounds.append(debate_round)
             if experiment.flip:
                 rounds.append(flipped_round)
+
+        if len(rounds) <= 1 or experiment.best_of_n:
+            return rounds, experiment
 
         # batches the debate rounds for efficient generation
         batched_rounds = []

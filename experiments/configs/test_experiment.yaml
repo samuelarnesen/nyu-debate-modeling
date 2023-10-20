@@ -1,4 +1,4 @@
-Test Experiment 1:
+Hardcoded_Test:
   topic: Who is the best basketball player of all time?
   word_limit: 500
   batch_size: 8
@@ -29,13 +29,13 @@ Test Experiment 1:
     val_file_path: ../debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev
     test_file_path: ../debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test
     split_type: val
-Test Experiment 2:
+Batched_Test:
   topic_config:
     topic_type: from_dataset
   word_limit: 500
   batch_size: 8
   num_speeches: 3
-  flip: True
+  flip: False
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
     prompt_name: Base Prompt
@@ -53,7 +53,7 @@ Test Experiment 2:
     dataset_type: quality_debates
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
     split_type: val
-Test Experiment 3:
+Single_Test:
   topic_config:
     topic_type: from_dataset
   word_limit: 500
@@ -76,7 +76,7 @@ Test Experiment 3:
   dataset:
     dataset_type: quality_debates
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
-Test Experiment 4:
+Offline_Test:
   topic_config:
     topic_type: from_dataset
   word_limit: 500
@@ -103,5 +103,29 @@ Test Experiment 4:
     debater_one: true
     debater_two: true
     file_path: /Users/samarnesen/nyu/debate-data/transcripts/2023-10-11_23:56:19.859778
-
+BoN_Test:
+  topic_config:
+    topic_type: from_dataset
+  word_limit: 500
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  prompt_config:
+    file_path: ./agents/prompts/prompts.yaml
+    prompt_name: Base Prompt
+  models:
+    debater_one:
+      model_type: random
+      alias: offline-debater-1
+    debater_two:
+      model_type: random
+      alias: offline-debater-2
+    judge:
+      model_type: random
+      alias: random-judge
+  dataset:
+    dataset_type: quality_debates
+    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+  best_of_n:
+    count: 8
 

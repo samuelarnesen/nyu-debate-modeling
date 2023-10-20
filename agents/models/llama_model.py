@@ -1,18 +1,25 @@
 from __future__ import annotations
 
-from agents.model import Model, ModelInput, RoleType
+from agents.model import Model, ModelInput, RoleType, SpeechStructure
 from utils.logger_utils import LoggerUtils
+from utils.timer_utils import timer
 import utils.constants as constants
 
 from pydantic import BaseModel
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig, pipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig
 import numpy as np
 import torch
 
 from typing import Optional, Union
 import copy
-import math
-import time
+
+FLASH_ATTENTION_AVAILABLE = False
+try:
+    from utils.flash_attn_utils import replace_with_flash_decoding
+
+    FLASH_ATTENTION_AVAILABLE = True
+except ImportError as e:
+    print("Running without flash attention")
 
 
 class LlamaInput(BaseModel):
@@ -29,6 +36,10 @@ class LlamaModel(Model):
             self.is_debater = is_debater
             self.tokenizer = AutoTokenizer.from_pretrained(file_path)
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id  # for open-ended generation
+
+            if FLASH_ATTENTION_AVAILABLE:
+                # replace_with_flash_decoding()
+                pass
 
             bnb_config = BitsAndBytesConfig(
                 load_in_4bit=True,
@@ -48,7 +59,7 @@ class LlamaModel(Model):
                 max_new_tokens=450,
                 temperature=0.5,
                 top_p=0.9,
-                num_return_sequence=1,
+                num_return_sequences=1,
                 output_scores=True,
                 return_dict_in_generate=True,
                 repetition_penalty=1.2,
@@ -92,68 +103,78 @@ class LlamaModel(Model):
 
     @classmethod
     def generate_input_str_from_model_inputs(
-        cls, input_list: list[ModelInput], is_debater: bool = True, alias: str = "", decide: bool = False
+        cls,
+        input_list: list[ModelInput],
+        is_debater: bool = True,
+        alias: str = "",
+        speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
     ) -> LlamaInput:
         # TODO: remove this -- I think the base model is not responding to commands because its instruction format
         # is non-standard so this is just a patch until I figure that out and train the debating model accordingly
         def get_judging_suffix():
             if is_debater:
-                if "base" in alias:
-                    return "\n\nHere is my first argument:\n"
-                return ""
-            if decide:
+                return "\n\n" + "Here is my first argument:\n" if constants.BASE_MODEL_PREFIX in alias else ""
+            if speech_structure == SpeechStructure.DECISION:
                 return "\n\n" + constants.JUDGING_PREFIX
-            if "base" in alias:
-                return "\n\nOk here is what I'm thinking."
-            return ""
+            elif speech_structure == SpeechStructure.PREFERENCE:
+                return "\n\n" + constants.PREFERENCE_PREFIX
+            return "\n\n" + "Here is what I'm thinking." if constants.BASE_MODEL_PREFIX in alias else ""
 
         return LlamaModel.generate_input_str(
             LlamaModel.generate_llama_input_from_model_inputs(input_list=input_list, extra_suffix=get_judging_suffix())
         )
 
+    @timer("llama inference")
     @torch.inference_mode()
-    def predict(self, inputs: list[list[ModelInput]], max_new_tokens=450, decide: bool = False, **kwargs) -> list[str]:
+    def predict(
+        self,
+        inputs: list[list[ModelInput]],
+        max_new_tokens=450,
+        speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
+        num_return_sequences: int = 1,
+        **kwargs,
+    ) -> list[str]:
+        def validate():
+            if num_return_sequences > 1 and len(inputs) > 1:
+                raise Exception("You cannot have multiple return sequences and a batch size of >1")
+
         def get_string_log_prob(target_string: list[str], scores: torch.Tensor, batch_index: int) -> float:
             tokenized_target = self.tokenizer(target_string).input_ids[-1]
-            self.logger.debug(f"Tokenized target is {tokenized_target}")
             return scores[0][batch_index][tokenized_target].item()
 
-        self.model.eval()
-        with torch.no_grad():
-            start = time.time()
+        def create_new_generation_config():
             config_to_use = copy.deepcopy(self.generation_config)
             config_to_use.max_new_tokens = max_new_tokens
-            input_strs = [
-                LlamaModel.generate_input_str_from_model_inputs(input_list, self.is_debater, self.alias, decide)
-                for input_list in inputs
-            ]
-            inputs = self.tokenizer(input_strs, return_tensors="pt", padding=True).to("cuda")
-            outputs = self.model.generate(**inputs, generation_config=config_to_use)
-            input_lengths = (inputs.input_ids != self.tokenizer.pad_token_id).sum(axis=1)
+            config_to_use.num_return_sequences = num_return_sequences
+            return config_to_use
 
-            decoded_outputs = []
-            for i, row in enumerate(outputs.sequences):
-                if self.is_debater or not decide:
-                    decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[i] :])
-                    new_tokens = decoded.split(constants.INSTRUCTION_SUFFIX)[-1]
-                    decoded_outputs.append(new_tokens.rstrip())
-                else:
-                    tokenized_debater_a = self.tokenizer(constants.DEFAULT_DEBATER_A_NAME)
-                    tokenized_debater_b = self.tokenizer(constants.DEFAULT_DEBATER_B_NAME)
-                    decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[i] :])
-                    self.logger.debug(
-                        f"It wanted to decode the following: {decoded.split(constants.INSTRUCTION_SUFFIX)[-1].rstrip()}"
-                    )
+        validate()
+        self.model.eval()
+        input_strs = [
+            LlamaModel.generate_input_str_from_model_inputs(input_list, self.is_debater, self.alias, speech_structure)
+            for input_list in inputs
+        ]
+        inputs = self.tokenizer(input_strs, return_tensors="pt", padding=True).to("cuda")
+        outputs = self.model.generate(**inputs, generation_config=create_new_generation_config())
+        input_lengths = (inputs.input_ids != self.tokenizer.pad_token_id).sum(axis=1)
 
-                    a_score = get_string_log_prob(constants.DEFAULT_DEBATER_A_NAME, outputs.scores, i)
-                    b_score = get_string_log_prob(constants.DEFAULT_DEBATER_B_NAME, outputs.scores, i)
+        decoded_outputs = []
+        for i, row in enumerate(outputs.sequences):
+            if self.is_debater or speech_structure == SpeechStructure.OPEN_ENDED:
+                decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[i] :])
+                new_tokens = decoded.split(constants.INSTRUCTION_SUFFIX)[-1]
+                decoded_outputs.append(new_tokens.rstrip())
+            else:
+                tokenized_debater_a = self.tokenizer(constants.DEFAULT_DEBATER_A_NAME)
+                tokenized_debater_b = self.tokenizer(constants.DEFAULT_DEBATER_B_NAME)
+                decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[i] :])
+                a_score = get_string_log_prob(constants.DEFAULT_DEBATER_A_NAME, outputs.scores, i)
+                b_score = get_string_log_prob(constants.DEFAULT_DEBATER_B_NAME, outputs.scores, i)
 
-                    decoded_outputs.append(
-                        constants.DEFAULT_DEBATER_A_NAME if a_score > b_score else constants.DEFAULT_DEBATER_B_NAME
-                    )
-                    self.logger.info(f"Scores: A {a_score} - B {b_score}")
-
-            self.logger.debug(f"inference in {str(round(time.time() - start, 2))}")
+                decoded_outputs.append(
+                    constants.DEFAULT_DEBATER_A_NAME if a_score > b_score else constants.DEFAULT_DEBATER_B_NAME
+                )
+                self.logger.info(f"Scores: A {a_score} - B {b_score}")
 
         return decoded_outputs
 

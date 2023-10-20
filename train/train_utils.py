@@ -9,8 +9,7 @@ import utils.constants as constants
 from pydantic import BaseModel
 from datasets import Dataset
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, pipeline, TrainingArguments
-from transformers.pipelines.pt_utils import KeyDataset
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments
 from trl import DataCollatorForCompletionOnlyLM, SFTTrainer
 from tqdm import tqdm
 import pandas as pd

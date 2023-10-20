@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.model import Model, ModelInput
+from agents.model import Model, ModelInput, SpeechStructure
 from utils.logger_utils import LoggerUtils
 import utils.constants as constants
 
@@ -12,6 +12,20 @@ import re
 
 
 class OpenAIModel(Model):
+    decision_addendum = (
+        "\n\nPlease answer exclusively in this format:\n"
+        + "Winner:[DEBATER_NAME] (Example 1 - Winner: Debater_A. Example 2: Winner: Debater_B)"
+    )
+
+    preference_addendum = (
+        "\n\nPlease answer exclusively in this format:\n"
+        + "Overall Score: [0-10] (Example 1 - Overall Score: 3. Overall Score: 7)"
+    )
+
+    decision_regex = ".*Winner: (Debater_[AB])"
+
+    preference_regex = ".*Overall Score: (\\d+)"
+
     def __init__(self, alias: str, is_debater: bool = True):
         super().__init__(alias=alias, is_debater=is_debater)
         self.__configure()
@@ -21,23 +35,37 @@ class OpenAIModel(Model):
         openai.organization = os.getenv("OPENAI_ORGANIZATION")
         openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    def predict(self, inputs: list[list[ModelInput]], max_new_tokens=450, decide: bool = False, **kwargs) -> list[str]:
+    def predict(
+        self,
+        inputs: list[list[ModelInput]],
+        max_new_tokens=450,
+        speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
+        **kwargs,
+    ) -> list[str]:
         def model_input_to_openai_format(model_input: ModelInput) -> dict[str, str]:
             return {"role": model_input.role.name.lower(), "content": model_input.content}
 
-        decision_addendum = (
-            "\n\nPlease answer exclusively in this format:\n"
-            + "Winner:[DEBATER_NAME] (Example 1 - Winner: Debater_A. Example 2: Winner: Debater_B)"
-        )
+        def add_addendum(messages: list[dict[str, str]], addendum: str) -> None:
+            if messages[-1]["role"] == "user":
+                messages[-1]["content"] = "\n".join([messages[-1]["content"], addendum])
+            else:
+                messages.append({"role": "user", "content": addendum})
+
+        def extract_response_from_structured_speech(message: str, regex_str: str, default: str) -> str:
+            match = re.match(regex_str, message)
+            if match:
+                return match.group(1)
+            else:
+                self.logger.warn("The regex {} did not match the following message: {}".format(regex_str, message))
+                return default
 
         responses = []
         for model_input_list in inputs:
             messages = [model_input_to_openai_format(model_input) for model_input in model_input_list]
-            if not self.is_debater and decide:
-                if messages[-1]["role"] == "user":
-                    messages[-1]["content"] = "\n".join([messages[-1]["content"], decision_addendum])
-                else:
-                    messages.append({"role": "user", "content": decision_addendum})
+            if speech_structure == SpeechStructure.DECISION:
+                add_addendum(messages=messages, addendum=OpenAIModel.decision_addendum)
+            elif speech_structure == SpeechStructure.PREFERENCE:
+                add_addendum(messages=messages, addendum=OpenAIModel.preference_addendum)
 
             try:
                 completion = openai.ChatCompletion.create(
@@ -55,19 +83,19 @@ class OpenAIModel(Model):
 
             message = completion.choices[0].message["content"]
 
-            if decide:
-                self.logger.debug("Deciding on a winner. The message was {}".format(message))
-                match = re.match(".*Winner: (Debater_[AB])", message)
-                if match:
-                    responses.append(match.group(1))
-                    self.logger.debug(f"The logged winner was {responses[-1]}")
-                else:
-                    responses.append(
-                        constants.DEFAULT_DEBATER_A_NAME if random.random() < 0.5 else constants.DEFAULT_DEBATER_B_NAME
-                    )
+            if speech_structure == SpeechStructure.DECISION:
+                message = extract_response_from_structured_speech(
+                    message=message,
+                    regex_str=OpenAIModel.decision_regex,
+                    default=constants.DEFAULT_DEBATER_A_NAME if random.random() < 0.5 else constants.DEFAULT_DEBATER_B_NAME,
+                )
+            elif speech_structure == SpeechStructure.PREFERENCE:
+                message = extract_response_from_structured_speech(
+                    message=message,
+                    regex_str=OpenAIModel.decision_regex,
+                    default=str(-1),
+                )
 
-                    self.logger.warn("A precise winner could not be extracted from the following text: {}".format(message))
-            else:
-                responses.append(message)
+            responses.append(message)
 
         return responses

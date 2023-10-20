@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.model import Model, ModelInput
+from agents.model import Model, ModelInput, SpeechStructure
 import utils.constants as constants
 
 from typing import Union, Optional
@@ -12,7 +12,13 @@ class RandomModel(Model):
         super().__init__(alias=alias, is_debater=is_debater)
         self.alphabet = "abcdefghijklmnopqrstuvwxyz"
 
-    def predict(self, inputs: list[list[ModelInput]], max_new_tokens=250, decide: bool = False, **kwargs) -> list[str]:
+    def predict(
+        self,
+        inputs: list[list[ModelInput]],
+        max_new_tokens=250,
+        speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
+        **kwargs,
+    ) -> list[str]:
         def generate_random_text():
             return " ".join(
                 [
@@ -24,8 +30,13 @@ class RandomModel(Model):
         def generate_random_decision():
             return constants.DEFAULT_DEBATER_A_NAME if random.random() < 0.5 else constants.DEFAULT_DEBATER_B_NAME
 
-        if decide:
+        def generate_random_number():
+            return str(random.random() * 10)
+
+        if speech_structure == SpeechStructure.DECISION:
             return [generate_random_decision() for i in range(len(inputs))]
+        elif speech_structure == SpeechStructure.PREFERENCE:
+            return [generate_random_number() for i in range(len(inputs))]
 
         return [generate_random_text() for i in range(len(inputs))]
 

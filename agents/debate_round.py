@@ -48,7 +48,7 @@ class DebateRound:
         for speech_num in range(num_speeches):
             responses = {}
             for debater in self.debaters:
-                batch_response = debater.generate()
+                batch_response = debater.debate()
                 for idx, response in enumerate(batch_response):
                     if speech_num == 0:
                         responses.setdefault(debater.name, []).append((response, idx))
@@ -88,7 +88,7 @@ class DebateRound:
 
         return [
             DebateRoundSummary(
-                metadata=self.metadata[i],
+                metadata=self.metadata[i % len(self.metadata)],
                 transcript=self.judge.get_transcript(idx=i),
                 winning_alias=self.first_debater.get_alias() if first_debater_wins else self.second_debater.get_alias(),
                 losing_alias=self.first_debater.get_alias() if not first_debater_wins else self.second_debater.get_alias(),

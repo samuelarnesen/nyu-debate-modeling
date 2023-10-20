@@ -1,17 +1,20 @@
 # copied from @philschmid
 # https://github.com/philschmid/deep-learning-pytorch-huggingface/blob/main/training/utils/llama_patch.py
+# the only exception is the flash_decoding functions, which is original
 
 from typing import List, Optional, Tuple
+from functools import partial
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 import warnings
 import transformers
 from transformers.models.llama.modeling_llama import apply_rotary_pos_emb
 from peft.tuners.lora import LoraLayer
 
 try:
-    from flash_attn.flash_attn_interface import flash_attn_varlen_qkvpacked_func
+    from flash_attn.flash_attn_interface import flash_attn_varlen_qkvpacked_func, flash_attn_with_kvcache
     from flash_attn.bert_padding import unpad_input, pad_input
 except Exception:
     raise ModuleNotFoundError(
@@ -22,6 +25,11 @@ try:
     from einops import rearrange
 except Exception:
     raise ModuleNotFoundError("Please install einops first, e.g., with pip install einops")
+
+from utils.logger_utils import LoggerUtils
+
+
+LOGGER = LoggerUtils.get_default_logger(__name__)
 
 
 # ADAPTED from https://github.com/allenai/open-instruct/blob/main/open_instruct/llama_flash_attn_monkey_patch.py
@@ -136,3 +144,51 @@ def upcast_layer_for_flash_attention(model, torch_dtype):
                 module.to(torch_dtype)
 
     return model
+
+
+def invoke_flash_attn_with_kvcache(
+    self, query_states, key_states, value_states, padding_mask, query_length, dropout=0.0, softmax_scale=None
+):
+    # self.k_cache_reusable.zero_()
+    # self.v_cache_reusable.zero_()
+
+    max_seq_length = 20_000
+    batch_size, sequence_length, num_heads, embed_size_per_head = key_states.shape
+    """
+    padded_key_states = (
+        F.pad(key_states.transpose(1, 3), (0, max_seq_length - sequence_length), "constant", 0)
+        .transpose(1, 3)
+        .contiguous()
+        .cuda()
+    )
+    padded_value_states = (
+        F.pad(value_states.transpose(1, 3), (0, max_seq_length - sequence_length), "constant", 0)
+        .transpose(1, 3)
+        .contiguous()
+        .cuda()
+    )
+    """
+
+    return flash_attn_with_kvcache(
+        q=query_states,
+        k_cache=key_states,  # self.k_cache_reusable,
+        v_cache=value_states,  # self.v_cache_reusable,
+        k=None,  # key_states,
+        v=None,  # value_states,
+        rotary_cos=None,
+        rotary_sin=None,
+        cache_seqlens=query_length,
+        softmax_scale=softmax_scale,
+        causal=True,
+    )
+
+
+def replace_with_flash_decoding():
+    # TODO: make this configurable
+    transformers.models.llama.modeling_llama.LlamaFlashAttention2.k_cache_reusable = torch.empty(
+        (1, 20_000, 40, 128), dtype=torch.float16, device=torch.device("cuda")
+    )
+    transformers.models.llama.modeling_llama.LlamaFlashAttention2.v_cache_reusable = torch.empty(
+        (1, 20_000, 40, 128), dtype=torch.float16, device=torch.device("cuda")
+    )
+    transformers.models.llama.modeling_llama.LlamaFlashAttention2._flash_attention_forward = invoke_flash_attn_with_kvcache

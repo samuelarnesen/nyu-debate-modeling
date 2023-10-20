@@ -13,6 +13,12 @@ class RoleType(Enum):
     ASSISTANT = 3
 
 
+class SpeechStructure(Enum):
+    OPEN_ENDED = 1
+    DECISION = 2
+    PREFERENCE = 3
+
+
 class ModelInput(BaseModel):
     role: RoleType
     content: str

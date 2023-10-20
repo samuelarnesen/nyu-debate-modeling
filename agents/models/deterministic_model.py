@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.model import Model, ModelInput
+from agents.model import Model, ModelInput, SpeechStructure
 import utils.constants as constants
 
 from typing import Union, Optional
@@ -13,9 +13,17 @@ class DeterministicModel(Model):
         self.text = "My position is correct. You have to vote for me."
         self.text_length = len(self.text.split())
 
-    def predict(self, inputs: list[list[ModelInput]], max_new_tokens=250, decide: bool = False, **kwargs) -> str:
-        if decide:
+    def predict(
+        self,
+        inputs: list[list[ModelInput]],
+        max_new_tokens=250,
+        speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
+        **kwargs,
+    ) -> str:
+        if speech_structure == SpeechStructure.DECISION:
             return [utils.DEFAULT_DEBATER_A_NAME for i in range(len(inputs))]
+        elif speech_structure == SpeechStructure.PREFERENCE:
+            return [str(5) for i in range(len(inputs))]
         text_to_repeat = "\n".join([self.text for i in range(int(max_new_tokens / self.text_length))])
         return [text_to_repeat for i in range(len(inputs))]
 

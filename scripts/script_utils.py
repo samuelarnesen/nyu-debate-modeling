@@ -34,7 +34,7 @@ class ScriptUtils:
         parser.add_argument("--num_iters", type=int, default=1_000)
         parser.add_argument("--log_level", type=str, default="INFO")
         parser.add_argument("--configuration", type=str, default="")
-        parser.add_argument("--random", action="store_true", default=False)
+        parser.add_argument("--test", action="store_true", default=False)
         parser.add_argument("--load_only", action="store_true", default=False)
         parser.add_argument("--suppress_graphs", action="store_true", default=False)
         parser.add_argument("--local_rank", type=int, default=0)
@@ -61,8 +61,8 @@ class ScriptUtils:
 
     @classmethod
     def get_debate_round_script_config(cls, args) -> DebateRoundScriptConfig:
-        if args.random:
-            experiment_name = args.configuration or "Test Experiment 2"
+        if args.test:
+            experiment_name = args.configuration or "Single_Test"
             experiment_file_path = "experiments/configs/test_experiment.yaml"
             save_path_base = "../../debate-data/transcripts"
             quotes_file_path = "../../debate-data/quotes_dataset.p"
