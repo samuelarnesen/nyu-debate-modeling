@@ -250,6 +250,7 @@ class ExperimentLoader:
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
                 use_scratchpad=experiment.models.debater_one.use_scratchpad or False,
+                best_of_n=experiment.best_of_n or False,
             )
 
             debater_b = Debater(
@@ -258,6 +259,7 @@ class ExperimentLoader:
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
                 use_scratchpad=experiment.models.debater_two.use_scratchpad or False,
+                best_of_n=experiment.best_of_n or False,
             )
 
             judge = Judge(
@@ -280,6 +282,7 @@ class ExperimentLoader:
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
                 use_scratchpad=experiment.models.debater_two.use_scratchpad or False,
+                best_of_n=experiment.best_of_n or False,
             )
 
             flipped_debater_b = Debater(
@@ -288,6 +291,7 @@ class ExperimentLoader:
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
                 use_scratchpad=experiment.models.debater_one.use_scratchpad or False,
+                best_of_n=experiment.best_of_n or False,
             )
 
             flipped_round = DebateRound(
@@ -299,33 +303,41 @@ class ExperimentLoader:
 
             if experiment.offline:
                 if experiment.offline.debater_one:
-                    debate_round.first_debater = OfflineDebater(
-                        debater=debate_round.first_debater,
-                        file_path=experiment.offline.file_path,
-                        first_debater_prompt=prompt_a,
+                    debate_round.set_first_debater(
+                        OfflineDebater(
+                            debater=debate_round.first_debater,
+                            file_path=experiment.offline.file_path,
+                            first_debater_prompt=prompt_a,
+                        )
                     )
-                    flipped_round.second_debater = OfflineDebater(
-                        debater=flipped_round.second_debater,
-                        file_path=experiment.offline.file_path,
-                        first_debater_prompt=prompt_a,
+                    flipped_round.set_second_debater(
+                        OfflineDebater(
+                            debater=flipped_round.second_debater,
+                            file_path=experiment.offline.file_path,
+                            first_debater_prompt=prompt_a,
+                        )
                     )
                 if experiment.offline.debater_two:
-                    debate_round.second_debater = OfflineDebater(
-                        debater=debate_round.second_debater,
-                        file_path=experiment.offline.file_path,
-                        first_debater_prompt=prompt_a,
+                    debate_round.set_second_debater(
+                        OfflineDebater(
+                            debater=debate_round.second_debater,
+                            file_path=experiment.offline.file_path,
+                            first_debater_prompt=prompt_a,
+                        )
                     )
-                    flipped_round.first_debater = OfflineDebater(
-                        debater=flipped_round.first_debater,
-                        file_path=experiment.offline.file_path,
-                        first_debater_prompt=prompt_a,
+                    flipped_round.set_first_debater(
+                        OfflineDebater(
+                            debater=flipped_round.first_debater,
+                            file_path=experiment.offline.file_path,
+                            first_debater_prompt=prompt_a,
+                        )
                     )
 
             if experiment.best_of_n:
                 if experiment.num_speeches > 1:
                     raise Exception("For now, there can only be 1 speech when doing BoN")
-                debate_round.judge = BoNJudge(judge=debate_round.judge, n=experiment.best_of_n.count)
-                flipped_round.judge = BoNJudge(judge=flipped_round.judge, n=experiment.best_of_n.count)
+                debate_round.set_judge(BoNJudge(judge=debate_round.judge, n=experiment.best_of_n.count))
+                flipped_round.set_judge(BoNJudge(judge=flipped_round.judge, n=experiment.best_of_n.count))
 
             rounds.append(debate_round)
             if experiment.flip:

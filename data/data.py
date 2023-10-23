@@ -14,6 +14,7 @@ class SplitType(Enum):
 class DatasetType(Enum):
     QUALITY = 1
     QUALITY_DEBATES = 2
+    JUDGE_PREFERENCES = 3
 
 
 class SpeakerType(Enum):
@@ -33,6 +34,12 @@ class DataRow(BaseModel):
     positions: Optional[tuple[str, str]]
     speeches: Optional[list[SpeechData]]
     correct_index: Optional[int]
+
+
+class JudgePreferenceDataRow(BaseModel):
+    instruction: str
+    chosen: str
+    rejected: str
 
 
 class RawDataset(ABC):

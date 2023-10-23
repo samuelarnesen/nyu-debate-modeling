@@ -41,6 +41,7 @@ class PromptTag(Enum):
     JUDGE_DECISION = 14
     DEBATER_SCRATCHPAD = 16
     BEST_OF_N_JUDGE_INSTRUCTION = 17
+    JUDGE_DECISION_FOR_DEBATER = 18
 
 
 class Prompt(BaseModel):

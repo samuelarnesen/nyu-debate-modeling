@@ -72,7 +72,7 @@ class TrainUtils:
                 row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name
             )
         elif target == TrainingTarget.JUDGE:
-            return RowConverter.convert_all_speeches_for_debater(
+            return RowConverter.convert_all_speeches_for_judge(
                 row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name
             )
         else:

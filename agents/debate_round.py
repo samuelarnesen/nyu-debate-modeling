@@ -1,5 +1,5 @@
 from agents.debater import Debater
-from agents.judge import Judge
+from agents.judge import Judge, JudgeType
 from agents.prompt import Prompt, PromptConfig, PromptParser
 from agents.transcript import Transcript
 from data.data import RawDataset, SplitType
@@ -8,6 +8,7 @@ import utils.constants as constants
 
 from pydantic import BaseModel
 
+from enum import Enum
 from typing import Optional, Any, Union
 
 
@@ -40,51 +41,53 @@ class DebateRound:
         self.second_debater = second_debater
         self.judge = judge
         self.metadata = metadata if type(metadata) == list else [metadata]
-        self.debaters = [self.first_debater, self.second_debater]
-        self.participants = [self.first_debater, self.second_debater, self.judge]
+        self.name_to_agent = {
+            self.first_debater.name: self.first_debater,
+            self.second_debater.name: self.second_debater,
+            self.judge.name: self.judge,
+        }
         self.logger = LoggerUtils.get_default_logger(__name__)
 
-    def run(self, num_speeches=3, save_file_path_prefix: str = None) -> list[DebateRoundSummary]:
-        for speech_num in range(num_speeches):
-            responses = {}
-            for debater in self.debaters:
-                batch_response = debater.debate()
-                for idx, response in enumerate(batch_response):
-                    if speech_num == 0:
-                        responses.setdefault(debater.name, []).append((response, idx))
-                    else:
-                        for participant in self.participants:
-                            participant.receive_message(speaker=debater.name, content=response, idx=idx)
-            if speech_num == 0:
-                for participant in self.participants:
-                    if participant.name in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_JUDGE_NAME]:
-                        for response, idx in responses[constants.DEFAULT_DEBATER_A_NAME]:
-                            participant.receive_message(speaker=constants.DEFAULT_DEBATER_A_NAME, content=response, idx=idx)
-                        for response, idx in responses[constants.DEFAULT_DEBATER_B_NAME]:
-                            participant.receive_message(speaker=constants.DEFAULT_DEBATER_B_NAME, content=response, idx=idx)
-                    else:
-                        for response, idx in responses[constants.DEFAULT_DEBATER_B_NAME]:
-                            participant.receive_message(speaker=constants.DEFAULT_DEBATER_B_NAME, content=response, idx=idx)
-                        for response, idx in responses[constants.DEFAULT_DEBATER_A_NAME]:
-                            participant.receive_message(speaker=constants.DEFAULT_DEBATER_A_NAME, content=response, idx=idx)
+    def set_first_debater(self, debater: Debater):
+        self.first_debater = debater
+        self.name_to_agent[self.first_debater.name] = debater
 
-            if speech_num < (num_speeches - 1):
-                batch_response = self.judge.generate()
-                for participant in self.participants:
-                    for idx, response in enumerate(batch_response):
-                        participant.receive_message(speaker=self.judge.name, content=response, idx=idx)
+    def set_second_debater(self, debater: Debater):
+        self.second_debater = debater
+        self.name_to_agent[self.second_debater.name] = debater
 
-        responses = self.judge.judge()
+    def set_judge(self, judge: Judge):
+        self.judge = judge
+        self.name_to_agent[self.judge.name] = judge
+
+    def run_round(self) -> list[str]:
+        last_output = None
+        next_speaker = self.judge.get_next_expected_speaker()
+        while next_speaker:
+            print(f"Next speaker is {next_speaker}")
+            speaker = self.name_to_agent[next_speaker]
+            batch_response = speaker()
+            for idx, response in enumerate(batch_response):
+                for _, agent in self.name_to_agent.items():
+                    agent.receive_message(speaker=speaker.name, content=response, idx=idx)
+            next_speaker = self.judge.get_next_expected_speaker()
+            last_output = batch_response
+        return last_output
+
+    def record_winners(
+        self, last_output: list[str], save_file_path_prefix: Optional[str] = None
+    ) -> list[DebateRoundSummary]:
         first_debater_win_list = []
-        for i, debater_a_wins in enumerate(responses):
+        for i, debater_a_wins in enumerate(last_output):
             winner = constants.DEFAULT_DEBATER_A_NAME if debater_a_wins else constants.DEFAULT_DEBATER_B_NAME
-            response_to_use = f"{winner} wins the debate"
             first_debater_win_list.append(winner == self.first_debater.name)
-            self.judge.receive_message(speaker=self.judge.name, content=response_to_use, idx=i)
             self.logger.debug(self.judge.get_transcript(idx=i).full_string_value())
 
         if save_file_path_prefix:
-            self.judge.save(save_file_path_prefix=save_file_path_prefix)
+            if self.judge.judge_type == JudgeType.BEST_OF_N:
+                self.first_debater.save(save_file_path_prefix=save_file_path_prefix)
+            else:
+                self.judge.save(save_file_path_prefix=save_file_path_prefix)
 
         return [
             DebateRoundSummary(
@@ -99,3 +102,7 @@ class DebateRound:
             )
             for i, first_debater_wins in enumerate(first_debater_win_list)
         ]
+
+    def __call__(self, save_file_path_prefix: Optional[str] = None) -> list[DebateRoundSummary]:  # TODO: remote num_speeches
+        last_output = self.run_round()
+        return self.record_winners(last_output=last_output, save_file_path_prefix=save_file_path_prefix)

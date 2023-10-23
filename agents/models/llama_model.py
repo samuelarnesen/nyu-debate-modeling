@@ -19,7 +19,7 @@ try:
 
     FLASH_ATTENTION_AVAILABLE = True
 except ImportError as e:
-    print("Running without flash attention")
+    FLASH_ATTENTION_AVAILABLE = False
 
 
 class LlamaInput(BaseModel):
@@ -32,11 +32,13 @@ class LlamaModel(Model):
     def __init__(self, alias: str, file_path: Optional[str] = None, is_debater: bool = True):
         super().__init__(alias=alias, is_debater=is_debater)
         torch.cuda.empty_cache()
+        self.logger = LoggerUtils.get_default_logger(__name__)
         if file_path:
             self.is_debater = is_debater
             self.tokenizer = AutoTokenizer.from_pretrained(file_path)
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id  # for open-ended generation
 
+            self.logger.info(f"Running with flash attention: {FLASH_ATTENTION_AVAILABLE}")
             if FLASH_ATTENTION_AVAILABLE:
                 # replace_with_flash_decoding()
                 pass
@@ -71,8 +73,6 @@ class LlamaModel(Model):
             self.tokenizer = None
             self.model = None
             self.generation_config = None
-
-        self.logger = LoggerUtils.get_default_logger(__name__)
 
         if self.model:
             self.model.config.max_position_embeddings = 32768

@@ -11,7 +11,6 @@ class DebateRoundScriptConfig(BaseModel):
     experiment_name: str
     experiment_file_path: str
     save_path_base: str
-    quotes_file_path: str
 
 
 class ModelRunScriptConfig(BaseModel):
@@ -38,6 +37,7 @@ class ScriptUtils:
         parser.add_argument("--load_only", action="store_true", default=False)
         parser.add_argument("--suppress_graphs", action="store_true", default=False)
         parser.add_argument("--local_rank", type=int, default=0)
+        parser.add_argument("--bon", action="store_true", default=False)
         args = parser.parse_args()
         ScriptUtils.set_log_level(args)
         return args
@@ -64,28 +64,23 @@ class ScriptUtils:
         if args.test:
             experiment_name = args.configuration or "Single_Test"
             experiment_file_path = "experiments/configs/test_experiment.yaml"
-            save_path_base = "../../debate-data/transcripts"
-            quotes_file_path = "../../debate-data/quotes_dataset.p"
+            save_path_base = "../../debate-data/transcripts" if not args.bon else "../../debate-data/bon"
             if not args.local:
                 experiment_name = "Test Experiment 2 - HPC"
                 experiment_file_path = "/home/spa9663/debate/" + experiment_file_path
-                save_path_base = "/home/spa9663/debate-data/transcripts"
-                quotes_file_path = "/home/spa9663/debate-data/quotes_dataset.p"
+                save_path_base = "/home/spa9663/debate-data/transcripts" if not args.bon else "/home/spa9663/debate-data/bon"
         else:
             experiment_name = args.configuration or "Local Experiment"
             experiment_file_path = "experiments/configs/sft_experiment.yaml"
-            save_path_base = "../../debate-data/transcripts"
-            quotes_file_path = "../../debate-data/quotes_dataset.p"
+            save_path_base = "../../debate-data/transcripts" if not args.bon else "../../debate-data/bon"
             if not args.local:
                 experiment_name = args.configuration or "7B-Base Experiment"
                 experiment_file_path = "/home/spa9663/debate/" + experiment_file_path
-                save_path_base = "/home/spa9663/debate-data/transcripts"
-                quotes_file_path = "/home/spa9663/debate-data/quotes_dataset.p"
+                save_path_base = "/home/spa9663/debate-data/transcripts" if not args.bon else "/home/spa9663/debate-data/bon"
         return DebateRoundScriptConfig(
             experiment_name=experiment_name,
             experiment_file_path=experiment_file_path,
             save_path_base=save_path_base,
-            quotes_file_path=quotes_file_path,
         )
 
     @classmethod

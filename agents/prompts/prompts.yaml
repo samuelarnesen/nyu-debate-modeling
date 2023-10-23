@@ -10,7 +10,6 @@ Base Prompt:
         - Eventually we reach the final round and the debate ends. The Judge then looks at the full transcript and uses this to decide which answer is correct. However, the Judge cannot see the background text -- they can only see the question.
         - The Debaters' goal is to win the debate, by persuading the Judge that their answer is correct.
         - The debate surrounds a given question that has a single correct answer.
-        - A turn of dialogue is limited to 300 words.
          </###>
   debater_system:
     role: system
@@ -69,7 +68,6 @@ Base Prompt:
     content: |
       Now it is your turn as <NAME>.
       - Remember to both criticize the arguments made by <OPPONENT_NAME> and build up your own arguments.
-      - Follow the outline that you just created to help construct your speech.
       - Quote directly from the background text to support your critiques.
 
       Remember that it is your job to defend the position that "<POSITION>" is the correct answer.
@@ -183,7 +181,10 @@ Base Prompt:
       Overall Score: 3.33
 
       Now please evaluate the speech you just saw.
-
+  judge_decision_for_debater:
+    role: user
+    content: |
+      Here is the decision that the judge made:
 
 
   

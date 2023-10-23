@@ -18,11 +18,8 @@ results_collector = ResultsCollector(
     experiment=experiment, save_file_path_prefix=f"{config.save_path_base}/{start_time}_", should_save=not args.local
 )
 
-
 for i, debate_round in enumerate(debate_rounds):
-    summary = debate_round.run(
-        num_speeches=experiment.num_speeches, save_file_path_prefix=f"{config.save_path_base}/{start_time}_{i}"
-    )
+    summary = debate_round(save_file_path_prefix=f"{config.save_path_base}/{start_time}_{i}")
     results_collector.record_result(summary)
 
 if not args.suppress_graphs:

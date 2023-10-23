@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from agents.model import Model, ModelInput
 from agents.prompt import Prompt, PromptTag
+from utils.input_utils import InputUtils
 import utils.constants as constants
 
 from typing import Union, Optional
@@ -38,7 +39,7 @@ class OfflineModel(Model):
         return OfflineModel(alias=alias, is_debater=is_debater, speeches=self.speeches)
 
     def __load(self, file_path: str, prompt: Prompt):
-        file_texts = self.__get_file_texts(base_path=file_path)
+        file_texts = InputUtils.read_file_texts(base_path=file_path)
         debate_rounds = [self.__extract_speeches(text=text, prompt=prompt) for text in file_texts]
         debater_to_speech_map = []
         for i, debate_round in enumerate(debate_rounds):
@@ -48,24 +49,6 @@ class OfflineModel(Model):
                 debater_to_speech_map[i][speaker].append(speech)
 
         return debater_to_speech_map
-
-    def __get_file_texts(self, base_path: str) -> list[str]:
-        round_idx = 0
-        batch_idx = 0
-        keep_extracting = True
-        file_texts = []
-        while keep_extracting:
-            candidate_path = f"{base_path}_{round_idx}_{batch_idx}.txt"
-            if os.path.exists(candidate_path):
-                with open(candidate_path) as f:
-                    file_texts.append(f.read())
-                batch_idx += 1
-            elif batch_idx == 0:
-                keep_extracting = False
-            else:
-                round_idx += 1
-                batch_idx = 0
-        return file_texts
 
     def __extract_speeches(self, text: str, prompt: Prompt) -> list[str]:
         def get_index(text, target):

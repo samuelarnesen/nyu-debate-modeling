@@ -58,7 +58,7 @@ Single_Test:
     topic_type: from_dataset
   word_limit: 500
   batch_size: 1
-  num_speeches: 1
+  num_speeches: 3
   flip: False
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
