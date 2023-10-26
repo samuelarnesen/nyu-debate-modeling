@@ -48,14 +48,19 @@ class Debater(Agent):
 
 
 class BoNDebater(Debater):
-    def __init__(self, debater: Debater, n: int):
+    def __init__(self, debater: Debater, n: int, prompts: Optional[list[Prompt]]):
         super().__init__(
             name=debater.name,
-            prompt=[copy.deepcopy(debater.prompts[0]) for i in range(n)],
+            prompt=BoNDebater.construct_prompts(debater=debater, n=n, prompts=prompts),
             model=debater.model,
             num_speeches=debater.num_speeches,
             speech_format=DebaterUtils.get_bon_speech_format(debater.name, debater.num_speeches, debater.use_scratchpad),
         )
+
+    @classmethod
+    def construct_prompts(cls, debater: Debater, n: int, prompts: Optional[list[Prompt]]):
+        prompts = prompts if prompts else debater.prompts
+        return [copy.deepcopy(prompts[i % len(prompts)]) for i in range(n)]
 
     def generate(self, max_new_tokens=300) -> Optional[list[str]]:
         model_inputs = [self.transcripts[0].to_model_input()]

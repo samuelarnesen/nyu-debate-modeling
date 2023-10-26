@@ -60,10 +60,17 @@ class PromptParser:
         prompt = Prompt(name=name, messages=loaded_yaml[name])
         prompt.messages = {PromptTag[tag.upper()]: Message(**message) for tag, message in prompt.messages.items()}
 
+        base_prompt = Prompt(name=constants.BASE_PROMPT, messages=loaded_yaml[constants.BASE_PROMPT])
+        base_prompt.messages = {PromptTag[tag.upper()]: Message(**message) for tag, message in base_prompt.messages.items()}
+
         for prop, value in prompt_config:
             key = f"<{prop.upper()}>"
             for tag, message in prompt.messages.items():
                 prompt.messages[tag].content = prompt.messages[tag].content.replace(key, str(value))
+            for tag, message in base_prompt.messages.items():
+                base_prompt.messages[tag].content = base_prompt.messages[tag].content.replace(key, str(value))
+                if tag not in prompt.messages:
+                    prompt.messages[tag] = base_prompt.messages[tag]
 
         return prompt
 

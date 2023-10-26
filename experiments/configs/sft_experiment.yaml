@@ -7,8 +7,8 @@
   flip: True
   prompt_config:
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
+    default_prompt_name: Base Prompt
+  agents:
     debater_one:
       model_type: llama
       model_file_path: /vast/spa9663/models/base_models/Llama-2-7b-chat-hf
@@ -32,8 +32,8 @@
   flip: True
   prompt_config:
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
+    default_prompt_name: Base Prompt
+  agents:
     debater_one:
       model_type: llama
       model_file_path: /vast/spa9663/models/base_models/Llama-2-7B-32K-Instruct
@@ -57,8 +57,8 @@
   flip: True
   prompt_config:
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
+    default_prompt_name: Base Prompt
+  agents:
     debater_one:
       model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-7B-32K-Instruct
@@ -83,8 +83,8 @@
   flip: True
   prompt_config:
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
+    default_prompt_name: Base Prompt
+  agents:
     debater_one:
       model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
@@ -109,8 +109,8 @@
   flip: True
   prompt_config:
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
+    default_prompt_name: Base Prompt
+  agents:
     debater_one:
       model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
@@ -135,8 +135,8 @@
   flip: True
   prompt_config:
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
+    default_prompt_name: Base Prompt
+  agents:
     debater_one:
       model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
@@ -160,8 +160,8 @@
   flip: False
   prompt_config:
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
+    default_prompt_name: Base Prompt
+  agents:
     debater_one:
       model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
@@ -186,8 +186,8 @@
   flip: True
   prompt_config:
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
+    default_prompt_name: Base Prompt
+  agents:
     debater_one:
       model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
@@ -215,10 +215,13 @@
   flip: True
   best_of_n:
     count: 2
+    prompts:
+      - Thoughtful Prompt
+      - Aggressive Prompt
   prompt_config:
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
+    default_prompt_name: Base Prompt
+  agents:
     debater_one:
       model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full

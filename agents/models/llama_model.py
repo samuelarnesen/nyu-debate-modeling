@@ -153,10 +153,7 @@ class LlamaModel(Model):
             if self.is_debater or speech_structure != SpeechStructure.DECISION:
                 decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[min(i, len(input_lengths) - 1)] :])
                 new_tokens = decoded.split(constants.INSTRUCTION_SUFFIX)[-1]
-                if speech_structure == SpeechStructure.PREFERENCE:
-                    self.logger.debug("Decoded tokens were: {}".format(new_tokens))
                 if speech_structure == SpeechStructure.PREFERENCE and re.search("\\d+(\\.\\d+)?", new_tokens.strip()):
-                    self.logger.debug("Found a match!")
                     decoded_outputs.append(re.search("\\d+(\\.\\d+)?", new_tokens.strip()).group())
                 else:
                     decoded_outputs.append(new_tokens.rstrip())

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PYTHON_PROGRAM="scripts/test_debate_round.py"
-ARGUMENTS=("--configuration=Single_Test --num_iters=1" "--configuration=BoN_Test --num_iters=1" "--configuration=Batched_Test --num_iters=40")
+ARGUMENTS=("--configuration=Simple_Test --num_iters=1" "--configuration=Single_Test --num_iters=1" "--configuration=BoN_Test --num_iters=1" "--configuration=Batched_Test --num_iters=40")
 COMMON_ARGS=("--local --test --suppress_graphs --log_level=INFO")
 
 # Loop over each argument and run the Python program

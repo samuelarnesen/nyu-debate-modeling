@@ -73,13 +73,13 @@ class Judge(Agent):
 
 
 class BoNJudge(Judge):
-    def __init__(self, judge: Judge, n: int, debater_one: bool):
+    def __init__(self, judge: Judge, n: int, debater_a: bool):
         super().__init__(
             name=judge.name,
             prompt=[copy.deepcopy(judge.prompts[0]) for i in range(n)],
             model=judge.model,
             num_speeches=1,
-            speech_format=JudgeUtils.get_bon_speech_format(debater_one=debater_one),
+            speech_format=JudgeUtils.get_bon_speech_format(debater_a=debater_a),
             speech_structure=SpeechStructure.PREFERENCE,
             judge_type=JudgeType.BEST_OF_N,
         )
@@ -159,10 +159,10 @@ class JudgeUtils:
         )
 
     @classmethod
-    def get_bon_speech_format(cls, debater_one: bool):
+    def get_bon_speech_format(cls, debater_a: bool):
         overview_tag = (
             PromptTag.BEST_OF_N_JUDGE_OVERVIEW_FOR_DEBATER_A
-            if debater_one
+            if debater_a
             else PromptTag.BEST_OF_N_JUDGE_OVERVIEW_FOR_DEBATER_B
         )
 

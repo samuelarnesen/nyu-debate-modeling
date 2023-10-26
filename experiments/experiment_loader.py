@@ -17,20 +17,20 @@ from typing import Optional
 
 class PromptLoadingConfig(BaseModel):
     file_path: str
-    prompt_name: str
+    default_prompt_name: str
 
 
-class ModelConfig(BaseModel):
+class AgentConfig(BaseModel):
     model_type: str
     model_file_path: Optional[str]
     alias: str
     use_scratchpad: Optional[bool]
 
 
-class ModelsConfig(BaseModel):
-    debater_one: ModelConfig
-    debater_two: ModelConfig
-    judge: ModelConfig
+class AgentsConfig(BaseModel):
+    debater_one: AgentConfig
+    debater_two: AgentConfig
+    judge: AgentConfig
 
 
 class DatasetConfig(BaseModel):
@@ -61,6 +61,7 @@ class OfflineConfig(BaseModel):
 
 class BoNConfig(BaseModel):
     count: int
+    prompts: Optional[list[str]]
 
 
 class ExperimentConfig(BaseModel):
@@ -70,7 +71,7 @@ class ExperimentConfig(BaseModel):
     num_speeches: int
     flip: Optional[bool]
     prompt_config: PromptLoadingConfig
-    models: ModelsConfig
+    agents: AgentsConfig
     dataset: DatasetConfig
     offline: Optional[OfflineConfig]
     best_of_n: Optional[BoNConfig]
@@ -157,39 +158,39 @@ class ExperimentLoader:
         split_type = ExperimentLoader.get_split(experiment)
 
         # create debater models
-        debater_one_model_type = ModelType[experiment.models.debater_one.model_type.upper()]
-        debater_two_model_type = ModelType[experiment.models.debater_two.model_type.upper()]
-        judge_model_type = ModelType[experiment.models.judge.model_type.upper()]
-        debater_one_model_path = experiment.models.debater_one.model_file_path
-        debater_two_model_path = experiment.models.debater_two.model_file_path
-        judge_model_path = experiment.models.judge.model_file_path
+        debater_one_model_type = ModelType[experiment.agents.debater_one.model_type.upper()]
+        debater_two_model_type = ModelType[experiment.agents.debater_two.model_type.upper()]
+        judge_model_type = ModelType[experiment.agents.judge.model_type.upper()]
+        debater_one_model_path = experiment.agents.debater_one.model_file_path
+        debater_two_model_path = experiment.agents.debater_two.model_file_path
+        judge_model_path = experiment.agents.judge.model_file_path
         debater_one_model = ModelUtils.instantiate_model(
             model_type=debater_one_model_type,
             file_path=debater_one_model_path,
             is_debater=True,
-            alias=experiment.models.debater_one.alias,
+            alias=experiment.agents.debater_one.alias,
         )
         debater_two_model = (
-            debater_one_model.copy(alias=experiment.models.debater_two.alias, is_debater=True)
+            debater_one_model.copy(alias=experiment.agents.debater_two.alias, is_debater=True)
             if debater_two_model_type == debater_one_model_type and debater_one_model_path == debater_two_model_path
             else ModelUtils.instantiate_model(
                 model_type=debater_two_model_type,
-                file_path=experiment.models.debater_two.model_file_path,
+                file_path=experiment.agents.debater_two.model_file_path,
                 is_debater=True,
-                alias=experiment.models.debater_two.alias,
+                alias=experiment.agents.debater_two.alias,
             )
         )
         judge_model = (
-            debater_one_model.copy(alias=experiment.models.judge.alias, is_debater=False)
+            debater_one_model.copy(alias=experiment.agents.judge.alias, is_debater=False)
             if judge_model_type == debater_one_model_type and debater_one_model_path == judge_model_path
             else (
-                debater_two_model.copy(alias=experiment.models.judge.alias, is_debater=False)
+                debater_two_model.copy(alias=experiment.agents.judge.alias, is_debater=False)
                 if judge_model_type == debater_two_model_type and debater_two_model_path == judge_model_path
                 else ModelUtils.instantiate_model(
                     model_type=judge_model_type,
-                    file_path=experiment.models.judge.model_file_path,
+                    file_path=experiment.agents.judge.model_file_path,
                     is_debater=False,
-                    alias=experiment.models.judge.alias,
+                    alias=experiment.agents.judge.alias,
                 )
             )
         )
@@ -229,19 +230,19 @@ class ExperimentLoader:
             prompt_a = PromptParser.parse(
                 prompts_file_path=experiment.prompt_config.file_path,
                 prompt_config=config_a,
-                name=experiment.prompt_config.prompt_name,
+                name=experiment.prompt_config.default_prompt_name,
             )
 
             prompt_b = PromptParser.parse(
                 prompts_file_path=experiment.prompt_config.file_path,
                 prompt_config=config_b,
-                name=experiment.prompt_config.prompt_name,
+                name=experiment.prompt_config.default_prompt_name,
             )
 
             prompt_judge = PromptParser.parse(
                 prompts_file_path=experiment.prompt_config.file_path,
                 prompt_config=config_a,
-                name=experiment.prompt_config.prompt_name,
+                name=experiment.prompt_config.default_prompt_name,
             )
 
             debater_a = Debater(
@@ -300,17 +301,32 @@ class ExperimentLoader:
             if experiment.best_of_n:
                 if experiment.num_speeches > 1:
                     raise Exception("For now, there can only be 1 speech when doing BoN")
-                debate_round.set_judge(BoNJudge(judge=debate_round.judge, n=experiment.best_of_n.count, debater_one=True))
-                flipped_round.set_judge(BoNJudge(judge=flipped_round.judge, n=experiment.best_of_n.count, debater_one=False))
-                debate_round.set_first_debater(BoNDebater(debater=debate_round.first_debater, n=experiment.best_of_n.count))
+
+                debater_a_prompts = []
+                debater_b_prompts = []
+                for prompt_name in experiment.best_of_n.prompts or [experiment.prompt_config.default_prompt_name]:
+                    for prompt_list, config in zip([debater_a_prompts, debater_b_prompts], [config_a, config_b]):
+                        prompt_list.append(
+                            PromptParser.parse(
+                                prompts_file_path=experiment.prompt_config.file_path,
+                                prompt_config=config,
+                                name=experiment.prompt_config.default_prompt_name,
+                            )
+                        )
+
+                debate_round.set_judge(BoNJudge(judge=debate_round.judge, n=experiment.best_of_n.count, debater_a=True))
+                flipped_round.set_judge(BoNJudge(judge=flipped_round.judge, n=experiment.best_of_n.count, debater_a=False))
+                debate_round.set_first_debater(
+                    BoNDebater(debater=debate_round.first_debater, n=experiment.best_of_n.count, prompts=debater_a_prompts)
+                )
                 flipped_round.set_first_debater(
-                    BoNDebater(debater=flipped_round.first_debater, n=experiment.best_of_n.count)
+                    BoNDebater(debater=flipped_round.first_debater, n=experiment.best_of_n.count, prompts=debater_a_prompts)
                 )
                 debate_round.set_second_debater(
-                    BoNDebater(debater=debate_round.second_debater, n=experiment.best_of_n.count)
+                    BoNDebater(debater=debate_round.second_debater, n=experiment.best_of_n.count, prompts=debater_b_prompts)
                 )
                 flipped_round.set_second_debater(
-                    BoNDebater(debater=flipped_round.second_debater, n=experiment.best_of_n.count)
+                    BoNDebater(debater=flipped_round.second_debater, n=experiment.best_of_n.count, prompts=debater_b_prompts)
                 )
 
             if experiment.offline:

@@ -12,8 +12,8 @@ Hardcoded_Test:
       - LeBron James
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
+    default_prompt_name: Base Prompt
+  agents:
     debater_one:
       model_type: random
       alias: random-debater
@@ -29,6 +29,30 @@ Hardcoded_Test:
     val_file_path: ../debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev
     test_file_path: ../debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test
     split_type: val
+Simple_Test:
+  topic_config:
+    topic_type: from_dataset
+  word_limit: 500
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  prompt_config:
+    file_path: ./agents/prompts/prompts.yaml
+    default_prompt_name: Base Prompt
+  agents:
+    debater_one:
+      model_type: random
+      alias: random-debater
+    debater_two:
+      model_type: deterministic
+      alias: deterministic-debater
+    judge:
+      model_type: deterministic
+      alias: deterministic-judge
+  dataset:
+    dataset_type: quality_debates
+    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+    split_type: val
 Batched_Test:
   topic_config:
     topic_type: from_dataset
@@ -38,8 +62,8 @@ Batched_Test:
   flip: False
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
+    default_prompt_name: Base Prompt
+  agents:
     debater_one:
       model_type: random
       alias: random-debater
@@ -59,11 +83,11 @@ Single_Test:
   word_limit: 500
   batch_size: 1
   num_speeches: 3
-  flip: False
+  flip: True
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
+    default_prompt_name: Base Prompt
+  agents:
     debater_one:
       model_type: random
       alias: random-debater
@@ -76,30 +100,6 @@ Single_Test:
   dataset:
     dataset_type: quality_debates
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
-Simple_Test:
-  topic_config:
-    topic_type: from_dataset
-  word_limit: 500
-  batch_size: 1
-  num_speeches: 1
-  flip: True
-  prompt_config:
-    file_path: ./agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
-    debater_one:
-      model_type: random
-      alias: random-debater
-    debater_two:
-      model_type: deterministic
-      alias: deterministic-debater
-    judge:
-      model_type: deterministic
-      alias: deterministic-judge
-  dataset:
-    dataset_type: quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
-    split_type: val
 Offline_Test:
   topic_config:
     topic_type: from_dataset
@@ -109,8 +109,8 @@ Offline_Test:
   flip: True
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
+    default_prompt_name: Base Prompt
+  agents:
     debater_one:
       model_type: random
       alias: offline-debater-1
@@ -136,8 +136,8 @@ BoN_Test:
   flip: False
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
-    prompt_name: Base Prompt
-  models:
+    default_prompt_name: Base Prompt
+  agents:
     debater_one:
       model_type: random
       alias: offline-debater-1
@@ -152,4 +152,34 @@ BoN_Test:
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
   best_of_n:
     count: 8
+Operational_Test: # this is to be tweaked whenever a new feature is being worked on
+  topic_config:
+    topic_type: from_dataset
+  word_limit: 100
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  prompt_config:
+    file_path: ./agents/prompts/prompts.yaml
+    default_prompt_name: Base Prompt
+  agents:
+    debater_one:
+      model_type: random
+      alias: random-debater
+    debater_two:
+      model_type: deterministic
+      alias: deterministic-debater
+    judge:
+      model_type: deterministic
+      alias: deterministic-judge
+  dataset:
+    dataset_type: quality_debates
+    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+    split_type: val
+  best_of_n:
+    count: 8
+    prompts:
+      - Thoughtful Prompt
+      - Aggressive Prompt
+      - Base Prompt
 
