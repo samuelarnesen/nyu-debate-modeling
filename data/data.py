@@ -37,7 +37,7 @@ class DataRow(BaseModel):
 
 
 class JudgePreferenceDataRow(BaseModel):
-    instruction: str
+    prompt: str
     chosen: str
     rejected: str
 

@@ -54,7 +54,7 @@ class QualityDebatesDataset(RawDataset):
             speeches=[
                 SpeechData(
                     text=turn["text"],
-                    position=turn["index"] if turn["role"] == "Debater" else -1,
+                    position=turn["index"] if turn["role"] == "Debater" else 0,
                     speaker_type=SpeakerType.DEBATER if turn["role"] == "Debater" else SpeakerType.JUDGE,
                 )
                 for turn in entry["turns"]

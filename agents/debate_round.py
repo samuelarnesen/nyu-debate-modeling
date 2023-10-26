@@ -64,7 +64,6 @@ class DebateRound:
         last_output = None
         next_speaker = self.judge.get_next_expected_speaker()
         while next_speaker:
-            print(f"Next speaker is {next_speaker}")
             speaker = self.name_to_agent[next_speaker]
             batch_response = speaker()
             for idx, response in enumerate(batch_response):

@@ -1,5 +1,5 @@
-from agents.debater import Debater
-from agents.judge import Judge
+from agents.debater import Debater, DebaterUtils
+from agents.judge import Judge, JudgeUtils
 from agents.models.llama_model import LlamaInput, LlamaModel
 from agents.prompt import Prompt, PromptParser, PromptTag
 from agents.transcript import Transcript
@@ -62,9 +62,11 @@ class RowConverter:
                     row=row, speech=speech, prompts_file_path=prompts_file_path, prompt_name=prompt_name
                 ),
                 speech_format=(
-                    Debater.generate_default_speech_format(name=name, num_speeches=rounds, include_scratchpad=False)
+                    DebaterUtils.get_default_speech_format(
+                        name=name, num_speeches=rounds, use_scratchpad=False, best_of_n=False
+                    )
                     if is_debater
-                    else Judge.generate_default_speech_format(num_speeches=rounds)
+                    else JudgeUtils.get_default_speech_format(num_speeches=rounds)
                 ),
             )
 

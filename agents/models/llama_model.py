@@ -12,14 +12,7 @@ import torch
 
 from typing import Optional, Union
 import copy
-
-FLASH_ATTENTION_AVAILABLE = False
-try:
-    from utils.flash_attn_utils import replace_with_flash_decoding
-
-    FLASH_ATTENTION_AVAILABLE = True
-except ImportError as e:
-    FLASH_ATTENTION_AVAILABLE = False
+import re
 
 
 class LlamaInput(BaseModel):
@@ -37,11 +30,6 @@ class LlamaModel(Model):
             self.is_debater = is_debater
             self.tokenizer = AutoTokenizer.from_pretrained(file_path)
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id  # for open-ended generation
-
-            self.logger.info(f"Running with flash attention: {FLASH_ATTENTION_AVAILABLE}")
-            if FLASH_ATTENTION_AVAILABLE:
-                # replace_with_flash_decoding()
-                pass
 
             bnb_config = BitsAndBytesConfig(
                 load_in_4bit=True,
@@ -115,8 +103,10 @@ class LlamaModel(Model):
             if is_debater:
                 return "\n\n" + "Here is my first argument:\n" if constants.BASE_MODEL_PREFIX in alias else ""
             if speech_structure == SpeechStructure.DECISION:
+                print(f"Generating output using decision prefix of {constants.JUDGING_PREFIX}")
                 return "\n\n" + constants.JUDGING_PREFIX
             elif speech_structure == SpeechStructure.PREFERENCE:
+                print(f"Generating output using decision prefix of {constants.PREFERENCE_PREFIX}")
                 return "\n\n" + constants.PREFERENCE_PREFIX
             return "\n\n" + "Here is what I'm thinking." if constants.BASE_MODEL_PREFIX in alias else ""
 
@@ -160,10 +150,16 @@ class LlamaModel(Model):
 
         decoded_outputs = []
         for i, row in enumerate(outputs.sequences):
-            if self.is_debater or speech_structure == SpeechStructure.OPEN_ENDED:
-                decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[i] :])
+            if self.is_debater or speech_structure != SpeechStructure.DECISION:
+                decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[min(i, len(input_lengths) - 1)] :])
                 new_tokens = decoded.split(constants.INSTRUCTION_SUFFIX)[-1]
-                decoded_outputs.append(new_tokens.rstrip())
+                if speech_structure == SpeechStructure.PREFERENCE:
+                    self.logger.debug("Decoded tokens were: {}".format(new_tokens))
+                if speech_structure == SpeechStructure.PREFERENCE and re.search("\\d+(\\.\\d+)?", new_tokens.strip()):
+                    self.logger.debug("Found a match!")
+                    decoded_outputs.append(re.search("\\d+(\\.\\d+)?", new_tokens.strip()).group())
+                else:
+                    decoded_outputs.append(new_tokens.rstrip())
             else:
                 tokenized_debater_a = self.tokenizer(constants.DEFAULT_DEBATER_A_NAME)
                 tokenized_debater_b = self.tokenizer(constants.DEFAULT_DEBATER_B_NAME)

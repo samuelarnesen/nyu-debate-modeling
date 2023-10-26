@@ -1,28 +1,46 @@
-from train.train_utils import TrainUtils, TrainingConfig
-from utils.flash_attn_utils import replace_attn_with_flash_attn, upcast_layer_for_flash_attention
+from agents.models.llama_model import LlamaInput, LlamaModel
+from data.data import DataRow, RawDataset, SplitType
+from train.row_converter import RowConverter
+from train.train_utils import TrainingConfig, TrainingTarget
+import utils.constants as constants
 
+from datasets import Dataset
+from pydantic import BaseModel
+from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
-from trl import DataCollatorForCompletionOnlyLM, DPOTrainer, SFTTrainer
+from trl import DataCollatorForCompletionOnlyLM, DPOTrainer
+import pandas as pd
 import torch
 
-from enum import Enum
+try:
+    from utils.flash_attn_utils import replace_attn_with_flash_attn, upcast_layer_for_flash_attention
+
+    FLASH_ATTENTION_AVAILABLE = True
+except ImportError as e:
+    print("Running without flash attention")
+    FLASH_ATTENTION_AVAILABLE = False
 
 
-class TrainerType(Enum):
-    SFT = 1
-    DPO = 2
-
-
-class Trainer:
+class DPOTrainer:
     @classmethod
-    def get_sft_trainer(
-        self,
-        model: AutoModelForCausalLM,
-        tokenizer: AutoTokenizer,
+    def convert_dataset(cls, raw_dataset: RawDataset) -> Dataset:
+        rows = [row.dict() for row in raw_dataset.get_data(split_type=SplitType.TRAIN)]
+        df = pd.DataFrame(data=rows)
+        return Dataset.from_pandas(df)
+
+    @classmethod
+    def get_trainer(
+        cls,
         config: TrainingConfig,
         raw_dataset: RawDataset,
         is_local: bool = False,
-    ) -> SFTTrainer:
+    ) -> DPOTrainer:
+        if FLASH_ATTENTION_AVAILABLE:
+            replace_attn_with_flash_attn()
+        tokenizer = TrainUtils.get_tokenizer(config=config)
+        model = TrainUtils.load_model(config=config.model_name, is_local=is_local)
+        reference_model = TrainUtils.load_model(config=config.reference_model_name, is_local=is_local)
+
         training_args = TrainingArguments(
             output_dir=config.logging_and_saving_config.output_dir,
             num_train_epochs=config.training_hyperparameters.num_train_epochs,
@@ -39,7 +57,6 @@ class Trainer:
             disable_tqdm=False,
             ddp_find_unused_parameters=False,
             use_cpu=is_local,
-            deepspeed=config.deepspeed if not is_local else None,  # change this
         )
 
         collator = DataCollatorForCompletionOnlyLM(
@@ -47,8 +64,7 @@ class Trainer:
             tokenizer=tokenizer,
         )
 
-        target = TrainingTarget[config.target.upper()]
-        train_dataset = TrainUtils.convert_dataset(
+        train_dataset = DPOTrainer.convert_dataset(
             raw_dataset=raw_dataset,
             prompts_file_path=config.prompt_config.prompts_file_path,
             prompt_name=config.prompt_config.prompt_name,
@@ -63,39 +79,20 @@ class Trainer:
             task_type="CAUSAL_LM",
         )
 
-        trainer = SFTTrainer(
+        model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
+        if FLASH_ATTENTION_AVAILABLE:
+            model = upcast_layer_for_flash_attention(model, torch.bfloat16)
+
+        trainer = DPOTrainer(
             model=model,
-            train_dataset=train_dataset,
-            peft_config=peft_config if not is_local else None,
-            tokenizer=tokenizer,
-            data_collator=collator,
-            formatting_func=TrainUtils.format_instruction,
-            max_seq_length=32_768,
+            ref_model=reference_model,
             args=training_args,
+            data_collator=collator,
+            train_dataset=train_dataset,
+            tokenizer=tokenizer,
+            peft_config=peft_config,
         )
 
         torch.cuda.empty_cache()
 
         return trainer
-
-    @classmethod
-    def get_dpo_trainer(
-        self,
-        model: AutoModelForCausalLM,
-        tokenizer: AutoTokenizer,
-        config: TrainingConfig,
-        raw_dataset: RawDataset,
-        is_local: bool = False,
-    ) -> DPOTrainer:
-        pass
-
-    @classmethod
-    def get_trainer(self, trainer_type: TrainerType, training_config: TrainingConfig):
-        replace_attn_with_flash_attn()
-
-        tokenizer = TrainUtils.get_tokenizer(config=config)
-        model = TrainUtils.load_model(config=config, is_local=is_local)
-
-        model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
-        model = upcast_layer_for_flash_attention(model, torch.bfloat16)
-        pass

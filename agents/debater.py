@@ -7,6 +7,7 @@ from utils.logger_utils import LoggerUtils
 import utils.constants as constants
 
 from typing import Optional, Union
+import copy
 
 
 class Debater(Agent):
@@ -17,8 +18,7 @@ class Debater(Agent):
         model: Model,
         num_speeches: int,
         speech_format: Optional[SpeechFormat] = None,
-        use_scratchpad: bool = True,
-        best_of_n: bool = False,
+        use_scratchpad: bool = False,
     ):
         super().__init__(
             name=name,
@@ -28,7 +28,7 @@ class Debater(Agent):
             num_speeches=num_speeches,
             speech_format=speech_format
             if speech_format
-            else DebaterUtils.get_default_speech_format(name, num_speeches, use_scratchpad, best_of_n),
+            else DebaterUtils.get_default_speech_format(name, num_speeches, use_scratchpad),
         )
         self.use_scratchpad = use_scratchpad
         self.logger = LoggerUtils.get_default_logger(__name__)
@@ -47,6 +47,26 @@ class Debater(Agent):
         return self.generate(max_new_tokens=300)
 
 
+class BoNDebater(Debater):
+    def __init__(self, debater: Debater, n: int):
+        super().__init__(
+            name=debater.name,
+            prompt=[copy.deepcopy(debater.prompts[0]) for i in range(n)],
+            model=debater.model,
+            num_speeches=debater.num_speeches,
+            speech_format=DebaterUtils.get_bon_speech_format(debater.name, debater.num_speeches, debater.use_scratchpad),
+        )
+
+    def generate(self, max_new_tokens=300) -> Optional[list[str]]:
+        model_inputs = [self.transcripts[0].to_model_input()]
+        return self.model.predict(
+            inputs=model_inputs,
+            max_new_tokens=max_new_tokens,
+            debater_name=self.name,
+            num_return_sequences=len(self.transcripts),
+        )
+
+
 class OfflineDebater(Debater):
     def __init__(self, debater: Debater, file_path: str, first_debater_prompt: Prompt):
         super().__init__(
@@ -56,6 +76,7 @@ class OfflineDebater(Debater):
                 alias=debater.model.alias, is_debater=debater.is_debater, file_path=file_path, prompt=first_debater_prompt
             ),
             num_speeches=debater.num_speeches,
+            speech_format=debater.speech_format,
         )
 
 
@@ -72,7 +93,7 @@ class DebaterUtils:
         return own_speech
 
     @classmethod
-    def get_default_speech_format(cls, name: str, num_speeches: int, use_scratchpad: bool, best_of_n: bool = False):
+    def get_speech_format(cls, name: str, num_speeches: int, use_scratchpad: bool, best_of_n: bool = False):
         opponent_name = (
             constants.DEFAULT_DEBATER_A_NAME
             if name == constants.DEFAULT_DEBATER_B_NAME
@@ -130,4 +151,16 @@ class DebaterUtils:
             .add_format(speech_format=opening_statements)
             .add_format(speech_format=later_arguments, repeats=(num_speeches - 1))
             .add_format(speech_format=decision)
+        )
+
+    @classmethod
+    def get_default_speech_format(cls, name: str, num_speeches: int, use_scratchpad: bool):
+        return DebaterUtils.get_speech_format(
+            name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad, best_of_n=False
+        )
+
+    @classmethod
+    def get_bon_speech_format(cls, name: str, num_speeches: int, use_scratchpad: bool):
+        return DebaterUtils.get_speech_format(
+            name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad, best_of_n=True
         )

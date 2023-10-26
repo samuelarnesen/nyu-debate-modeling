@@ -1,6 +1,7 @@
 from agents.model import Model
 from agents.prompt import Prompt
 from agents.transcript import SpeechFormat, Transcript
+from utils.logger_utils import LoggerUtils
 
 from typing import Optional, Union
 import copy
@@ -20,22 +21,23 @@ class Agent:
         self.is_debater = is_debater
         self.model = model
         self.num_speeches = num_speeches
+        self.speech_format = speech_format
 
         self.prompts = prompt if type(prompt) == list else [prompt]
         self.transcripts = [Transcript(name=self.name, prompt=p, speech_format=speech_format) for p in self.prompts]
         self.cached_messages = {}
 
-    def receive_message(self, speaker: str, content: str, idx: int = 0):
-        while idx >= len(self.transcripts):
-            self.transcripts.append(copy.deepcopy(self.transcripts[-1]))  # useful for BoN
-        self.cached_messages.setdefault(speaker, {}).setdefault(idx, []).append(content)
+    def receive_message(self, speaker: str, content: str, idx: int):
+        if idx >= len(self.transcripts):
+            return
 
-        expected_speaker = self.get_next_expected_speaker()
+        self.cached_messages.setdefault(speaker, {}).setdefault(idx, []).append(content)
+        expected_speaker = self.get_next_expected_speaker(idx=idx)
         while self.cached_messages.get(expected_speaker, {}).get(idx):
             for message in self.cached_messages[expected_speaker][idx]:
                 self.transcripts[idx].add_speech(speaker=expected_speaker, content=message)
             del self.cached_messages[expected_speaker][idx]
-            expected_speaker = self.get_next_expected_speaker()
+            expected_speaker = self.get_next_expected_speaker(idx=idx)
 
     def __call__(self) -> Optional[list[str]]:
         pass
@@ -50,5 +52,5 @@ class Agent:
     def get_alias(self) -> str:
         return self.model.alias
 
-    def get_next_expected_speaker(self) -> Optional[str]:
-        return self.transcripts[0].get_next_expected_speaker()
+    def get_next_expected_speaker(self, idx: int = 0) -> Optional[str]:
+        return self.transcripts[idx].get_next_expected_speaker()

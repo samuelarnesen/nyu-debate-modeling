@@ -13,18 +13,20 @@ import re
 
 class OpenAIModel(Model):
     decision_addendum = (
-        "\n\nPlease answer exclusively in this format:\n"
-        + "Winner:[DEBATER_NAME] (Example 1 - Winner: Debater_A. Example 2: Winner: Debater_B)"
+        "\n\nNow please give your answer exclusively in this format:\n"
+        + "Winner:[DEBATER_NAME] (Example 1 - Winner: Debater_A. Example 2: Winner: Debater_B)\n"
+        + "Do not contain any other text at all."
     )
 
     preference_addendum = (
-        "\n\nPlease answer exclusively in this format:\n"
-        + "Overall Score: [0-10] (Example 1 - Overall Score: 3. Overall Score: 7)"
+        "\nNow please give your answer exclusively in this format:\n"
+        + "Overall Score: [0-10] (Example 1 - Overall Score: 3. Example 2: Overall Score: 7)\n"
+        + "Do not contain any other text at all."
     )
 
     decision_regex = ".*Winner: (Debater_[AB])"
 
-    preference_regex = ".*Overall Score: (\\d+)"
+    preference_regex = ".*Overall Score: (\\d+(\\.\\d+)?)"
 
     def __init__(self, alias: str, is_debater: bool = True):
         super().__init__(alias=alias, is_debater=is_debater)
@@ -92,7 +94,7 @@ class OpenAIModel(Model):
             elif speech_structure == SpeechStructure.PREFERENCE:
                 message = extract_response_from_structured_speech(
                     message=message,
-                    regex_str=OpenAIModel.decision_regex,
+                    regex_str=OpenAIModel.preference_regex,
                     default=str(-1),
                 )
 

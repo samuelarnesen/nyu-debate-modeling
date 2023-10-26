@@ -17,6 +17,7 @@ class RandomModel(Model):
         inputs: list[list[ModelInput]],
         max_new_tokens=250,
         speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
+        num_return_sequences: int = 1,
         **kwargs,
     ) -> list[str]:
         def generate_random_text():
@@ -38,7 +39,8 @@ class RandomModel(Model):
         elif speech_structure == SpeechStructure.PREFERENCE:
             return [generate_random_number() for i in range(len(inputs))]
 
-        return [generate_random_text() for i in range(len(inputs))]
+        num_return_sequences = max(num_return_sequences, len(inputs))
+        return [generate_random_text() for i in range(num_return_sequences)]
 
     def copy(self, alias: str, is_debater: Optional[bool] = None) -> RandomModel:
         return RandomModel(alias=alias, is_debater=is_debater if is_debater is not None else False)

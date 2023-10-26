@@ -6,6 +6,8 @@ import utils.constants as constants
 from typing import Any, Optional
 import json
 import os
+import re
+import sys
 
 
 class JudgePreferencesDataset(RawDataset):
@@ -41,33 +43,32 @@ class JudgePreferencesDataset(RawDataset):
 
 class JudgePreferencesLoader(RawDataLoader):
     @classmethod
-    def load(cls, full_dataset_filepath: str, prompts_file_path: str, prompt_name: str, **kwargs) -> JudgePreferencesDataset:
+    def load(cls, full_dataset_filepath: str) -> JudgePreferencesDataset:
         train_data = []
         input_texts = InputUtils.read_file_texts(base_path=full_dataset_filepath, group_by_batch=True)
         for batch in input_texts:
             position = 0 if constants.DEBATER_A_IDENTIFICATION in batch[0] else 1
-            prompt_config = PromptParser.convert_data_row_to_default_prompt_config(row=row, position=speech.position)
-            prompt = PromptParser.parse(prompts_file_path=prompts_file_path, prompt_config=prompt_config, name=prompt_name)
-
             parsed_texts = []
-            instruction = None
-            instruction_end = prompt.messages[PromptTag.PRE_SPEECH].content
-            verdict_begin = prompt.messages[PromptTag.JUDGE_DECISION_FOR_DEBATER]
+            previous_instruction = None
             for example in batch:
-                if not instruction:
-                    instruction_index = text.find(instruction_end)
-                    assert instruction_index != -1
-                    instruction = example[0 : instruction_index + len(instruction_end)]
-
-                verdict_index = text.find(verdict_begin)
-                speech = example[instruction_index + len(instruction_end) : verdict_index].strip()
-                verdict = float(example[verdict_index + len(verdict_begin) :].strip())
+                all_instructions = re.findall(
+                    f"{constants.SYSTEM_TAG_START}.*?{constants.SYSTEM_TAG_END}", example, re.DOTALL
+                )
+                instruction_end = example.find(all_instructions[-2]) + len(all_instructions[-2])
+                verdict_start = example.find(all_instructions[-1])
+                instruction = example[:instruction_end].strip()
+                speech = example[instruction_end:verdict_start].strip()
+                verdict = float(example[verdict_start + len(all_instructions[-1]) :])
                 parsed_texts.append((instruction, speech, verdict))
 
-            sorted_parsed_texts = sorted(parsed_texts, key=lambda x: x[2], reversed=True)
+                if previous_instruction:
+                    assert instruction == previous_instruction
+                previous_instruction = instruction
+
+            sorted_parsed_texts = sorted(parsed_texts, key=lambda x: x[2], reverse=True)
             sorted_speeches = [speech for _, speech, _ in sorted_parsed_texts]
             train_data.append((instruction, sorted_speeches[0], sorted_speeches[-1]))
-            if i > 4:
+            if len(sorted_speeches) > 4:
                 train_data.append((instruction, sorted_speeches[0], sorted_speeches[-1]))
 
         return JudgePreferencesDataset(
