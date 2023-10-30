@@ -151,7 +151,10 @@ BoN_Test:
     dataset_type: quality_debates
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
   best_of_n:
-    count: 8
+    count: 2
+    prompts:
+      - Thoughtful Prompt
+      - Aggressive Prompt
 Operational_Test: # this is to be tweaked whenever a new feature is being worked on
   topic_config:
     topic_type: from_dataset

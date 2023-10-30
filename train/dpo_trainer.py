@@ -1,7 +1,7 @@
 from agents.models.llama_model import LlamaInput, LlamaModel
 from data.data import DataRow, RawDataset, SplitType
 from train.row_converter import RowConverter
-from train.train_utils import TrainingConfig, TrainingTarget
+from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
 import utils.constants as constants
 
 from datasets import Dataset
@@ -21,7 +21,7 @@ except ImportError as e:
     FLASH_ATTENTION_AVAILABLE = False
 
 
-class DPOTrainer:
+class DirectPreferenceTrainer:
     @classmethod
     def convert_dataset(cls, raw_dataset: RawDataset) -> Dataset:
         rows = [row.dict() for row in raw_dataset.get_data(split_type=SplitType.TRAIN)]
@@ -38,8 +38,8 @@ class DPOTrainer:
         if FLASH_ATTENTION_AVAILABLE:
             replace_attn_with_flash_attn()
         tokenizer = TrainUtils.get_tokenizer(config=config)
-        model = TrainUtils.load_model(config=config.model_name, is_local=is_local)
-        reference_model = TrainUtils.load_model(config=config.reference_model_name, is_local=is_local)
+        model = TrainUtils.load_model(model_name=config.model_name, is_local=is_local)
+        reference_model = TrainUtils.load_model(model_name=config.reference_model_name, is_local=is_local)
 
         training_args = TrainingArguments(
             output_dir=config.logging_and_saving_config.output_dir,
@@ -64,7 +64,7 @@ class DPOTrainer:
             tokenizer=tokenizer,
         )
 
-        train_dataset = DPOTrainer.convert_dataset(
+        train_dataset = DirectPreferenceTrainer.convert_dataset(
             raw_dataset=raw_dataset,
             prompts_file_path=config.prompt_config.prompts_file_path,
             prompt_name=config.prompt_config.prompt_name,

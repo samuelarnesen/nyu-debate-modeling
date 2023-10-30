@@ -34,6 +34,7 @@ class RowConverter:
         prompt_name: str,
         skipping_func: Callable[[SpeechData], bool],
         is_debater: bool,
+        index: int = 0,
     ):
         llama_inputs = []
 
@@ -62,9 +63,7 @@ class RowConverter:
                     row=row, speech=speech, prompts_file_path=prompts_file_path, prompt_name=prompt_name
                 ),
                 speech_format=(
-                    DebaterUtils.get_default_speech_format(
-                        name=name, num_speeches=rounds, use_scratchpad=False, best_of_n=False
-                    )
+                    DebaterUtils.get_default_speech_format(name=name, num_speeches=rounds, use_scratchpad=False)
                     if is_debater
                     else JudgeUtils.get_default_speech_format(num_speeches=rounds)
                 ),
@@ -88,7 +87,7 @@ class RowConverter:
 
     @classmethod
     def convert_all_speeches_for_debater(
-        cls, row: DataRow, prompts_file_path: str, prompt_name: str
+        cls, row: DataRow, prompts_file_path: str, prompt_name: str, index: int = 0
     ) -> list[dict[str, str]]:
         return RowConverter.convert_transcript(
             row=row,
@@ -96,14 +95,18 @@ class RowConverter:
             prompt_name=prompt_name,
             skipping_func=lambda speech: speech.speaker_type == SpeakerType.JUDGE,
             is_debater=True,
+            index=index,
         )
 
     @classmethod
-    def convert_all_speeches_for_judge(cls, row: DataRow, prompts_file_path: str, prompt_name: str) -> list[dict[str, str]]:
+    def convert_all_speeches_for_judge(
+        cls, row: DataRow, prompts_file_path: str, prompt_name: str, index: int = 0
+    ) -> list[dict[str, str]]:
         return RowConverter.convert_transcript(
             row=row,
             prompts_file_path=prompts_file_path,
             prompt_name=prompt_name,
             skipping_func=lambda speech: speech.speaker_type == SpeakerType.DEBATER,
             is_debater=False,
+            index=index,
         )

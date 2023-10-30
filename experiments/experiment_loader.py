@@ -5,6 +5,7 @@ from agents.models.model_utils import ModelType, ModelUtils
 from agents.prompt import Prompt, PromptConfig, PromptParser
 from data.data import DatasetType, RawDataLoader, RawDataset, SplitType
 from data.loaders.loader_utils import LoaderUtils
+from utils.logger_utils import LoggerUtils
 import utils.constants as constants
 
 from pydantic import BaseModel
@@ -148,6 +149,9 @@ class ExperimentLoader:
     def generate_debate_rounds(
         cls, experiment_file_path: str, name: str, count: int = 1
     ) -> tuple[list[list[DebateRound]], ExperimentConfig]:
+        # create logger
+        logger = LoggerUtils.get_default_logger(__name__)
+
         # create experiment config
         with open(experiment_file_path) as f:
             loaded_yaml = yaml.safe_load(f)
@@ -164,6 +168,7 @@ class ExperimentLoader:
         debater_one_model_path = experiment.agents.debater_one.model_file_path
         debater_two_model_path = experiment.agents.debater_two.model_file_path
         judge_model_path = experiment.agents.judge.model_file_path
+        logger.debug(f"Instantiating a {debater_one_model_type} from {debater_one_model_path}")
         debater_one_model = ModelUtils.instantiate_model(
             model_type=debater_one_model_type,
             file_path=debater_one_model_path,
@@ -272,7 +277,14 @@ class ExperimentLoader:
                 first_debater=debater_a,
                 second_debater=debater_b,
                 judge=judge,
-                metadata=[QuestionMetadata(first_debater_correct=correct_index == 0, question_idx=i, split=split_type)],
+                metadata=[
+                    QuestionMetadata(
+                        first_debater_correct=correct_index == 0,
+                        question_idx=i,
+                        background_text=background_text,
+                        split=split_type,
+                    )
+                ],
             )
 
             flipped_debater_a = Debater(
@@ -295,7 +307,14 @@ class ExperimentLoader:
                 first_debater=flipped_debater_a,
                 second_debater=flipped_debater_b,
                 judge=judge,
-                metadata=[QuestionMetadata(first_debater_correct=correct_index == 0, question_idx=i, split=split_type)],
+                metadata=[
+                    QuestionMetadata(
+                        first_debater_correct=correct_index == 0,
+                        question_idx=i,
+                        background_text=background_text,
+                        split=split_type,
+                    )
+                ],
             )
 
             if experiment.best_of_n:
@@ -310,7 +329,7 @@ class ExperimentLoader:
                             PromptParser.parse(
                                 prompts_file_path=experiment.prompt_config.file_path,
                                 prompt_config=config,
-                                name=experiment.prompt_config.default_prompt_name,
+                                name=prompt_name,
                             )
                         )
 
@@ -320,10 +339,10 @@ class ExperimentLoader:
                     BoNDebater(debater=debate_round.first_debater, n=experiment.best_of_n.count, prompts=debater_a_prompts)
                 )
                 flipped_round.set_first_debater(
-                    BoNDebater(debater=flipped_round.first_debater, n=experiment.best_of_n.count, prompts=debater_a_prompts)
+                    BoNDebater(debater=flipped_round.first_debater, n=experiment.best_of_n.count)
                 )
                 debate_round.set_second_debater(
-                    BoNDebater(debater=debate_round.second_debater, n=experiment.best_of_n.count, prompts=debater_b_prompts)
+                    BoNDebater(debater=debate_round.second_debater, n=experiment.best_of_n.count)
                 )
                 flipped_round.set_second_debater(
                     BoNDebater(debater=flipped_round.second_debater, n=experiment.best_of_n.count, prompts=debater_b_prompts)

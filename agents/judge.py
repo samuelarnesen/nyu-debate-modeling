@@ -36,6 +36,7 @@ class Judge(Agent):
             prompt=prompt,
             model=model,
             num_speeches=num_speeches,
+            validate_quotes=True,
             speech_format=speech_format if speech_format else JudgeUtils.get_default_speech_format(num_speeches),
         )
         self.logger = LoggerUtils.get_default_logger(__name__)

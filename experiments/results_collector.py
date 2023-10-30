@@ -2,6 +2,7 @@ from agents.debate_round import DebateRoundSummary
 from data.data import DataRow
 from data.loaders.quality_debates_loader import QualityDebatesLoader, QualityDebatesDataset
 from experiments.experiment_loader import ExperimentConfig, ExperimentLoader
+from experiments.quotes_collector import QuotesCollector
 from utils.logger_utils import LoggerUtils
 import utils.constants as constants
 
@@ -13,12 +14,6 @@ import scipy.optimize
 from enum import Enum
 from typing import Optional, Union
 import re
-
-
-class QuoteStats(BaseModel):
-    number_of_quotes: int
-    number_of_valid_quotes: int
-    total_valid_quote_length: int
 
 
 class WinStats(BaseModel):
@@ -261,95 +256,3 @@ class ResultsCollector:
 
         judge_results = self.__graph_judge()
         self.logger.info(judge_results)
-
-
-class QuotesCollector:
-    def __init__(self, experiment: ExperimentConfig):
-        self.dataset = ExperimentLoader.create_dataset(experiment)
-        self.split = ExperimentLoader.get_split(experiment)
-        self.alias_to_results = {}
-
-    def record_result(self, summary: DebateRoundSummary) -> None:
-        def add_new_alias(alias):
-            self.alias_to_results[alias] = {}
-            self.alias_to_results[alias][constants.OVERALL] = QuoteStats(
-                number_of_quotes=0, number_of_valid_quotes=0, total_valid_quote_length=0
-            )
-            self.alias_to_results[alias][constants.CORRECT] = QuoteStats(
-                number_of_quotes=0, number_of_valid_quotes=0, total_valid_quote_length=0
-            )
-            self.alias_to_results[alias][constants.WINNER] = QuoteStats(
-                number_of_quotes=0, number_of_valid_quotes=0, total_valid_quote_length=0
-            )
-            self.alias_to_results[alias][constants.LOSER] = QuoteStats(
-                number_of_quotes=0, number_of_valid_quotes=0, total_valid_quote_length=0
-            )
-            self.alias_to_results[alias][constants.INCORRECT] = QuoteStats(
-                number_of_quotes=0, number_of_valid_quotes=0, total_valid_quote_length=0
-            )
-
-        def is_correct(speaker: str):
-            return (speaker == constants.DEFAULT_DEBATER_A_NAME and summary.metadata.first_debater_correct) or (
-                speaker != constants.DEFAULT_DEBATER_A_NAME and not summary.metadata.first_debater_correct
-            )
-
-        def is_winner(speaker: str):
-            return (speaker == constants.DEFAULT_DEBATER_A_NAME and summary.first_debater_wins) or (
-                speaker != constants.DEFAULT_DEBATER_A_NAME and not summary.first_debater_wins
-            )
-
-        def get_alias_from_speaker(speaker: str):
-            if speech.speaker == constants.DEFAULT_DEBATER_A_NAME:
-                return summary.first_debater_alias
-            elif speech.speaker == constants.DEFAULT_DEBATER_B_NAME:
-                return summary.second_debater_alias
-            else:
-                return constants.DEFAULT_JUDGE_NAME
-
-        def simplify_text(text: str):
-            return text.replace(",", "").replace(".", "").replace('"', "").replace("'", "").lower()
-
-        if summary.first_debater_alias not in self.alias_to_results:
-            add_new_alias(summary.first_debater_alias)
-
-        if summary.second_debater_alias not in self.alias_to_results:
-            add_new_alias(summary.second_debater_alias)
-
-        data = self.dataset.get_example(idx=summary.metadata.question_idx, split=self.split)
-        background_text = data.background_text
-        for speech in summary.transcript.speeches:
-            outputted_quotes = re.findall("<quote>(.*?)</quote>", speech.content)
-            alias = get_alias_from_speaker(speech.speaker)
-            if alias == constants.DEFAULT_JUDGE_NAME:
-                continue
-            correct = is_correct(speech.speaker)
-            winner = is_winner(speech.speaker)
-            for quote in outputted_quotes:
-                if quote in background_text or simplify_text(quote) in simplify_text(background_text):
-                    self.alias_to_results[alias][constants.OVERALL].number_of_valid_quotes += 1
-                    self.alias_to_results[alias][constants.OVERALL].total_valid_quote_length += len(quote.split())
-                    if winner:
-                        self.alias_to_results[alias][constants.WINNER].number_of_valid_quotes += 1
-                        self.alias_to_results[alias][constants.WINNER].total_valid_quote_length += len(quote.split())
-                    else:
-                        self.alias_to_results[alias][constants.LOSER].number_of_valid_quotes += 1
-                        self.alias_to_results[alias][constants.LOSER].total_valid_quote_length += len(quote.split())
-                    if correct:
-                        self.alias_to_results[alias][constants.CORRECT].number_of_valid_quotes += 1
-                        self.alias_to_results[alias][constants.CORRECT].total_valid_quote_length += len(quote.split())
-                    else:
-                        self.alias_to_results[alias][constants.INCORRECT].number_of_valid_quotes += 1
-                        self.alias_to_results[alias][constants.INCORRECT].total_valid_quote_length += len(quote.split())
-
-                self.alias_to_results[alias][constants.OVERALL].number_of_quotes += 1
-                if alias == summary.winning_alias:
-                    self.alias_to_results[alias][constants.WINNER].number_of_quotes += 1
-                if alias == summary.losing_alias:
-                    self.alias_to_results[alias][constants.LOSER].number_of_quotes += 1
-                if correct:
-                    self.alias_to_results[alias][constants.CORRECT].number_of_quotes += 1
-                else:
-                    self.alias_to_results[alias][constants.INCORRECT].number_of_quotes += 1
-
-    def get_results(self):
-        return self.alias_to_results

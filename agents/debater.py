@@ -26,6 +26,7 @@ class Debater(Agent):
             prompt=prompt,
             model=model,
             num_speeches=num_speeches,
+            validate_quotes=False,
             speech_format=speech_format
             if speech_format
             else DebaterUtils.get_default_speech_format(name, num_speeches, use_scratchpad),
@@ -48,7 +49,7 @@ class Debater(Agent):
 
 
 class BoNDebater(Debater):
-    def __init__(self, debater: Debater, n: int, prompts: Optional[list[Prompt]]):
+    def __init__(self, debater: Debater, n: int, prompts: Optional[list[Prompt]] = None):
         super().__init__(
             name=debater.name,
             prompt=BoNDebater.construct_prompts(debater=debater, n=n, prompts=prompts),
@@ -56,6 +57,7 @@ class BoNDebater(Debater):
             num_speeches=debater.num_speeches,
             speech_format=DebaterUtils.get_bon_speech_format(debater.name, debater.num_speeches, debater.use_scratchpad),
         )
+        self.overridden_prompts = prompts is not None
 
     @classmethod
     def construct_prompts(cls, debater: Debater, n: int, prompts: Optional[list[Prompt]]):
@@ -64,11 +66,15 @@ class BoNDebater(Debater):
 
     def generate(self, max_new_tokens=300) -> Optional[list[str]]:
         model_inputs = [self.transcripts[0].to_model_input()]
+        num_return_sequences = len(self.transcripts)
+        if self.overridden_prompts:
+            model_inputs = [transcript.to_model_input() for transcript in self.transcripts]
+            num_return_sequences = 1
         return self.model.predict(
             inputs=model_inputs,
             max_new_tokens=max_new_tokens,
             debater_name=self.name,
-            num_return_sequences=len(self.transcripts),
+            num_return_sequences=num_return_sequences,
         )
 
 

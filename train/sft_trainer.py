@@ -1,7 +1,7 @@
 from agents.models.llama_model import LlamaInput, LlamaModel
 from data.data import DataRow, RawDataset, SplitType
 from train.row_converter import RowConverter
-from train.train_utils import TrainingConfig, TrainingTarget
+from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
 import utils.constants as constants
 
 from datasets import Dataset
@@ -20,18 +20,18 @@ except ImportError as e:
     FLASH_ATTENTION_AVAILABLE = False
 
 
-class SFTTrainer:
+class SupervisedTrainer:
     @classmethod
     def convert_row(
-        cls, row: DataRow, prompts_file_path: str, prompt_name: str, target: TrainingTarget
+        cls, row: DataRow, prompts_file_path: str, prompt_name: str, target: TrainingTarget, index: int = 0
     ) -> list[dict[str, str]]:
         if target == TrainingTarget.DEBATER:
             return RowConverter.convert_all_speeches_for_debater(
-                row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name
+                row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name, index=index
             )
         elif target == TrainingTarget.JUDGE:
             return RowConverter.convert_all_speeches_for_judge(
-                row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name
+                row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name, index=index
             )
         else:
             raise Exception(f"Tried to train on an ineligible training target of {target}. This line should not be reached.")
@@ -54,8 +54,10 @@ class SFTTrainer:
         cls, raw_dataset: RawDataset, prompts_file_path: str, prompt_name: str, target: TrainingTarget
     ) -> Dataset:
         llama_input_lists = [
-            SFTTrainer.convert_row(row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name, target=target)
-            for row in raw_dataset.get_data(split=SplitType.TRAIN)
+            SupervisedTrainer.convert_row(
+                row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name, target=target, index=i
+            )
+            for i, row in enumerate(raw_dataset.get_data(split=SplitType.TRAIN))
         ]
         llama_inputs = [item for llama_input_list in llama_input_lists for item in llama_input_list]
         df = pd.DataFrame(data=llama_inputs)
@@ -72,7 +74,7 @@ class SFTTrainer:
         if FLASH_ATTENTION_AVAILABLE:
             replace_attn_with_flash_attn()
         tokenizer = TrainUtils.get_tokenizer(config=config)
-        model = TrainUtils.load_model(config=config.model_name, is_local=is_local)
+        model = TrainUtils.load_model(model_name=config.model_name, is_local=is_local)
 
         training_args = TrainingArguments(
             output_dir=config.logging_and_saving_config.output_dir,
@@ -98,7 +100,7 @@ class SFTTrainer:
         )
 
         target = TrainingTarget[config.target.upper()]
-        train_dataset = SFTTrainer.convert_dataset(
+        train_dataset = SupervisedTrainer.convert_dataset(
             raw_dataset=raw_dataset,
             prompts_file_path=config.prompt_config.prompts_file_path,
             prompt_name=config.prompt_config.prompt_name,
@@ -123,7 +125,7 @@ class SFTTrainer:
             peft_config=peft_config if not is_local else None,
             tokenizer=tokenizer,
             data_collator=collator,
-            formatting_func=SFTTrainer.format_instruction,
+            formatting_func=SupervisedTrainer.format_instruction,
             max_seq_length=32_768,
             args=training_args,
         )

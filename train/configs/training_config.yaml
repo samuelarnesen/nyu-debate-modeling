@@ -129,7 +129,25 @@ Train - 13B:
     model_name: /vast/spa9663/models/base_models/Llama-2-13B-32K/
     target: debater
     training_hyperparameters:
-        num_train_epochs: 3
+        num_train_epochs: 2
+        per_device_train_batch_size: 4
+        gradient_accumulation_steps: 2
+        optim: paged_adamw_32bit
+        learning_rate: 2e-4
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+    logging_and_saving_config:
+        logging_steps: 10
+        output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K/
+    prompt_config:
+        prompts_file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+        prompt_name: Base Prompt
+Train - 13B - Alpaca:
+    model_name: Yukang/LongAlpaca-13B
+    target: debater
+    training_hyperparameters:
+        num_train_epochs: 2
         per_device_train_batch_size: 4
         gradient_accumulation_steps: 2
         optim: paged_adamw_32bit

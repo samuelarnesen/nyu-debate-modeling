@@ -15,7 +15,7 @@ debate_rounds, experiment = ExperimentLoader.generate_debate_rounds(
     experiment_file_path=config.experiment_file_path, name=config.experiment_name, count=args.num_iters
 )
 results_collector = ResultsCollector(
-    experiment=experiment, save_file_path_prefix=f"{config.save_path_base}/{start_time}_", should_save=not args.local
+    experiment=experiment, save_file_path_prefix=f"{config.save_path_base}/{start_time}_", should_save=(not args.local)
 )
 
 for i, debate_round in enumerate(debate_rounds):

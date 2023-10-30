@@ -5,6 +5,7 @@ from agents.transcript import Transcript
 from data.data import RawDataset, SplitType
 from utils.logger_utils import LoggerUtils
 import utils.constants as constants
+from utils.quote_utils import QuoteUtils
 
 from pydantic import BaseModel
 
@@ -15,6 +16,7 @@ from typing import Optional, Any, Union
 class QuestionMetadata(BaseModel):
     first_debater_correct: bool
     question_idx: int
+    background_text: str
     split: SplitType = SplitType.TRAIN
 
 
@@ -67,8 +69,13 @@ class DebateRound:
             speaker = self.name_to_agent[next_speaker]
             batch_response = speaker()
             for idx, response in enumerate(batch_response):
+                validated_response = QuoteUtils.validate_and_replace_quotes(
+                    speech_content=str(response),
+                    background_text=self.metadata[min(idx, len(self.metadata) - 1)].background_text,
+                )
                 for _, agent in self.name_to_agent.items():
-                    agent.receive_message(speaker=speaker.name, content=response, idx=idx)
+                    response_to_use = validated_response if agent.validate_quotes else response
+                    agent.receive_message(speaker=speaker.name, content=response_to_use, idx=idx)
             next_speaker = self.judge.get_next_expected_speaker()
             last_output = batch_response
         return last_output
@@ -80,7 +87,7 @@ class DebateRound:
         for i, debater_a_wins in enumerate(last_output):
             winner = constants.DEFAULT_DEBATER_A_NAME if debater_a_wins else constants.DEFAULT_DEBATER_B_NAME
             first_debater_win_list.append(winner == self.first_debater.name)
-            self.logger.debug(self.judge.get_transcript(idx=i).full_string_value())
+            string_value = self.judge.get_transcript(idx=i).full_string_value()
 
         if save_file_path_prefix:
             if self.judge.judge_type == JudgeType.BEST_OF_N:
@@ -102,6 +109,6 @@ class DebateRound:
             for i, first_debater_wins in enumerate(first_debater_win_list)
         ]
 
-    def __call__(self, save_file_path_prefix: Optional[str] = None) -> list[DebateRoundSummary]:  # TODO: remote num_speeches
+    def __call__(self, save_file_path_prefix: Optional[str] = None) -> list[DebateRoundSummary]:
         last_output = self.run_round()
         return self.record_winners(last_output=last_output, save_file_path_prefix=save_file_path_prefix)

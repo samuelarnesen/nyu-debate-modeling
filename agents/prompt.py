@@ -11,7 +11,7 @@ from typing import Any, Union
 
 class Message(BaseModel):
     role: Union[str, RoleType]
-    content: str
+    content: Union[str, list[str]]
 
 
 class PromptConfig(BaseModel):
@@ -65,10 +65,12 @@ class PromptParser:
 
         for prop, value in prompt_config:
             key = f"<{prop.upper()}>"
-            for tag, message in prompt.messages.items():
-                prompt.messages[tag].content = prompt.messages[tag].content.replace(key, str(value))
-            for tag, message in base_prompt.messages.items():
-                base_prompt.messages[tag].content = base_prompt.messages[tag].content.replace(key, str(value))
+            for tag, messages in prompt.messages.items():
+                for i, message in enumerate(messages.content):
+                    prompt.messages[tag].content[i] = message.replace(key, str(value))
+            for tag, messages in base_prompt.messages.items():
+                for i, message in enumerate(messages.content):
+                    base_prompt.messages[tag].content[i] = message.replace(key, str(value))
                 if tag not in prompt.messages:
                     prompt.messages[tag] = base_prompt.messages[tag]
 

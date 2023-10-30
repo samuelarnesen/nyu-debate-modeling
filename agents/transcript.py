@@ -74,11 +74,18 @@ class SpeechFormat:
 
 
 class Transcript:
-    def __init__(self, name: str, prompt: Prompt, speech_format: SpeechFormat):
+    def __init__(
+        self,
+        name: str,
+        prompt: Prompt,
+        speech_format: SpeechFormat,
+        index: int = 0,
+    ):
         self.prompt = prompt
         self.name = name
         self.speeches = []
         self.speech_format = speech_format
+        self.index = index
 
     def reset(self) -> None:
         self.speeches = []
@@ -107,7 +114,9 @@ class Transcript:
                     model_inputs,
                     ModelInput(
                         role=RoleType.SYSTEM if i < 2 else RoleType.USER,
-                        content=self.prompt.messages[prompt_tag].content,
+                        content=self.prompt.messages[prompt_tag].content[
+                            index % len(self.prompt.messages[prompt_tag].content)
+                        ],
                     ),
                 )
             else:

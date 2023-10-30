@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+import torch
 import yaml
 
 from enum import Enum

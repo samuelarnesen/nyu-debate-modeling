@@ -15,16 +15,20 @@ class Agent:
         prompt: Union[Prompt, list[Prompt]],
         model: Model,
         num_speeches: int,
+        validate_quotes: bool,
         speech_format: SpeechFormat,
     ):
         self.name = name
         self.is_debater = is_debater
         self.model = model
         self.num_speeches = num_speeches
+        self.validate_quotes = validate_quotes
         self.speech_format = speech_format
 
         self.prompts = prompt if type(prompt) == list else [prompt]
-        self.transcripts = [Transcript(name=self.name, prompt=p, speech_format=speech_format) for p in self.prompts]
+        self.transcripts = [
+            Transcript(name=self.name, prompt=p, speech_format=speech_format, index=i) for i, p in enumerate(self.prompts)
+        ]
         self.cached_messages = {}
 
     def receive_message(self, speaker: str, content: str, idx: int):

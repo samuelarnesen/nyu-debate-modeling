@@ -14,6 +14,14 @@ from typing import Optional, Union
 import copy
 import re
 
+try:
+    from utils.flash_attn_utils import replace_with_flash_decoding
+
+    FLASH_ATTENTION_AVAILABLE = True
+except ImportError as e:
+    print("Running without flash attention")
+    FLASH_ATTENTION_AVAILABLE = False
+
 
 class LlamaInput(BaseModel):
     instruction: str
@@ -27,6 +35,9 @@ class LlamaModel(Model):
         torch.cuda.empty_cache()
         self.logger = LoggerUtils.get_default_logger(__name__)
         if file_path:
+            if FLASH_ATTENTION_AVAILABLE:
+                self.logger.debug("Deciding not to use flash decoding")
+                # replace_with_flash_decoding()
             self.is_debater = is_debater
             self.tokenizer = AutoTokenizer.from_pretrained(file_path)
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id  # for open-ended generation
@@ -71,9 +82,9 @@ class LlamaModel(Model):
 
     @classmethod
     def generate_input_str(cls, llama_input: LlamaInput) -> str:
-        return "{}\n\n {} \n\n{}\n\n {} {}".format(
-            llama_input.instruction,
+        return "{}{}\n\n{}\n\n {} {}".format(
             constants.INSTRUCTION_PREFIX,
+            llama_input.instruction,
             llama_input.input,
             constants.INSTRUCTION_SUFFIX,
             llama_input.extra_suffix,
@@ -99,19 +110,17 @@ class LlamaModel(Model):
     ) -> LlamaInput:
         # TODO: remove this -- I think the base model is not responding to commands because its instruction format
         # is non-standard so this is just a patch until I figure that out and train the debating model accordingly
-        def get_judging_suffix():
+        def get_extra_suffix():
             if is_debater:
                 return "\n\n" + "Here is my first argument:\n" if constants.BASE_MODEL_PREFIX in alias else ""
             if speech_structure == SpeechStructure.DECISION:
-                print(f"Generating output using decision prefix of {constants.JUDGING_PREFIX}")
                 return "\n\n" + constants.JUDGING_PREFIX
             elif speech_structure == SpeechStructure.PREFERENCE:
-                print(f"Generating output using decision prefix of {constants.PREFERENCE_PREFIX}")
                 return "\n\n" + constants.PREFERENCE_PREFIX
             return "\n\n" + "Here is what I'm thinking." if constants.BASE_MODEL_PREFIX in alias else ""
 
         return LlamaModel.generate_input_str(
-            LlamaModel.generate_llama_input_from_model_inputs(input_list=input_list, extra_suffix=get_judging_suffix())
+            LlamaModel.generate_llama_input_from_model_inputs(input_list=input_list, extra_suffix=get_extra_suffix())
         )
 
     @timer("llama inference")
@@ -144,6 +153,7 @@ class LlamaModel(Model):
             LlamaModel.generate_input_str_from_model_inputs(input_list, self.is_debater, self.alias, speech_structure)
             for input_list in inputs
         ]
+
         inputs = self.tokenizer(input_strs, return_tensors="pt", padding=True).to("cuda")
         outputs = self.model.generate(**inputs, generation_config=create_new_generation_config())
         input_lengths = (inputs.input_ids != self.tokenizer.pad_token_id).sum(axis=1)
@@ -156,7 +166,7 @@ class LlamaModel(Model):
                 if speech_structure == SpeechStructure.PREFERENCE and re.search("\\d+(\\.\\d+)?", new_tokens.strip()):
                     decoded_outputs.append(re.search("\\d+(\\.\\d+)?", new_tokens.strip()).group())
                 else:
-                    decoded_outputs.append(new_tokens.rstrip())
+                    decoded_outputs.append(new_tokens.rstrip().replace("<s>", "").replace("</s>", ""))
             else:
                 tokenized_debater_a = self.tokenizer(constants.DEFAULT_DEBATER_A_NAME)
                 tokenized_debater_b = self.tokenizer(constants.DEFAULT_DEBATER_B_NAME)
