@@ -38,6 +38,8 @@ class ScriptUtils:
         parser.add_argument("--suppress_graphs", action="store_true", default=False)
         parser.add_argument("--local_rank", type=int, default=0)
         parser.add_argument("--bon", action="store_true", default=False)
+        parser.add_argument("--dpo", action="store_true", default=False)
+        parser.add_argument("--dataset", type=str, default="")
         args = parser.parse_args()
         ScriptUtils.set_log_level(args)
         return args
@@ -71,7 +73,9 @@ class ScriptUtils:
                 save_path_base = "/home/spa9663/debate-data/transcripts" if not args.bon else "/home/spa9663/debate-data/bon"
         else:
             experiment_name = args.configuration or "Local Experiment"
-            experiment_file_path = "experiments/configs/sft_experiment.yaml"
+            experiment_file_path = (
+                "experiments/configs/sft_experiment.yaml" if not args.bon else "experiments/configs/bon_experiment.yaml"
+            )
             save_path_base = "../../debate-data/transcripts" if not args.bon else "../../debate-data/bon"
             if not args.local:
                 experiment_name = args.configuration or "7B-Base Experiment"
@@ -85,12 +89,12 @@ class ScriptUtils:
 
     @classmethod
     def get_model_run_script_config(cls, args) -> ModelRunScriptConfig:
-        config_filepath = "train/configs/training_config.yaml"
-        full_dataset_filepath = "../../debate-data/debates-readable.jsonl"
+        config_filepath = "train/configs/sft_config.yaml" if not args.dpo else "train/configs/dpo_config.yaml"
+        full_dataset_filepath = args.dataset or "../../debate-data/debates-readable.jsonl"
         config_name = args.configuration or "Default - Local"
         if not args.local:
             config_filepath = "/home/spa9663/debate/" + config_filepath
-            full_dataset_filepath = "/home/spa9663/debate-data/debates-readable.jsonl"
+            full_dataset_filepath = args.dataset or "/home/spa9663/debate-data/debates-readable.jsonl"
             config_name = args.configuration or "Extended - 7B"
         return ModelRunScriptConfig(
             config_filepath=config_filepath, full_dataset_filepath=full_dataset_filepath, config_name=config_name

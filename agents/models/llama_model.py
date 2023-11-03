@@ -111,13 +111,11 @@ class LlamaModel(Model):
         # TODO: remove this -- I think the base model is not responding to commands because its instruction format
         # is non-standard so this is just a patch until I figure that out and train the debating model accordingly
         def get_extra_suffix():
-            if is_debater:
-                return "\n\n" + "Here is my first argument:\n" if constants.BASE_MODEL_PREFIX in alias else ""
             if speech_structure == SpeechStructure.DECISION:
                 return "\n\n" + constants.JUDGING_PREFIX
             elif speech_structure == SpeechStructure.PREFERENCE:
                 return "\n\n" + constants.PREFERENCE_PREFIX
-            return "\n\n" + "Here is what I'm thinking." if constants.BASE_MODEL_PREFIX in alias else ""
+            return ""
 
         return LlamaModel.generate_input_str(
             LlamaModel.generate_llama_input_from_model_inputs(input_list=input_list, extra_suffix=get_extra_suffix())

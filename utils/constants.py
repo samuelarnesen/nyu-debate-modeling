@@ -3,14 +3,11 @@ DEFAULT_DEBATER_B_NAME = "Debater_B"
 DEFAULT_JUDGE_NAME = "Judge"
 DEFAULT_BACKGROUND_TEXT = "None provided"
 DEFAULT_WORD_LIMIT = 750
-INSTRUCTION_PREFIX = "instruction:"  # "[INST]"
+INSTRUCTION_PREFIX = "instruction:"
 INPUT_PREFIX = "### User:"
-INSTRUCTION_SUFFIX = "output:"  # "[/INST]"
-SYSTEM_TAG_START = "<###>"
-SYSTEM_TAG_END = "</###>"
+INSTRUCTION_SUFFIX = "output:"
 JUDGING_PREFIX = "I believe the winner of this debate is Debater_"
 PREFERENCE_PREFIX = "Overall Score: "
-PRE_INSTRUCTIONS = "Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request."
 WINNER = "Winner"
 LOSER = "Loser"
 CORRECT = "Correct"
@@ -23,3 +20,10 @@ QUOTE_TAG = "<quote>"
 UNQUOTE_TAG = "</quote>"
 INVALID_QUOTE_TAG = "<invalid_quote>"
 INVALID_UNQUOTE_TAG = "</invalid_quote>"
+BEGIN_SPEECH_OPTIONS = [
+    "Write out your speech:",
+    "Now begin your speech.",
+    "Please deliver your speech.",
+    "We will now await your speech.",
+]
+BEGIN_JUDGING_OPTIONS = ["Here is the decision that the judge made:"]

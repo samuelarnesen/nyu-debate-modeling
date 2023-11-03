@@ -88,12 +88,10 @@ class DebateRound:
             winner = constants.DEFAULT_DEBATER_A_NAME if debater_a_wins else constants.DEFAULT_DEBATER_B_NAME
             first_debater_win_list.append(winner == self.first_debater.name)
             string_value = self.judge.get_transcript(idx=i).full_string_value()
+            self.logger.debug(string_value)
 
         if save_file_path_prefix:
-            if self.judge.judge_type == JudgeType.BEST_OF_N:
-                self.first_debater.save(save_file_path_prefix=save_file_path_prefix)
-            else:
-                self.judge.save(save_file_path_prefix=save_file_path_prefix)
+            self.name_to_agent[self.judge.expected_saver].save(save_file_path_prefix=save_file_path_prefix)
 
         return [
             DebateRoundSummary(

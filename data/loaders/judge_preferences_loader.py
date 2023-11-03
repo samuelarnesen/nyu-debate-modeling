@@ -36,7 +36,7 @@ class JudgePreferencesDataset(RawDataset):
 
     def __convert_batch_to_rows(self, train_data: list[tuple[str, str, str]]):
         return [
-            JudgePreferenceDataRow(instruction=instruction, chosen=chosen, rejected=rejected)
+            JudgePreferenceDataRow(prompt=instruction, chosen=chosen, rejected=rejected)
             for instruction, chosen, rejected in train_data
         ]
 
@@ -51,14 +51,14 @@ class JudgePreferencesLoader(RawDataLoader):
             parsed_texts = []
             previous_instruction = None
             for example in batch:
-                all_instructions = re.findall(
-                    f"{constants.SYSTEM_TAG_START}.*?{constants.SYSTEM_TAG_END}", example, re.DOTALL
-                )
-                instruction_end = example.find(all_instructions[-2]) + len(all_instructions[-2])
-                verdict_start = example.find(all_instructions[-1])
+                instruction_end_text = re.search("|".join(constants.BEGIN_SPEECH_OPTIONS), example, re.DOTALL).group()
+                verdict_start_text = re.search("|".join(constants.BEGIN_JUDGING_OPTIONS), example, re.DOTALL).group()
+                instruction_end = example.find(instruction_end_text) + len(instruction_end_text)
+                verdict_start = example.find(verdict_start_text)
+                verdict_end = verdict_start + len(verdict_start_text)
                 instruction = example[:instruction_end].strip()
                 speech = example[instruction_end:verdict_start].strip()
-                verdict = float(example[verdict_start + len(all_instructions[-1]) :])
+                verdict = float(example[verdict_end:])
                 parsed_texts.append((instruction, speech, verdict))
 
                 if previous_instruction:
@@ -69,7 +69,7 @@ class JudgePreferencesLoader(RawDataLoader):
             sorted_speeches = [speech for _, speech, _ in sorted_parsed_texts]
             train_data.append((instruction, sorted_speeches[0], sorted_speeches[-1]))
             if len(sorted_speeches) > 4:
-                train_data.append((instruction, sorted_speeches[0], sorted_speeches[-1]))
+                train_data.append((instruction, sorted_speeches[1], sorted_speeches[-2]))
 
         return JudgePreferencesDataset(
             train_data=train_data,

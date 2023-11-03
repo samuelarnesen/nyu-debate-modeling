@@ -29,6 +29,7 @@ class Judge(Agent):
         speech_format: Optional[SpeechFormat] = None,
         speech_structure: SpeechStructure = SpeechStructure.DECISION,
         judge_type: JudgeType = JudgeType.STANDARD,
+        expected_saver: str = constants.DEFAULT_JUDGE_NAME,
     ):
         super().__init__(
             name=name,
@@ -42,6 +43,7 @@ class Judge(Agent):
         self.logger = LoggerUtils.get_default_logger(__name__)
         self.speech_structure = speech_structure
         self.judge_type = judge_type
+        self.expected_saver = expected_saver
 
     def generate(
         self, max_new_tokens: int = 150, speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED
@@ -83,6 +85,7 @@ class BoNJudge(Judge):
             speech_format=JudgeUtils.get_bon_speech_format(debater_a=debater_a),
             speech_structure=SpeechStructure.PREFERENCE,
             judge_type=JudgeType.BEST_OF_N,
+            expected_saver=constants.DEFAULT_DEBATER_A_NAME if debater_a else constants.DEFAULT_DEBATER_B_NAME,
         )
         self.internal_results = []
 
