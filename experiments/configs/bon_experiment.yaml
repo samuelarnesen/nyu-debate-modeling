@@ -13,12 +13,40 @@
   agents:
     debater_one:
       model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
+      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged/
       alias: "13b-32k-sft"
     debater_two:
       model_type: llama
-      model_file_path: /vast/spa9663/models/base_models/Llama-2-13B-32K
-      alias: "13b-32k-base"
+      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged/
+      alias: "13b-32k-sft"
+    judge:
+      model_type: openai
+      alias: "openai-judge"
+  dataset:
+    dataset_type: quality_debates
+    full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
+    split_type: train
+13B Experiment - Train - DPO:
+  topic_config:
+    topic_type: from_dataset
+  word_limit: 500
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  best_of_n:
+    count: 2
+  prompt_config:
+    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+    default_prompt_name: Base Prompt
+  agents:
+    debater_one:
+      model_type: llama
+      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
+      alias: "13b-32k-dpo"
+    debater_two:
+      model_type: llama
+      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
+      alias: "13b-32k-dpo"
     judge:
       model_type: openai
       alias: "openai-judge"

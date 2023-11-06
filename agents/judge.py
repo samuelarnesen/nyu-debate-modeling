@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from agents.agent import Agent
 from agents.model import Model, SpeechStructure
 from agents.prompt import Prompt, PromptTag
@@ -73,6 +75,21 @@ class Judge(Agent):
 
     def process_responses(self, responses: list[str]) -> list[Any]:
         return [constants.DEFAULT_DEBATER_A_NAME in response for response in responses]
+
+    def copy(self, transcripts: Optional[list[Transcript]]) -> Judge:
+        judge = Judge(
+            name=self.name,
+            prompt=[copy.deepcopy(prompt) for prompt in self.prompts],
+            model=self.model,
+            num_speeches=self.num_speeches,
+            speech_format=self.speech_format,
+            speech_structure=self.speech_structure,
+            judge_type=self.judge_type,
+            expected_saver=self.expected_saver,
+        )
+        if transcripts:
+            judge.transcripts = [transcript.copy() for transcript in transcripts]
+        return judge
 
 
 class BoNJudge(Judge):

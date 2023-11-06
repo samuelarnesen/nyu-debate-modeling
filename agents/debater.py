@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from agents.agent import Agent
 from agents.model import Model
 from agents.models.offline_model import OfflineModel
@@ -37,6 +39,20 @@ class Debater(Agent):
     def generate(self, max_new_tokens=300) -> Optional[list[str]]:
         model_inputs = [transcript.to_model_input() for transcript in self.transcripts]
         return self.model.predict(inputs=model_inputs, max_new_tokens=max_new_tokens, debater_name=self.name)
+
+    def copy(self, transcripts: Optional[list[Transcript]] = None) -> Debater:
+        debater = Debater(
+            name=self.name,
+            prompt=[copy.deepcopy(prompt) for prompt in self.prompts],
+            model=self.model,
+            num_speeches=self.num_speeches,
+            speech_format=self.speech_format,
+            use_scratchpad=self.use_scratchpad,
+        )
+        if transcripts:
+            debater.transcripts = [transcript.copy() for transcript in transcripts]
+            print(debater.transcripts)
+        return debater
 
     def __call__(self) -> Optional[list[str]]:
         if self.use_scratchpad:

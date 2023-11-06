@@ -96,7 +96,7 @@
     judge:
       model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
-      alias: "random-judge"
+      alias: "llama-judge"
   dataset:
     dataset_type: quality_debates
     full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
@@ -113,11 +113,11 @@
   agents:
     debater_one:
       model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-reference
+      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged
       alias: "sft-debater"
     debater_two:
       model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-2
+      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current
       alias: "dpo-debater"
     judge:
       model_type: random
@@ -139,11 +139,12 @@
   agents:
     debater_one:
       model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
-      alias: "13b-32k-sft-debater"
+      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged
+      alias: "sft-debater"
     debater_two:
-      model_type: deterministic
-      alias: "deterministic-debater"
+      model_type: llama
+      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current
+      alias: "dpo-debater"
     judge:
       model_type: openai
       alias: "openai-judge"

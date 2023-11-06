@@ -1,3 +1,4 @@
+from agents.agent import Agent
 from agents.debater import Debater
 from agents.judge import Judge, JudgeType
 from agents.prompt import Prompt, PromptConfig, PromptParser
@@ -11,6 +12,8 @@ from pydantic import BaseModel
 
 from enum import Enum
 from typing import Optional, Any, Union
+import copy
+import random
 
 
 class QuestionMetadata(BaseModel):
@@ -29,6 +32,11 @@ class DebateRoundSummary(BaseModel):
     second_debater_alias: str
     first_debater_wins: bool
     judge_alias: str
+
+
+class SplittingRule(Enum):
+    OPENING_ONLY = 1
+    ALL_RANDOM = 2
 
 
 class DebateRound:
@@ -110,3 +118,53 @@ class DebateRound:
     def __call__(self, save_file_path_prefix: Optional[str] = None) -> list[DebateRoundSummary]:
         last_output = self.run_round()
         return self.record_winners(last_output=last_output, save_file_path_prefix=save_file_path_prefix)
+
+
+class SplittableDebateRound:
+    @classmethod
+    def run_split_round(
+        cls, debate_round: DebateRound, splitting_rule: SplittingRule, save_file_path_prefix: Optional[str] = None
+    ):
+        first_round_summary = debate_round(save_file_path_prefix=save_file_path_prefix)
+
+        truncation_index = SplittableDebateRound.__get_truncation_index(
+            splitting_rule=splitting_rule, debate_round=debate_round
+        )
+        
+        second_round = DebateRound(
+            first_debater=debate_round.first_debater.copy(
+                transcripts=SplittableDebateRound.__truncate_transcript(
+                    agent=debate_round.first_debater, idx=truncation_index
+                )
+            ),
+            second_debater=debate_round.second_debater.copy(
+                transcripts=SplittableDebateRound.__truncate_transcript(
+                    agent=debate_round.second_debater, idx=truncation_index
+                )
+            ),
+            judge=debate_round.judge.copy(
+                transcripts=SplittableDebateRound.__truncate_transcript(agent=debate_round.judge, idx=truncation_index)
+            ),
+            metadata=copy.deepcopy(debate_round.metadata),
+        )
+
+        second_round_summary = second_round(save_file_path_prefix=save_file_path_prefix)
+
+        return first_round_summary, second_round_summary
+
+    @classmethod
+    def __get_truncation_index(self, splitting_rule: SplittingRule, debate_round: DebateRound):
+        if splitting_rule == SplittingRule.OPENING_ONLY:
+            return 0
+        elif splitting_rule == SplittingRule.ALL_RANDOM:
+            total_speeches = debate_round.first_debater.transcripts[0].get_speech_count(debaters_only=True)
+            if len(total_speeches) <= 2:
+                return 0
+            random_index = random.randrange(0, total_speeches - 1)
+            if random_index <= 1:
+                return 0
+            return random_index
+
+    @classmethod
+    def __truncate_transcript(cls, agent: Agent, idx: int) -> list[Transcript]:
+        return [transcript.copy().truncate(idx=idx, debaters_only=True) for transcript in agent.transcripts]

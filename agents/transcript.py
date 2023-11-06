@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from enum import Enum
 from typing import Callable, Optional, Union
+import copy
 
 
 class Speech(BaseModel):
@@ -85,7 +86,6 @@ class Transcript:
         self.name = name
         self.speeches = []
         self.speech_format = speech_format
-        self.index = index
 
     def reset(self) -> None:
         self.speeches = []
@@ -138,8 +138,6 @@ class Transcript:
     def get_next_expected_speaker(self) -> Optional[str]:
         expected_speakers = [expected_speaker for _, _, expected_speaker in filter(lambda x: x[-1], self.speech_format)]
         expected_speaker = expected_speakers[len(self.speeches)] if len(self.speeches) < len(expected_speakers) else None
-
-        tags = [(tag, expected_speaker) for _, tag, expected_speaker in filter(lambda x: x[-1], self.speech_format)]
         return expected_speaker
 
     def only_decision_remains(self) -> bool:
@@ -149,12 +147,31 @@ class Transcript:
         )
         return constants.DEFAULT_JUDGE_NAME in remaining_speakers and len(remaining_speakers) == 1
 
-    def pop(self):
-        if len(self.speeches) > 0:
-            self.speeches = self.speeches[:-1]
+    def full_string_value(self) -> str:
+        return "\n\n".join([x.content for x in self.to_model_input()])
+
+    def copy(self) -> Transcript:
+        return copy.deepcopy(self)
+
+    def truncate(self, idx: int, debaters_only: bool = False) -> None:
+        max_idx = len(self.speeches)
+        if debaters_only:
+            counter = 0
+            max_idx = 0
+            idx_to_true_idx = {}
+            for i, speech in enumerate(self.speeches):
+                if speech.speaker != constants.DEFAULT_JUDGE_NAME:
+                    idx_to_true_idx[counter] = i
+                    max_idx = counter
+                    counter += 1
+            idx = idx_to_true_idx[idx]
+        return self.speeches[: min(idx, max_idx)]
+
+    def get_speech_count(self, debaters_only: bool = False) -> int:
+        if not debaters_only:
+            return len(self.speeches)
+        else:
+            return len([speech for speech in filter(lambda x: x.speaker != constants.DEFAULT_JUDGE_NAME, self.speeches)])
 
     def __str__(self):
         return f"Name: {self.name}\n\n" + "\n\n".join([str(speech) for speech in self.speeches])
-
-    def full_string_value(self):
-        return "\n\n".join([x.content for x in self.to_model_input()])

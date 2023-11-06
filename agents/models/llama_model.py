@@ -36,8 +36,8 @@ class LlamaModel(Model):
         self.logger = LoggerUtils.get_default_logger(__name__)
         if file_path:
             if FLASH_ATTENTION_AVAILABLE:
-                self.logger.debug("Deciding not to use flash decoding")
                 # replace_with_flash_decoding()
+                pass
             self.is_debater = is_debater
             self.tokenizer = AutoTokenizer.from_pretrained(file_path)
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id  # for open-ended generation

@@ -33,13 +33,13 @@ class ScriptUtils:
         parser.add_argument("--num_iters", type=int, default=1_000)
         parser.add_argument("--log_level", type=str, default="INFO")
         parser.add_argument("--configuration", type=str, default="")
-        parser.add_argument("--test", action="store_true", default=False)
+        parser.add_argument("--test", action="store_true", default=False)  # needed for local testing (optional otherwise)
         parser.add_argument("--load_only", action="store_true", default=False)
         parser.add_argument("--suppress_graphs", action="store_true", default=False)
-        parser.add_argument("--local_rank", type=int, default=0)
-        parser.add_argument("--bon", action="store_true", default=False)
-        parser.add_argument("--dpo", action="store_true", default=False)
-        parser.add_argument("--dataset", type=str, default="")
+        parser.add_argument("--local_rank", type=int, default=0)  # needed for multi-GPU training
+        parser.add_argument("--bon", action="store_true", default=False)  # needed for best-of-n
+        parser.add_argument("--dpo", action="store_true", default=False)  # needed for dpo training
+        parser.add_argument("--dataset", type=str, default="")  # needed for dpo training
         args = parser.parse_args()
         ScriptUtils.set_log_level(args)
         return args
@@ -74,7 +74,7 @@ class ScriptUtils:
         else:
             experiment_name = args.configuration or "Local Experiment"
             experiment_file_path = (
-                "experiments/configs/sft_experiment.yaml" if not args.bon else "experiments/configs/bon_experiment.yaml"
+                "experiments/configs/standard_experiment.yaml" if not args.bon else "experiments/configs/bon_experiment.yaml"
             )
             save_path_base = "../../debate-data/transcripts" if not args.bon else "../../debate-data/bon"
             if not args.local:

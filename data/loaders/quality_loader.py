@@ -2,6 +2,7 @@ from data.data import DataRow, RawDataLoader, RawDataset, SplitType
 
 from typing import Any, Optional
 import json
+import random
 
 
 class QualityDataset(RawDataset):
@@ -39,15 +40,17 @@ class QualityDataset(RawDataset):
 
     def __example_to_row(self, entry: dict[str, Any], question_idx: int) -> tuple[str, Any]:
         question = entry["questions"][question_idx]
-        if "gold_label" not in question:
+        if "gold_label" not in question or "difficult" not in question or question["difficult"] == 0:
             return None
         correct_answer = int(question["gold_label"]) - 1
+        incorrect_answer = random.choice([i for i in filter(lambda x: x != correct_answer, range(len(question["options"])))])
+        debater_a_correct = random.random() < 0.5
         return DataRow(
             background_text=entry["article"],
             question=question["question"],
             positions=(
-                question["options"][correct_answer],
-                question["options"][(correct_answer + 1) % len(question["options"])],
+                question["options"][correct_answer if debater_a_correct else incorrect_answer],
+                question["options"][incorrect_answer if debater_a_correct else correct_answer],
             ),
         )
 

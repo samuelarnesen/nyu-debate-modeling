@@ -4,7 +4,6 @@ from agents.transcript import SpeechFormat, Transcript
 from utils.logger_utils import LoggerUtils
 
 from typing import Optional, Union
-import copy
 
 
 class Agent:
