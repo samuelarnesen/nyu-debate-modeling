@@ -403,7 +403,6 @@ class ExperimentLoader:
         if current_flipped_batch:
             batched_rounds.append(ExperimentLoader.merge_debate_rounds(current_flipped_batch))
 
-
         return batched_rounds
 
     @classmethod
@@ -429,8 +428,10 @@ class ExperimentLoader:
 
         all_rounds = []
         for combination in ExperimentLoader.get_debater_combinations(experiment=experiment):
-            all_rounds.extend(ExperimentLoader.create_debate_rounds_for_combination(
-                experiment=experiment, dataset=dataset, split_type=split_type, debater_idxs=combination, count=count
-            ))
+            all_rounds.extend(
+                ExperimentLoader.create_debate_rounds_for_combination(
+                    experiment=experiment, dataset=dataset, split_type=split_type, debater_idxs=combination, count=count
+                )
+            )
 
         return all_rounds, experiment

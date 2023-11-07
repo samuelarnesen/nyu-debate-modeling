@@ -9,10 +9,12 @@ import utils.constants as constants
 from pydantic import BaseModel
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 import scipy.optimize
 
 from enum import Enum
 from typing import Optional, Union
+import math
 import re
 
 
@@ -167,13 +169,30 @@ class ResultsCollector:
         debater_skills = {alias: 0 for alias in indices}
         if len(indices) > 1:
             optimal_params = scipy.optimize.minimize(lambda x: log_likelihood(x, indices), init_params, method="BFGS").x
-            debater_skills = {debater: skill for debater, skill in zip(indices, optimal_params)}
+            debater_skills = {debater: math.exp(skill) for debater, skill in zip(indices, optimal_params)}
 
         categories = [str(key) for key in debater_skills]
         values = [value for _, value in debater_skills.items()]
         plt.bar(categories, values)
         plt.title("Bradley-Terry Scores")
         self.__save("BT")
+
+        plt.show()
+
+        computed_win_rate_matrix = []
+        for first in categories:
+            computed_win_rate_matrix.append([])
+            for second in categories:
+                computed_win_rate = debater_skills[first] / (debater_skills[first] + debater_skills[second])
+                computed_win_rate_matrix[-1].append(computed_win_rate)
+        ax = sns.heatmap(computed_win_rate_matrix, annot=True, fmt=".1%", cmap="coolwarm_r", cbar=False)
+
+        ax.set_xticklabels(categories)
+        ax.set_yticklabels(categories)
+        ax.set_xlabel("Losing Team")
+        ax.set_ylabel("Winning Team")
+        ax.set_title("Computed Win Rates")
+        self.__save("Computed_Win_Rates")
         plt.show()
 
         return debater_skills
