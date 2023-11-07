@@ -83,9 +83,9 @@
     default_prompt_name: Base Prompt
   agents:
     debaters:
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
-        alias: "13b-32k-sft"
+    - model_type: llama
+      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
+      alias: "13b-32k-sft"
     - model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
       alias: "13b-32k-sft"

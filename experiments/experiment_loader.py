@@ -1,6 +1,7 @@
 from agents.debater import BoNDebater, Debater, OfflineDebater
 from agents.judge import BoNJudge, Judge
 from agents.debate_round import DebateRound, QuestionMetadata
+from agents.model import Model
 from agents.models.model_utils import ModelType, ModelUtils
 from agents.prompt import Prompt, PromptConfig, PromptParser
 from data.data import DatasetType, RawDataLoader, RawDataset, SplitType
@@ -152,6 +153,7 @@ class ExperimentLoader:
         split_type: SplitType,
         debater_idxs: tuple[int, int],
         count: int,
+        model_cache: Optional[dict[str, Model]] = None,
     ) -> list[DebateRound]:
         # create logger
         logger = LoggerUtils.get_default_logger(__name__)
@@ -164,36 +166,51 @@ class ExperimentLoader:
         debater_two_model_path = experiment.agents.debaters[debater_idxs[1]].model_file_path
         judge_model_path = experiment.agents.judge.model_file_path
         logger.debug(f"Instantiating a {debater_one_model_type} from {debater_one_model_path}")
-        debater_one_model = ModelUtils.instantiate_model(
-            model_type=debater_one_model_type,
-            file_path=debater_one_model_path,
-            is_debater=True,
-            alias=experiment.agents.debaters[debater_idxs[0]].alias,
+
+        if not model_cache:
+            model_cache = {}
+
+        debater_one_model = (
+            ModelUtils.instantiate_model(
+                model_type=debater_one_model_type,
+                file_path=debater_one_model_path,
+                is_debater=True,
+                alias=experiment.agents.debaters[debater_idxs[0]].alias,
+            )
+            if f"{debater_one_model_type}_{debater_one_model_path}" not in model_cache
+            else model_cache[f"{debater_one_model_type}_{debater_one_model_path}"].copy(
+                alias=experiment.agents.debaters[debater_idxs[0]].alias, is_debater=True
+            )
         )
+        model_cache[f"{debater_one_model_type}_{debater_one_model_path}"] = debater_one_model
+
         debater_two_model = (
-            debater_one_model.copy(alias=experiment.agents.debaters[debater_idxs[1]].alias, is_debater=True)
-            if debater_two_model_type == debater_one_model_type and debater_one_model_path == debater_two_model_path
-            else ModelUtils.instantiate_model(
+            ModelUtils.instantiate_model(
                 model_type=debater_two_model_type,
-                file_path=experiment.agents.debaters[debater_idxs[1]].model_file_path,
+                file_path=debater_two_model_path,
                 is_debater=True,
                 alias=experiment.agents.debaters[debater_idxs[1]].alias,
             )
-        )
-        judge_model = (
-            debater_one_model.copy(alias=experiment.agents.judge.alias, is_debater=False)
-            if judge_model_type == debater_one_model_type and debater_one_model_path == judge_model_path
-            else (
-                debater_two_model.copy(alias=experiment.agents.judge.alias, is_debater=False)
-                if judge_model_type == debater_two_model_type and debater_two_model_path == judge_model_path
-                else ModelUtils.instantiate_model(
-                    model_type=judge_model_type,
-                    file_path=experiment.agents.judge.model_file_path,
-                    is_debater=False,
-                    alias=experiment.agents.judge.alias,
-                )
+            if f"{debater_two_model_type}_{debater_two_model_path}" not in model_cache
+            else model_cache[f"{debater_two_model_type}_{debater_two_model_path}"].copy(
+                alias=experiment.agents.debaters[debater_idxs[1]].alias, is_debater=True
             )
         )
+        model_cache[f"{debater_two_model_type}_{debater_two_model_path}"] = debater_two_model
+
+        judge_model = (
+            ModelUtils.instantiate_model(
+                model_type=judge_model_type,
+                file_path=judge_model_path,
+                is_debater=False,
+                alias=experiment.agents.judge.alias,
+            )
+            if f"{judge_model_type}_{judge_model_path}" not in model_cache
+            else model_cache[f"{judge_model_type}_{judge_model_path}"].copy(
+                alias=experiment.agents.judge.alias, is_debater=False
+            )
+        )
+        model_cache[f"{judge_model_type}_{judge_model_path}"] = judge_model
 
         # create debate rounds
         rounds = []
@@ -380,7 +397,7 @@ class ExperimentLoader:
                 rounds.append(flipped_round)
 
         if len(rounds) <= 1 or experiment.best_of_n:
-            return rounds
+            return rounds, model_cache
 
         # batches the debate rounds for efficient generation
         batched_rounds = []
@@ -403,7 +420,7 @@ class ExperimentLoader:
         if current_flipped_batch:
             batched_rounds.append(ExperimentLoader.merge_debate_rounds(current_flipped_batch))
 
-        return batched_rounds
+        return batched_rounds, model_cache
 
     @classmethod
     def get_debater_combinations(cls, experiment: ExperimentConfig):
@@ -427,11 +444,16 @@ class ExperimentLoader:
         split_type = ExperimentLoader.get_split(experiment)
 
         all_rounds = []
+        model_cache = {}
         for combination in ExperimentLoader.get_debater_combinations(experiment=experiment):
-            all_rounds.extend(
-                ExperimentLoader.create_debate_rounds_for_combination(
-                    experiment=experiment, dataset=dataset, split_type=split_type, debater_idxs=combination, count=count
-                )
+            rounds, model_cache = ExperimentLoader.create_debate_rounds_for_combination(
+                experiment=experiment,
+                dataset=dataset,
+                split_type=split_type,
+                debater_idxs=combination,
+                count=count,
+                model_cache=model_cache,
             )
+            all_rounds.extend(rounds)
 
         return all_rounds, experiment

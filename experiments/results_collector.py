@@ -197,7 +197,7 @@ class ResultsCollector:
 
         return debater_skills
 
-    def __graph_quotes(self) -> dict[int, int]:
+    def __graph_quotes(self, win_stats_dict: dict[str, WinStats]) -> dict[int, int]:
         def get_accuracy(results, name, key):
             return (
                 results[name][key].number_of_valid_quotes / results[name][key].number_of_quotes
@@ -207,6 +207,17 @@ class ResultsCollector:
 
         results = self.quotes_collector.get_results()
         all_categories = [constants.OVERALL, constants.WINNER, constants.LOSER, constants.CORRECT, constants.INCORRECT]
+
+        category_to_counts = {}
+        for name in results:
+            win_stats = win_stats_dict[name]
+            category_to_counts[name] = {
+                constants.OVERALL: win_stats.matches,
+                constants.WINNER: win_stats.wins,
+                constants.LOSER: win_stats.matches - win_stats.wins,
+                constants.CORRECT: win_stats.correct_matches,
+                constants.INCORRECT: win_stats.matches - win_stats.correct_matches,
+            }
 
         quote_accuracy = {}
         total_quote_counts = {}
@@ -231,7 +242,7 @@ class ResultsCollector:
 
             axs[0, 1].bar(
                 index + (i * bar_width),
-                [item / len(self.summaries) for _, item in total_quote_counts[key].items()],
+                [item / max(category_to_counts[alias][key], 1) for alias, item in total_quote_counts[key].items()],
                 bar_width,
                 label=key,
             )
@@ -241,7 +252,7 @@ class ResultsCollector:
 
             axs[1, 0].bar(
                 index + (i * bar_width),
-                [item / len(self.summaries) for _, item in valid_quote_counts[key].items()],
+                [item / max(category_to_counts[alias][key], 1) for alias, item in valid_quote_counts[key].items()],
                 bar_width,
                 label=key,
             )
@@ -268,14 +279,18 @@ class ResultsCollector:
         return results
 
     def graph_results(self) -> None:
+        plt.clf()
         bt_results = self.__graph_bradley_terry()
         self.logger.info(bt_results)
 
+        plt.clf()
         win_results = self.__graph_wins()
         self.logger.info(win_results)
 
-        quote_results = self.__graph_quotes()
+        plt.clf()
+        quote_results = self.__graph_quotes(win_stats_dict=win_results)
         self.logger.info(quote_results)
 
+        plt.clf()
         judge_results = self.__graph_judge()
         self.logger.info(judge_results)

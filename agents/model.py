@@ -32,5 +32,5 @@ class Model(ABC):
     def predict(self, inputs: list[list[ModelInput]], max_new_tokens: 250, **kwargs) -> str:
         pass
 
-    def copy(self, is_debater: Optional[bool] = None) -> Model:
-        pass
+    def copy(self, is_debater: Optional[bool] = None, **kwargs) -> Model:
+        return self

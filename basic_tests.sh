@@ -7,7 +7,6 @@ COMMON_ARGS=("--local --test --suppress_graphs --log_level=INFO")
 # Loop over each argument and run the Python program
 for ARG in "${ARGUMENTS[@]}"; do
     eval $(echo python "$PYTHON_PROGRAM" "${COMMON_ARGS[@]}" "$ARG")
-
     
     # Check if the Python script exited with an error
     if [ $? -ne 0 ]; then

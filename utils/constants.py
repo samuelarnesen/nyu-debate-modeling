@@ -27,3 +27,5 @@ BEGIN_SPEECH_OPTIONS = [
     "We will now await your speech.",
 ]
 BEGIN_JUDGING_OPTIONS = ["Here is the decision that the judge made:"]
+QUOTE_FUZZY_MATCH_EARLY_STOPPING_THRESHOLD = 0.9
+QUOTE_FUZZY_MATCH_MIN_THRESHOLD = 0.8

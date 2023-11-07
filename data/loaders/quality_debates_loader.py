@@ -84,10 +84,28 @@ class QualityDebatesLoader(RawDataLoader):
                     rows.append(json.loads(line))
             return [row for row in filter(__should_keep, rows)]
 
+        def create_splits(filtered_rows: list[dict]):
+            story_to_row = {}
+            for row in filtered_rows:
+                if row["story"] not in story_to_row:
+                    story_to_row[row["story"]] = []
+                story_to_row[row["story"]].append(row)
+            train = []
+            val = []
+            test = []
+            for i, story in enumerate(story_to_row):
+                if i < int(0.8 * len(story_to_row)):
+                    train.extend(story_to_row[story])
+                elif i < int(0.9 * len(story_to_row)):
+                    val.extend(story_to_row[story])
+                else:
+                    test.extend(story_to_row[story])
+            return train, val, test
+
         filtered_rows = __get_filtered_rows(file_path=full_dataset_filepath)
-        length = len(filtered_rows)
+        train, val, test = create_splits(filtered_rows)
         return QualityDebatesDataset(
-            train_data=filtered_rows[0 : int(0.8 * length)],
-            val_data=filtered_rows[int(0.8 * length) : int(0.9 * length)],
-            test_data=filtered_rows[int(0.9 * length) :],
+            train_data=train,
+            val_data=val,
+            test_data=test,
         )
