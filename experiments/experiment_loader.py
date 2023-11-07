@@ -14,6 +14,7 @@ import yaml
 
 from enum import Enum
 from typing import Optional
+import itertools
 
 
 class PromptLoadingConfig(BaseModel):
@@ -29,8 +30,7 @@ class AgentConfig(BaseModel):
 
 
 class AgentsConfig(BaseModel):
-    debater_one: AgentConfig
-    debater_two: AgentConfig
+    debaters: list[AgentConfig]
     judge: AgentConfig
 
 
@@ -55,8 +55,7 @@ class TopicConfig(BaseModel):
 
 
 class OfflineConfig(BaseModel):
-    debater_one: bool
-    debater_two: bool
+    debaters: list[bool]
     file_path: str
 
 
@@ -146,43 +145,39 @@ class ExperimentLoader:
         return SplitType[experiment.dataset.split_type.upper()] if experiment.dataset.split_type else SplitType.TRAIN
 
     @classmethod
-    def generate_debate_rounds(
-        cls, experiment_file_path: str, name: str, count: int = 1
-    ) -> tuple[list[list[DebateRound]], ExperimentConfig]:
+    def create_debate_rounds_for_combination(
+        cls,
+        experiment: ExperimentConfig,
+        dataset: RawDataset,
+        split_type: SplitType,
+        debater_idxs: tuple[int, int],
+        count: int,
+    ) -> list[DebateRound]:
         # create logger
         logger = LoggerUtils.get_default_logger(__name__)
 
-        # create experiment config
-        with open(experiment_file_path) as f:
-            loaded_yaml = yaml.safe_load(f)
-        experiment = ExperimentConfig(**loaded_yaml[name])
-
-        # create dataset
-        dataset = ExperimentLoader.create_dataset(experiment)
-        split_type = ExperimentLoader.get_split(experiment)
-
         # create debater models
-        debater_one_model_type = ModelType[experiment.agents.debater_one.model_type.upper()]
-        debater_two_model_type = ModelType[experiment.agents.debater_two.model_type.upper()]
+        debater_one_model_type = ModelType[experiment.agents.debaters[debater_idxs[0]].model_type.upper()]
+        debater_two_model_type = ModelType[experiment.agents.debaters[debater_idxs[1]].model_type.upper()]
         judge_model_type = ModelType[experiment.agents.judge.model_type.upper()]
-        debater_one_model_path = experiment.agents.debater_one.model_file_path
-        debater_two_model_path = experiment.agents.debater_two.model_file_path
+        debater_one_model_path = experiment.agents.debaters[debater_idxs[0]].model_file_path
+        debater_two_model_path = experiment.agents.debaters[debater_idxs[1]].model_file_path
         judge_model_path = experiment.agents.judge.model_file_path
         logger.debug(f"Instantiating a {debater_one_model_type} from {debater_one_model_path}")
         debater_one_model = ModelUtils.instantiate_model(
             model_type=debater_one_model_type,
             file_path=debater_one_model_path,
             is_debater=True,
-            alias=experiment.agents.debater_one.alias,
+            alias=experiment.agents.debaters[debater_idxs[0]].alias,
         )
         debater_two_model = (
-            debater_one_model.copy(alias=experiment.agents.debater_two.alias, is_debater=True)
+            debater_one_model.copy(alias=experiment.agents.debaters[debater_idxs[1]].alias, is_debater=True)
             if debater_two_model_type == debater_one_model_type and debater_one_model_path == debater_two_model_path
             else ModelUtils.instantiate_model(
                 model_type=debater_two_model_type,
-                file_path=experiment.agents.debater_two.model_file_path,
+                file_path=experiment.agents.debaters[debater_idxs[1]].model_file_path,
                 is_debater=True,
-                alias=experiment.agents.debater_two.alias,
+                alias=experiment.agents.debaters[debater_idxs[1]].alias,
             )
         )
         judge_model = (
@@ -385,7 +380,7 @@ class ExperimentLoader:
                 rounds.append(flipped_round)
 
         if len(rounds) <= 1 or experiment.best_of_n:
-            return rounds, experiment
+            return rounds
 
         # batches the debate rounds for efficient generation
         batched_rounds = []
@@ -408,4 +403,34 @@ class ExperimentLoader:
         if current_flipped_batch:
             batched_rounds.append(ExperimentLoader.merge_debate_rounds(current_flipped_batch))
 
-        return batched_rounds, experiment
+
+        return batched_rounds
+
+    @classmethod
+    def get_debater_combinations(cls, experiment: ExperimentConfig):
+        all_idxs = [i for i in range(len(experiment.agents.debaters))]
+        if len(all_idxs) < 2:
+            raise Exception("At least 2 debaters must be defined")
+
+        return [elem for elem in itertools.combinations(all_idxs, r=2)]
+
+    @classmethod
+    def generate_debate_rounds(
+        cls, experiment_file_path: str, name: str, count: int = 1
+    ) -> tuple[list[DebateRound], ExperimentConfig]:
+        # create experiment config
+        with open(experiment_file_path) as f:
+            loaded_yaml = yaml.safe_load(f)
+        experiment = ExperimentConfig(**loaded_yaml[name])
+
+        # create dataset
+        dataset = ExperimentLoader.create_dataset(experiment)
+        split_type = ExperimentLoader.get_split(experiment)
+
+        all_rounds = []
+        for combination in ExperimentLoader.get_debater_combinations(experiment=experiment):
+            all_rounds.extend(ExperimentLoader.create_debate_rounds_for_combination(
+                experiment=experiment, dataset=dataset, split_type=split_type, debater_idxs=combination, count=count
+            ))
+
+        return all_rounds, experiment

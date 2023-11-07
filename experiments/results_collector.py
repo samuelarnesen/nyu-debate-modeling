@@ -37,6 +37,7 @@ class ResultsCollector:
     ):
         self.logger = LoggerUtils.get_default_logger(__name__)
         self.quotes_collector = QuotesCollector(experiment=experiment) if experiment else None
+        self.num_debaters = len(set([debater.alias for debater in experiment.agents.debaters])) if experiment else 2
         self.save_file_path_prefix = save_file_path_prefix
         self.should_save = should_save
         self.summaries = []
@@ -53,6 +54,9 @@ class ResultsCollector:
         for summary in summaries:
             self.summaries.append(summary)
             self.quotes_collector.record_result(summary=summary)
+
+    def __get_num_debaters(self):
+        return len(set([debater.alias for debater in self.experiment.agents.debaters]))
 
     def __graph_judge(self) -> dict[str, float]:
         alias_to_stats = {}
@@ -120,7 +124,7 @@ class ResultsCollector:
 
         categories = ["Overall", "Correct", "Incorrect", "First", "Second"]
         index = np.arange(len(categories))
-        bar_width = 0.35
+        bar_width = 0.7 / self.num_debaters
 
         for i, alias in enumerate(alias_to_stats):
             stats = alias_to_stats[alias]
@@ -134,7 +138,7 @@ class ResultsCollector:
             plt.bar(index + (i * bar_width), values, bar_width, label=alias)
 
         plt.title("Win Rates")
-        plt.xticks(index + ((len(alias_to_stats) - 1) * bar_width) / 2, categories)
+        plt.xticks(index + ((len(alias_to_stats) - 1) * bar_width) / self.num_debaters, categories)
         plt.ylim(0, 1)
         plt.legend()
         plt.tight_layout()
@@ -151,7 +155,7 @@ class ResultsCollector:
                 log_likelihood += params[winner_idx] - np.logaddexp(params[winner_idx], params[loser_idx])
             return -log_likelihood
 
-        init_params = np.zeros(2)
+        init_params = np.zeros(self.num_debaters)
 
         indices = {}
         for summary in self.summaries:
@@ -197,12 +201,12 @@ class ResultsCollector:
 
         fig, axs = plt.subplots(2, 2, figsize=(12, 8))
         index = np.arange(len(results))
-        bar_width = 0.15
+        bar_width = 0.3 / self.num_debaters
 
         for i, key in enumerate(all_categories):
             axs[0, 0].set_ylim(0, 1)
             axs[0, 0].bar(index + (i * bar_width), [item for _, item in quote_accuracy[key].items()], bar_width, label=key)
-            axs[0, 0].set_xticks(index + (bar_width * (len(all_categories) - 1)) / 2, results.keys())
+            axs[0, 0].set_xticks(index + (bar_width * (len(all_categories) - 1)) / self.num_debaters, results.keys())
             axs[0, 0].set_title("Valid Quote Percentage")
             axs[0, 0].legend()
 
@@ -212,7 +216,7 @@ class ResultsCollector:
                 bar_width,
                 label=key,
             )
-            axs[0, 1].set_xticks(index + (bar_width * (len(all_categories) - 1)) / 2, results.keys())
+            axs[0, 1].set_xticks(index + (bar_width * (len(all_categories) - 1)) / self.num_debaters, results.keys())
             axs[0, 1].set_title("Total Quotes")
             axs[0, 1].legend()
 
@@ -222,7 +226,7 @@ class ResultsCollector:
                 bar_width,
                 label=key,
             )
-            axs[1, 0].set_xticks(index + (bar_width * (len(all_categories) - 1)) / 2, results.keys())
+            axs[1, 0].set_xticks(index + (bar_width * (len(all_categories) - 1)) / self.num_debaters, results.keys())
             axs[1, 0].set_title("Valid Quotes")
             axs[1, 0].legend()
 
@@ -232,7 +236,7 @@ class ResultsCollector:
                 bar_width,
                 label=key,
             )
-            axs[1, 1].set_xticks(index + (bar_width * (len(all_categories) - 1)) / 2, results.keys())
+            axs[1, 1].set_xticks(index + (bar_width * (len(all_categories) - 1)) / self.num_debaters, results.keys())
             axs[1, 1].set_title("Valid Quote Word Count")
             axs[1, 1].legend()
 

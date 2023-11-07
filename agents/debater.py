@@ -51,7 +51,6 @@ class Debater(Agent):
         )
         if transcripts:
             debater.transcripts = [transcript.copy() for transcript in transcripts]
-            print(debater.transcripts)
         return debater
 
     def __call__(self) -> Optional[list[str]]:

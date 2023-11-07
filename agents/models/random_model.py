@@ -29,7 +29,8 @@ class RandomModel(Model):
             )
 
         def generate_random_decision():
-            return constants.DEFAULT_DEBATER_A_NAME if random.random() < 0.5 else constants.DEFAULT_DEBATER_B_NAME
+            decision = constants.DEFAULT_DEBATER_A_NAME if random.random() < 0.5 else constants.DEFAULT_DEBATER_B_NAME
+            return decision
 
         def generate_random_number():
             return str(random.random() * 10)

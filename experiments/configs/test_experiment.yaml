@@ -14,12 +14,11 @@ Hardcoded_Test:
     file_path: ./agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: random
-      alias: random-debater
-    debater_two:
-      model_type: random
-      alias: random-debater
+    debaters:
+      - model_type: random
+        alias: random-debater
+      - model_type: random
+        alias: random-debater
     judge:
       model_type: random
       alias: random-judge
@@ -40,12 +39,11 @@ Simple_Test:
     file_path: ./agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: random
-      alias: random-debater
-    debater_two:
-      model_type: deterministic
-      alias: deterministic-debater
+    debaters:
+      - model_type: random
+        alias: random-debater
+      - model_type: deterministic
+        alias: deterministic-debater
     judge:
       model_type: deterministic
       alias: deterministic-judge
@@ -64,12 +62,11 @@ Batched_Test:
     file_path: ./agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: random
-      alias: random-debater
-    debater_two:
-      model_type: deterministic
-      alias: deterministic-debater
+    debaters:
+      - model_type: random
+        alias: random-debater
+      - model_type: deterministic
+        alias: deterministic-debater
     judge:
       model_type: random
       alias: random-judge
@@ -88,12 +85,11 @@ Single_Test:
     file_path: ./agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: random
-      alias: random-debater
-    debater_two:
-      model_type: deterministic
-      alias: deterministic-debater
+    debaters:
+      - model_type: random
+        alias: random-debater
+      - model_type: deterministic
+        alias: deterministic-debater
     judge:
       model_type: random
       alias: random-judge
@@ -111,12 +107,11 @@ Offline_Test:
     file_path: ./agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: random
-      alias: offline-debater-1
-    debater_two:
-      model_type: random
-      alias: offline-debater-2
+    debaters:
+      - model_type: random
+        alias: offline-debater-1
+      - model_type: random
+        alias: offline-debater-2
     judge:
       model_type: random
       alias: random-judge
@@ -124,8 +119,9 @@ Offline_Test:
     dataset_type: quality_debates
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
   offline:
-    debater_one: true
-    debater_two: true
+    debaters:
+      - true
+      - true
     file_path: /Users/samarnesen/nyu/debate-data/transcripts/2023-10-11_23:56:19.859778
 BoN_Test:
   topic_config:
@@ -138,12 +134,11 @@ BoN_Test:
     file_path: ./agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: random
-      alias: offline-debater-1
-    debater_two:
-      model_type: random
-      alias: offline-debater-2
+    debaters:
+      - model_type: random
+        alias: random-debater-1
+      - model_type: random
+        alias: random-debater-2
     judge:
       model_type: random
       alias: random-judge
@@ -166,12 +161,11 @@ Quality_Test:
     file_path: ./agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: random
-      alias: offline-debater-1
-    debater_two:
-      model_type: random
-      alias: offline-debater-2
+    debaters:
+      - model_type: random
+        alias: random-debater-1
+      - model_type: random
+        alias: random-debater-2
     judge:
       model_type: random
       alias: random-judge
@@ -186,34 +180,29 @@ Quality_Test:
     prompts:
       - Thoughtful Prompt
       - Aggressive Prompt
-Operational_Test: # this is to be tweaked whenever a new feature is being worked on
+Operational_Test:
   topic_config:
     topic_type: from_dataset
-  word_limit: 100
+  word_limit: 500
   batch_size: 1
   num_speeches: 1
-  flip: False
+  flip: True
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: random
-      alias: random-debater
-    debater_two:
-      model_type: deterministic
-      alias: deterministic-debater
+    debaters:
+      - model_type: random
+        alias: random-debater-1
+      - model_type: random
+        alias: random-debater-2
+      - model_type: random
+        alias: random-debater-3
     judge:
-      model_type: deterministic
-      alias: deterministic-judge
+      model_type: random
+      alias: random-judge
   dataset:
     dataset_type: quality_debates
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
     split_type: val
-  best_of_n:
-    count: 8
-    prompts:
-      - Thoughtful Prompt
-      - Aggressive Prompt
-      - Base Prompt
 

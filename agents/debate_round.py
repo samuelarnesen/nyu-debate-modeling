@@ -130,7 +130,7 @@ class SplittableDebateRound:
         truncation_index = SplittableDebateRound.__get_truncation_index(
             splitting_rule=splitting_rule, debate_round=debate_round
         )
-        
+
         second_round = DebateRound(
             first_debater=debate_round.first_debater.copy(
                 transcripts=SplittableDebateRound.__truncate_transcript(

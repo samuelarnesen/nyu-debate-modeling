@@ -11,12 +11,11 @@
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged/
-      alias: "13b-32k-sft"
-    debater_two:
-      model_type: llama
+    debaters:
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged/
+        alias: "13b-32k-sft"
+    - model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged/
       alias: "13b-32k-sft"
     judge:
@@ -39,14 +38,13 @@
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
-      alias: "13b-32k-dpo"
-    debater_two:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
-      alias: "13b-32k-dpo"
+    debaters:
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
+        alias: "13b-32k-dpo"
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
+        alias: "13b-32k-dpo"
     judge:
       model_type: openai
       alias: "openai-judge"
@@ -69,14 +67,13 @@
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
-      alias: "13b-32k-sft"
-    debater_two:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
-      alias: "13b-32k-sft"
+    debaters:
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
+        alias: "13b-32k-sft"
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
+        alias: "13b-32k-sft"
     judge:
       model_type: openai
       alias: "openai-judge"

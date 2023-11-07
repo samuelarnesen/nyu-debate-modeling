@@ -62,8 +62,8 @@ class Judge(Agent):
 
             batch_predictions = self.generate(max_new_tokens=15, speech_structure=self.speech_structure)
             validated_predictions = self.validate_responses(batch_predictions)
-
-            return self.process_responses(validated_predictions)
+            returned_response = self.process_responses(validated_predictions)
+            return returned_response
         return batch_reasoning
 
     def validate_responses(self, responses: list[str]) -> None:

@@ -9,14 +9,13 @@
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/base_models/Llama-2-7b-chat-hf
-      alias: "7b-base"
-    debater_two:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/base_models/Llama-2-7b-chat-hf
-      alias: "7b-base"
+    debaters:
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/base_models/Llama-2-7b-chat-hf
+        alias: "7b-base"
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/base_models/Llama-2-7b-chat-hf
+        alias: "7b-base"
     judge:
       model_type: random
       alias: "random-judge"
@@ -34,14 +33,13 @@
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/base_models/Llama-2-7B-32K-Instruct
-      alias: "7b-32k-base"
-    debater_two:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/base_models/Llama-2-7B-32K-Instruct
-      alias: "7b-32k-base"
+    debaters:
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/base_models/Llama-2-7B-32K-Instruct
+        alias: "7b-32k-base"
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/base_models/Llama-2-7B-32K-Instruct
+        alias: "7b-32k-base"
     judge:
       model_type: random
       alias: "random-judge"
@@ -59,14 +57,13 @@
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-7B-32K-Instruct
-      alias: "7b-32k-sft"
-    debater_two:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-7B-32K-Instruct
-      alias: "7b-32k-sft"
+    debaters:
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-7B-32K-Instruct
+        alias: "7b-32k-sft"
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-7B-32K-Instruct
+        alias: "7b-32k-sft"
     judge:
       model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-7B-32K-Instruct
@@ -85,12 +82,11 @@
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
-      alias: "13b-32k-sft"
-    debater_two:
-      model_type: llama
+    debaters:
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
+        alias: "13b-32k-sft"
+    - model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
       alias: "13b-32k-sft"
     judge:
@@ -111,14 +107,16 @@
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged
-      alias: "sft-debater"
-    debater_two:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current
-      alias: "dpo-debater"
+    debaters:
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged
+        alias: "sft-debater"
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current
+        alias: "dpo-debater"
+      - model_type: llama
+        model_file_path: Yukang/LongAlpaca-13B
+        alias: "base-debater"
     judge:
       model_type: random
       alias: "random-judge"
@@ -137,14 +135,13 @@
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged
-      alias: "sft-debater"
-    debater_two:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current
-      alias: "dpo-debater"
+    debaters:
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged
+        alias: "sft-debater"
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current
+        alias: "dpo-debater"
     judge:
       model_type: openai
       alias: "openai-judge"
@@ -163,14 +160,13 @@
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
-      alias: "13b-32k-sft-debater-full"
-    debater_two:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
-      alias: "13b-32k-sft-debater-full"
+    debaters:
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
+        alias: "13b-32k-sft-debater-full"
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
+        alias: "13b-32k-sft-debater-full"
     judge:
       model_type: openai
       alias: "openai-judge"
@@ -189,16 +185,15 @@
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
-      alias: "13b-32k-sft-debater-full"
-      use_scratchpad: false
-    debater_two:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
-      alias: "13b-32k-sft-debater-full"
-      use_scratchpad: false
+    debaters:
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
+        alias: "13b-32k-sft-debater-full"
+        use_scratchpad: false
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
+        alias: "13b-32k-sft-debater-full"
+        use_scratchpad: false
     judge:
       model_type: llama
       model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full-Judge
@@ -218,14 +213,13 @@
     file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
-    debater_one:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
-      alias: "sft-debater"
-    debater_two:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/base_models/Llama-2-13B-32K
-      alias: "base-debater"
+    debaters:
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
+        alias: "sft-debater"
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/base_models/Llama-2-13B-32K
+        alias: "base-debater"
     judge:
       model_type: openai
       alias: "openai-judge"
