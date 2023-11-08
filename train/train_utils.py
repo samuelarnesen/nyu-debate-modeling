@@ -26,6 +26,7 @@ class PromptConfig(BaseModel):
 class LoggingAndSavingConfig(BaseModel):
     logging_steps: int
     output_dir: str
+    merge_output_dir: Optional[str]
 
 
 class TrainingHyperParameterConfig(BaseModel):

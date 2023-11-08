@@ -15,9 +15,9 @@
       - model_type: llama
         model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged/
         alias: "13b-32k-sft"
-    - model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged/
-      alias: "13b-32k-sft"
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged/
+        alias: "13b-32k-sft"
     judge:
       model_type: openai
       alias: "openai-judge"
@@ -41,10 +41,10 @@
     debaters:
       - model_type: llama
         model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
-        alias: "13b-32k-dpo"
+        alias: "13b-32k"
       - model_type: llama
         model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
-        alias: "13b-32k-dpo"
+        alias: "13b-32k"
     judge:
       model_type: openai
       alias: "openai-judge"

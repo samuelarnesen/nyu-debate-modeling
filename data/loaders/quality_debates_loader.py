@@ -71,6 +71,7 @@ class QualityDebatesLoader(RawDataLoader):
         train_filepath: Optional[str] = None,
         val_filepath: Optional[str] = None,
         test_filepath: Optional[str] = None,
+        deduplicate: bool = True,
     ) -> QualityDebatesDataset:
         def __should_keep(row: dict[str, Any]) -> bool:
             roles = [turn["role"] for turn in row["turns"]]
@@ -86,10 +87,14 @@ class QualityDebatesLoader(RawDataLoader):
 
         def create_splits(filtered_rows: list[dict]):
             story_to_row = {}
+            story_to_question = {}
             for row in filtered_rows:
                 if row["story"] not in story_to_row:
                     story_to_row[row["story"]] = []
-                story_to_row[row["story"]].append(row)
+                    story_to_question[row["story"]] = []
+                if row["question"] not in story_to_question[row["story"]]:
+                    story_to_row[row["story"]].append(row)
+                    story_to_question[row["story"]].append(row["question"])
             train = []
             val = []
             test = []

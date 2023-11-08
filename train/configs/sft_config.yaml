@@ -158,6 +158,7 @@ Train - 13B - Alpaca:
     logging_and_saving_config:
         logging_steps: 10
         output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K/
+        merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged/
     prompt_config:
         prompts_file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
         prompt_name: Base Prompt

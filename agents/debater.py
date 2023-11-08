@@ -64,15 +64,16 @@ class Debater(Agent):
 
 
 class BoNDebater(Debater):
-    def __init__(self, debater: Debater, n: int, prompts: Optional[list[Prompt]] = None):
+    def __init__(self, debater: Debater, n: int, prompts: Optional[list[Prompt]] = None, evaluated: bool = True):
         super().__init__(
             name=debater.name,
-            prompt=BoNDebater.construct_prompts(debater=debater, n=n, prompts=prompts),
+            prompt=BoNDebater.construct_prompts(debater=debater, n=n if evaluated else 1, prompts=prompts),
             model=debater.model,
             num_speeches=debater.num_speeches,
             speech_format=DebaterUtils.get_bon_speech_format(debater.name, debater.num_speeches, debater.use_scratchpad),
         )
-        self.overridden_prompts = prompts is not None
+        self.n = n
+        self.evaluated = evaluated
 
     @classmethod
     def construct_prompts(cls, debater: Debater, n: int, prompts: Optional[list[Prompt]]):
@@ -80,17 +81,18 @@ class BoNDebater(Debater):
         return [copy.deepcopy(prompts[i % len(prompts)]) for i in range(n)]
 
     def generate(self, max_new_tokens=300) -> Optional[list[str]]:
-        model_inputs = [self.transcripts[0].to_model_input()]
-        num_return_sequences = len(self.transcripts)
-        if self.overridden_prompts:
-            model_inputs = [transcript.to_model_input() for transcript in self.transcripts]
-            num_return_sequences = 1
-        return self.model.predict(
-            inputs=model_inputs,
-            max_new_tokens=max_new_tokens,
-            debater_name=self.name,
-            num_return_sequences=num_return_sequences,
-        )
+        prediction = []
+        for transcript in self.transcripts:
+            prediction.extend(
+                self.model.predict(
+                    inputs=[transcript.to_model_input()],
+                    max_new_tokens=max_new_tokens,
+                    debater_name=self.name,
+                )
+            )
+        if not self.evaluated and self.n > len(prediction):
+            prediction.extend([copy.deepcopy(prediction[0]) for i in range(self.n - len(prediction))])
+        return prediction
 
 
 class OfflineDebater(Debater):

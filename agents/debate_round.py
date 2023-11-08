@@ -164,6 +164,7 @@ class SplittableDebateRound:
             if random_index <= 1:
                 return 0
             return random_index
+        raise Exception(f"Splitting rule {splitting_rule} is not recognized")
 
     @classmethod
     def __truncate_transcript(cls, agent: Agent, idx: int) -> list[Transcript]:

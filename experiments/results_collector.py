@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import scipy.optimize
+import scipy.stats
 
 from enum import Enum
 from typing import Optional, Union
@@ -93,6 +94,15 @@ class ResultsCollector:
         return alias_to_stats
 
     def __graph_wins(self) -> dict[str, float]:
+        def bayesian_credible_interval(wins: int, games: int, confidence: float = 0.95):
+            alpha = (games / 2) + wins
+            beta = (games / 2) + games - wins
+
+            lower_bound = scipy.stats.beta.ppf((1 - confidence) / 2, alpha, beta)
+            upper_bound = scipy.stats.beta.ppf(1 - (1 - confidence) / 2, alpha, beta)
+
+            return lower_bound, upper_bound
+
         alias_to_stats = {}
         for summary in self.summaries:
             if summary.first_debater_alias not in alias_to_stats:
@@ -137,7 +147,20 @@ class ResultsCollector:
                 stats.first_wins / max(stats.first_matches, 1),
                 (stats.wins - stats.first_wins) / max((stats.matches - stats.first_matches), 1),
             ]
-            plt.bar(index + (i * bar_width), values, bar_width, label=alias)
+
+            intervals = [
+                bayesian_credible_interval(stats.wins, stats.matches),
+                bayesian_credible_interval(stats.correct_wins, stats.correct_matches),
+                bayesian_credible_interval((stats.wins - stats.correct_wins), (stats.matches - stats.correct_matches)),
+                bayesian_credible_interval(stats.first_wins, stats.first_matches),
+                bayesian_credible_interval((stats.wins - stats.first_wins), (stats.matches - stats.first_matches)),
+            ]
+            assymetric_intervals = [
+                [abs(values[i] - interval[0]) for i, interval in enumerate(intervals)],
+                [abs(interval[1] - values[i]) for i, interval in enumerate(intervals)],
+            ]
+
+            plt.bar(index + (i * bar_width), values, bar_width, label=alias, yerr=assymetric_intervals)
 
         plt.title("Win Rates")
         plt.xticks(index + ((len(alias_to_stats) - 1) * bar_width) / self.num_debaters, categories)
@@ -178,6 +201,7 @@ class ResultsCollector:
         self.__save("BT")
 
         plt.show()
+        plt.clf()
 
         computed_win_rate_matrix = []
         for first in categories:
@@ -262,7 +286,7 @@ class ResultsCollector:
 
             axs[1, 1].bar(
                 index + (i * bar_width),
-                [item / len(self.summaries) for _, item in valid_quote_word_counts[key].items()],
+                [item / max(category_to_counts[alias][key], 1) for alias, item in valid_quote_word_counts[key].items()],
                 bar_width,
                 label=key,
             )
@@ -279,7 +303,7 @@ class ResultsCollector:
         return results
 
     def graph_results(self) -> None:
-        plt.clf()
+
         bt_results = self.__graph_bradley_terry()
         self.logger.info(bt_results)
 

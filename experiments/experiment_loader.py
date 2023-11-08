@@ -348,16 +348,26 @@ class ExperimentLoader:
                 debate_round.set_judge(BoNJudge(judge=debate_round.judge, n=experiment.best_of_n.count, debater_a=True))
                 flipped_round.set_judge(BoNJudge(judge=flipped_round.judge, n=experiment.best_of_n.count, debater_a=False))
                 debate_round.set_first_debater(
-                    BoNDebater(debater=debate_round.first_debater, n=experiment.best_of_n.count, prompts=debater_a_prompts)
+                    BoNDebater(
+                        debater=debate_round.first_debater,
+                        n=experiment.best_of_n.count,
+                        prompts=debater_a_prompts,
+                        evaluated=True,
+                    )
                 )
                 flipped_round.set_first_debater(
-                    BoNDebater(debater=flipped_round.first_debater, n=experiment.best_of_n.count)
+                    BoNDebater(debater=flipped_round.first_debater, n=experiment.best_of_n.count, evaluated=False)
                 )
                 debate_round.set_second_debater(
-                    BoNDebater(debater=debate_round.second_debater, n=experiment.best_of_n.count)
+                    BoNDebater(debater=debate_round.second_debater, n=experiment.best_of_n.count, evaluated=False)
                 )
                 flipped_round.set_second_debater(
-                    BoNDebater(debater=flipped_round.second_debater, n=experiment.best_of_n.count, prompts=debater_b_prompts)
+                    BoNDebater(
+                        debater=flipped_round.second_debater,
+                        n=experiment.best_of_n.count,
+                        prompts=debater_b_prompts,
+                        evaluated=True,
+                    )
                 )
 
             if experiment.offline:
