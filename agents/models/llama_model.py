@@ -5,6 +5,7 @@ from utils.logger_utils import LoggerUtils
 from utils.timer_utils import timer
 import utils.constants as constants
 
+from peft import PeftModel
 from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig
 import numpy as np
@@ -55,6 +56,11 @@ class LlamaModel(Model):
                 trust_remote_code=True,
                 use_flash_attention_2=True,
             )
+
+            # TODO: change this -- this is the experiment with steerability
+            if file_path == "Yukang/LongAlpaca-13B":
+                self.logger.info("Loading peft")
+                self.model = PeftModel.from_pretrained(self.model, "/vast/spa9663/models/trained_models/Llama-2-13B-32K-PT")
 
             self.generation_config = GenerationConfig(
                 max_new_tokens=450,

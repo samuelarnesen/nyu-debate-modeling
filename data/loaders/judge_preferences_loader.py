@@ -58,7 +58,11 @@ class JudgePreferencesLoader(RawDataLoader):
                 verdict_end = verdict_start + len(verdict_start_text)
                 instruction = example[:instruction_end].strip()
                 speech = example[instruction_end:verdict_start].strip()
-                verdict = float(example[verdict_end:])
+                verdict = (
+                    float(example[verdict_end:])
+                    if constants.DEBATER_A_IDENTIFICATION
+                    else constants.MAX_SCORE - float(example[verdict_end:])
+                )
                 parsed_texts.append((instruction, speech, verdict))
 
                 if previous_instruction:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from agents.agent import Agent
 from agents.model import Model
+from agents.models.human_model import HumanModel
 from agents.models.offline_model import OfflineModel
 from agents.prompt import Prompt, PromptTag
 from agents.transcript import SpeechFormat, Transcript
@@ -102,6 +103,19 @@ class OfflineDebater(Debater):
             prompt=debater.prompts,
             model=OfflineModel(
                 alias=debater.model.alias, is_debater=debater.is_debater, file_path=file_path, prompt=first_debater_prompt
+            ),
+            num_speeches=debater.num_speeches,
+            speech_format=debater.speech_format,
+        )
+
+
+class HumanDebater(Debater):
+    def __init__(self, debater: Debater, speeches: list[SpeechData]):
+        super().__init__(
+            name=debater.name,
+            prompt=debater.prompts,
+            model=HumanModel(
+                alias=debater.model.alias, is_debater=debater.is_debater, debater_name=debater.name, speeches=speeches
             ),
             num_speeches=debater.num_speeches,
             speech_format=debater.speech_format,

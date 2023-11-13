@@ -14,6 +14,7 @@ class ModelType(Enum):
     DETERMINISTIC = 3
     OPENAI = 4
     OFFLINE = 5
+    HUMAN = 6
 
 
 class ModelUtils:
@@ -36,4 +37,6 @@ class ModelUtils:
             return OpenAIModel(alias=alias, is_debater=is_debater)
         elif model_type == ModelType.OFFLINE:
             raise Exception("Offline model cannot be directly instantiated")
+        elif model_type == ModelType.HUMAN:
+            raise Exception("Human model cannot be directly instantiated")
         raise Exception(f"Model {model_type} not found")

@@ -1,4 +1,4 @@
-from agents.debater import BoNDebater, Debater, OfflineDebater
+from agents.debater import BoNDebater, Debater, HumanDebater, OfflineDebater
 from agents.judge import BoNJudge, Judge
 from agents.debate_round import DebateRound, QuestionMetadata
 from agents.model import Model
@@ -60,6 +60,10 @@ class OfflineConfig(BaseModel):
     file_path: str
 
 
+class HumanConfig(BaseModel):
+    debaters: list[str]
+
+
 class BoNConfig(BaseModel):
     count: int
     prompts: Optional[list[str]]
@@ -76,6 +80,7 @@ class ExperimentConfig(BaseModel):
     dataset: DatasetConfig
     offline: Optional[OfflineConfig]
     best_of_n: Optional[BoNConfig]
+    human: Optional[HumanConfig]
 
 
 class ExperimentLoader:
@@ -223,12 +228,14 @@ class ExperimentLoader:
                 opponent_position = example.positions[1]
                 background_text = example.background_text
                 correct_index = example.correct_index
+                speeches = example.speeches
             elif topic_config_type == TopicConfigType.HARD_CODED:
                 topic = experiment.topic_config.topic
                 position = experiment.topic_config.positions[0]
                 opponent_position = experiment.topic_config.positions[1]
                 background_text = constants.DEFAULT_BACKGROUND_TEXT
                 correct_index = None
+                speeches = []
             else:
                 raise Exception(f"Topic config type {topic_config_type} is not recognized")
 
@@ -335,6 +342,9 @@ class ExperimentLoader:
 
                 debater_a_prompts = []
                 debater_b_prompts = []
+                logger.info(
+                    f"Using {(len(experiment.best_of_n.prompts) if experiment.best_of_n.prompts else 0)} new prompts"
+                )
                 for prompt_name in experiment.best_of_n.prompts or [experiment.prompt_config.default_prompt_name]:
                     for prompt_list, config in zip([debater_a_prompts, debater_b_prompts], [config_a, config_b]):
                         prompt_list.append(
@@ -371,7 +381,7 @@ class ExperimentLoader:
                 )
 
             if experiment.offline:
-                if experiment.offline.debater_one:
+                if experiment.offline.debaters[0]:
                     debate_round.set_first_debater(
                         OfflineDebater(
                             debater=debate_round.first_debater,
@@ -386,7 +396,7 @@ class ExperimentLoader:
                             first_debater_prompt=prompt_a,
                         )
                     )
-                if experiment.offline.debater_two:
+                if experiment.offline.debaters[1]:
                     debate_round.set_second_debater(
                         OfflineDebater(
                             debater=debate_round.second_debater,
@@ -401,6 +411,15 @@ class ExperimentLoader:
                             first_debater_prompt=prompt_a,
                         )
                     )
+            if experiment.human:
+                if debate_round.first_debater.model.alias in experiment.human.debaters:
+                    debate_round.set_first_debater(HumanDebater(debater=debate_round.first_debater, speeches=speeches))
+                if debate_round.second_debater.model.alias in experiment.human.debaters:
+                    debate_round.set_second_debater(HumanDebater(debater=debate_round.second_debater, speeches=speeches))
+                if flipped_round.first_debater.model.alias in experiment.human.debaters:
+                    flipped_round.set_first_debater(HumanDebater(debater=flipped_round.first_debater, speeches=speeches))
+                if flipped_round.second_debater.model.alias in experiment.human.debaters:
+                    flipped_round.set_second_debater(HumanDebater(debater=flipped_round.second_debater, speeches=speeches))
 
             rounds.append(debate_round)
             if experiment.flip:

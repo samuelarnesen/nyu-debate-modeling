@@ -51,11 +51,11 @@ class Judge(Agent):
         self, max_new_tokens: int = 150, speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED
     ) -> [list[str]]:
         model_inputs = [transcript.to_model_input() for transcript in self.transcripts]
-        max_new_tokens = 200 if speech_structure == SpeechStructure.OPEN_ENDED else 15
+        max_new_tokens = max_new_tokens if speech_structure == SpeechStructure.OPEN_ENDED else 15
         return self.model.predict(inputs=model_inputs, max_new_tokens=max_new_tokens, speech_structure=speech_structure)
 
     def __call__(self) -> list[Union[str, bool]]:
-        batch_reasoning = self.generate(max_new_tokens=150, speech_structure=SpeechStructure.OPEN_ENDED)
+        batch_reasoning = self.generate(max_new_tokens=250, speech_structure=SpeechStructure.OPEN_ENDED)
         if self.transcripts[0].only_decision_remains():  # all formats should be the same so we can use any transcript
             for i, reasoning in enumerate(batch_reasoning):
                 super().receive_message(speaker=self.name, content=reasoning, idx=i)
@@ -105,6 +105,7 @@ class BoNJudge(Judge):
             expected_saver=constants.DEFAULT_DEBATER_A_NAME if debater_a else constants.DEFAULT_DEBATER_B_NAME,
         )
         self.internal_results = []
+        self.debater_a = debater_a
 
     def validate_responses(self, responses: list[str]) -> list[str]:
         validated_responses = []
@@ -117,7 +118,7 @@ class BoNJudge(Judge):
         return validated_responses
 
     def process_responses(self, responses: list[str]) -> list[Any]:
-        scores = [float(response) for response in responses]
+        scores = [(float(response) if self.debater_a else (constants.MAX_SCORE - float(response))) for response in responses]
         speeches = [transcript.get_last_external_speech() for transcript in self.transcripts]
         self.internal_results.append(
             [
@@ -181,15 +182,8 @@ class JudgeUtils:
 
     @classmethod
     def get_bon_speech_format(cls, debater_a: bool):
-        overview_tag = (
-            PromptTag.BEST_OF_N_JUDGE_OVERVIEW_FOR_DEBATER_A
-            if debater_a
-            else PromptTag.BEST_OF_N_JUDGE_OVERVIEW_FOR_DEBATER_B
-        )
-
         bon_speech_format = (
             SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-            .add(prompt_tag=overview_tag)
             .add(prompt_tag=PromptTag.BEST_OF_N_JUDGE_INSTRUCTION)
             .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
             .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)

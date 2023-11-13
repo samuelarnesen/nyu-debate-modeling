@@ -303,7 +303,6 @@ class ResultsCollector:
         return results
 
     def graph_results(self) -> None:
-
         bt_results = self.__graph_bradley_terry()
         self.logger.info(bt_results)
 

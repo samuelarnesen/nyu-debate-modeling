@@ -1,77 +1,4 @@
-7B-Base Experiment:
-  topic_config:
-    topic_type: from_dataset
-  word_limit: 500
-  batch_size: 8
-  num_speeches: 1
-  flip: True
-  prompt_config:
-    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    default_prompt_name: Base Prompt
-  agents:
-    debaters:
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/base_models/Llama-2-7b-chat-hf
-        alias: "7b-base"
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/base_models/Llama-2-7b-chat-hf
-        alias: "7b-base"
-    judge:
-      model_type: random
-      alias: "random-judge"
-  dataset:
-    dataset_type: quality_debates
-    full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-7B-32k-Base Experiment:
-  topic_config:
-    topic_type: from_dataset
-  word_limit: 500
-  batch_size: 8
-  num_speeches: 1
-  flip: True
-  prompt_config:
-    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    default_prompt_name: Base Prompt
-  agents:
-    debaters:
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/base_models/Llama-2-7B-32K-Instruct
-        alias: "7b-32k-base"
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/base_models/Llama-2-7B-32K-Instruct
-        alias: "7b-32k-base"
-    judge:
-      model_type: random
-      alias: "random-judge"
-  dataset:
-    dataset_type: quality_debates
-    full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-7B-32k Experiment:
-  topic_config:
-    topic_type: from_dataset
-  word_limit: 500
-  batch_size: 8
-  num_speeches: 1
-  flip: True
-  prompt_config:
-    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    default_prompt_name: Base Prompt
-  agents:
-    debaters:
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-7B-32K-Instruct
-        alias: "7b-32k-sft"
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-7B-32K-Instruct
-        alias: "7b-32k-sft"
-    judge:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-7B-32K-Instruct
-      alias: "7b-32k-sft-judge"
-  dataset:
-    dataset_type: quality_debates
-    full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-13B Experiment:
+13B Validation - Llama Judge:
   topic_config:
     topic_type: from_dataset
   word_limit: 500
@@ -149,60 +76,7 @@
     dataset_type: quality_debates
     full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
     split_type: val
-13B Validation - OpenAI - Full:
-  topic_config:
-    topic_type: from_dataset
-  word_limit: 500
-  batch_size: 1
-  num_speeches: 3
-  flip: False
-  prompt_config:
-    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    default_prompt_name: Base Prompt
-  agents:
-    debaters:
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
-        alias: "13b-32k-sft-debater-full"
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
-        alias: "13b-32k-sft-debater-full"
-    judge:
-      model_type: openai
-      alias: "openai-judge"
-  dataset:
-    dataset_type: quality_debates
-    full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-    split_type: val
-13B Validation - Llama - Full:
-  topic_config:
-    topic_type: from_dataset
-  word_limit: 500
-  batch_size: 1
-  num_speeches: 3
-  flip: True
-  prompt_config:
-    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
-    default_prompt_name: Base Prompt
-  agents:
-    debaters:
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
-        alias: "13b-32k-sft-debater-full"
-        use_scratchpad: false
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full/
-        alias: "13b-32k-sft-debater-full"
-        use_scratchpad: false
-    judge:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full-Judge
-      alias: "13b-32k-ft"
-  dataset:
-    dataset_type: quality_debates
-    full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-    split_type: val
-13B Base v SFT - OpenAI:
+13B Validation - PT v LoRA v Human:
   topic_config:
     topic_type: from_dataset
   word_limit: 500
@@ -215,11 +89,13 @@
   agents:
     debaters:
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged
         alias: "sft-debater"
       - model_type: llama
-        model_file_path: /vast/spa9663/models/base_models/Llama-2-13B-32K
-        alias: "base-debater"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-PT
+        alias: "pt-debater"
+      - model_type: random
+        alias: "human-debater"
     judge:
       model_type: openai
       alias: "openai-judge"
@@ -227,3 +103,6 @@
     dataset_type: quality_debates
     full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
     split_type: val
+  human:
+    debaters:
+      - "human-debater"

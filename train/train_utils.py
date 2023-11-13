@@ -1,3 +1,4 @@
+from peft import LoraConfig, PeftConfig, PeftType, PromptTuningInit, PromptTuningConfig, TaskType
 from pydantic import BaseModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import torch
@@ -38,6 +39,7 @@ class TrainingHyperParameterConfig(BaseModel):
     max_grad_norm: float
     warmup_ratio: float
     lr_scheduler_type: str
+    peft_type: Union[PeftType, str]
 
 
 class TrainingConfig(BaseModel):
@@ -91,3 +93,23 @@ class TrainUtils:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = "right"
         return tokenizer
+
+    @classmethod
+    def get_peft_config(cls, config: TrainingConfig):
+        peft_type = PeftType[config.training_hyperparameters.peft_type.upper()]
+        if peft_type == PeftType.LORA:
+            return LoraConfig(
+                lora_alpha=16,
+                lora_dropout=0.1,
+                r=64,
+                bias="none",
+                task_type=TaskType.CAUSAL_LM,
+            )
+        elif peft_type == PeftType.PROMPT_TUNING:
+            return PromptTuningConfig(
+                prompt_tuning_init=PromptTuningInit.TEXT,
+                num_virtual_tokens=16,
+                prompt_tuning_init_text="Now give your speech:",
+                tokenizer_name_or_path=config.model_name,
+                task_type=TaskType.CAUSAL_LM,
+            )

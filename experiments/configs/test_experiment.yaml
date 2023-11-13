@@ -180,6 +180,31 @@ Quality_Test:
     prompts:
       - Thoughtful Prompt
       - Aggressive Prompt
+Human_Test:
+  topic_config:
+    topic_type: from_dataset
+  word_limit: 500
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  prompt_config:
+    file_path: ./agents/prompts/prompts.yaml
+    default_prompt_name: Base Prompt
+  agents:
+    debaters:
+      - model_type: random
+        alias: 'human-debater'
+      - model_type: random
+        alias: 'random-debater'
+    judge:
+      model_type: random
+      alias: random-judge
+  dataset:
+    dataset_type: quality_debates
+    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+  human:
+    debaters:
+      - 'human-debater'
 Operational_Test:
   topic_config:
     topic_type: from_dataset

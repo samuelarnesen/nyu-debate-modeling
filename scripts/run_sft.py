@@ -26,5 +26,5 @@ if config.logging_and_saving_config.merge_output_dir:
     SaveUtils.save(
         base_model_name=config.model_name,
         adapter_name=config.logging_and_saving_config.output_dir,
-        merge_output_dir=config.logging_and_saving_config.merge_output_dir,
+        merge_name=config.logging_and_saving_config.merge_output_dir,
     )

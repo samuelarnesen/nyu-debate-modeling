@@ -3,7 +3,7 @@ from data.data import DataRow, RawDataset, SplitType
 from train.row_converter import RowConverter
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
 import utils.constants as constants
-from utils.logger_utils import LoggerUtils
+from utils.logger_utils import LoggingCallback, LoggerUtils
 
 from datasets import Dataset
 from pydantic import BaseModel
@@ -58,6 +58,7 @@ class DirectPreferenceTrainer:
             disable_tqdm=False,
             ddp_find_unused_parameters=False,
             optim=config.training_hyperparameters.optim,
+            lr_scheduler_type=config.training_hyperparameters.lr_scheduler_type,
             use_cpu=is_local,
         )
 
@@ -71,25 +72,28 @@ class DirectPreferenceTrainer:
             task_type="CAUSAL_LM",
         )
 
-        model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
+        # model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
         if FLASH_ATTENTION_AVAILABLE:
             model = upcast_layer_for_flash_attention(model, torch.bfloat16)
 
+        """
         trainable_params, all_param = model.get_nb_trainable_parameters()
         logger.info(
             f"trainable params: {trainable_params:,d} || all params: {all_param:,d} || trainable%: {100 * trainable_params / all_param}"
         )
+        """
 
         trainer = DPOTrainer(
             model=model,
             ref_model=None,
-            max_length=1024,
+            max_length=16384,
             max_prompt_length=16384,
             beta=0.1,
             args=training_args,
             train_dataset=train_dataset,
             tokenizer=tokenizer,
             peft_config=peft_config,
+            callbacks=[LoggingCallback],
         )
 
         torch.cuda.empty_cache()

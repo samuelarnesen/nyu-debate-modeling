@@ -17,6 +17,7 @@ class OfflineModel(Model):
         self.speech_idx = 0
         self.last_round_idx = -1
         self.last_debater_name = ""
+        self.prompt = prompt
 
     def predict(
         self, inputs: list[list[ModelInput]], max_new_tokens: int = 250, debater_name: str = "", round_idx: int = 0, **kwargs
@@ -36,7 +37,7 @@ class OfflineModel(Model):
         return [speech]
 
     def copy(self, alias: str, is_debater: Optional[bool] = None) -> OfflineModel:
-        return OfflineModel(alias=alias, is_debater=is_debater, speeches=self.speeches)
+        return OfflineModel(alias=alias, is_debater=is_debater, prompt=self.prompt)
 
     def __load(self, file_path: str, prompt: Prompt):
         file_texts = InputUtils.read_file_texts(base_path=file_path)

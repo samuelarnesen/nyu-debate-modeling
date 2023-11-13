@@ -1,3 +1,5 @@
+from transformers import TrainerCallback
+
 import logging
 import os
 
@@ -26,3 +28,10 @@ class LoggerUtils:
             for level in filter(lambda x: requested == str(x), [logging.DEBUG, logging.INFO, logging.WARN, logging.ERROR]):
                 return level
         return logging.INFO
+
+
+class LoggingCallback(TrainerCallback):
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        _ = logs.pop("total_flos", None)
+        if state.is_local_process_zero:
+            LoggerUtils.get_default_logger(__name__).info(logs)

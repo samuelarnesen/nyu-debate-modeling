@@ -73,6 +73,7 @@ class SupervisedTrainer:
     ) -> SFTTrainer:
         if FLASH_ATTENTION_AVAILABLE:
             replace_attn_with_flash_attn()
+
         tokenizer = TrainUtils.get_tokenizer(config=config)
         model = TrainUtils.load_model(model_name=config.model_name, is_local=is_local)
 
@@ -107,13 +108,7 @@ class SupervisedTrainer:
             target=target,
         )
 
-        peft_config = LoraConfig(
-            lora_alpha=16,
-            lora_dropout=0.1,
-            r=64,
-            bias="none",
-            task_type="CAUSAL_LM",
-        )
+        peft_config = TrainUtils.get_peft_config(config)
 
         model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
         if FLASH_ATTENTION_AVAILABLE:

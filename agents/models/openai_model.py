@@ -71,14 +71,14 @@ class OpenAIModel(Model):
 
             try:
                 completion = openai.ChatCompletion.create(
-                    model="gpt-4",
+                    model="gpt-4-1106-preview",
                     messages=messages,
                     max_tokens=max_new_tokens,
                 )
             except Exception as e:
                 self.logger.warn(f"Received an error while calling OpenAI: {e}")
                 completion = openai.ChatCompletion.create(
-                    model="gpt-4",
+                    model="gpt-4-1106-preview",
                     messages=messages,
                     max_tokens=max_new_tokens,
                 )
