@@ -1,0 +1,50 @@
+Default Dynamic Prompt:
+  Quote-Heavy:
+    eligibility_criteria:
+      tag: quote
+      bracket: high
+      threshold: 0.8
+    display:
+      positive_examples: 2
+      negative_examples: 2
+    counterpart: 
+      - Quote-Light
+    reference_prompt: Base Prompt
+    messages:
+      debater_system: |
+        The style you are assigned is "Quote-Heavy". That means that as much of your speech as possible should be quotes, while still trying to win the debate.
+      pre_opening_speech: |
+        Remember that you must debate in the "Quote-Heavy" style, otherwise you will not win.
+  Quote-Light:
+    eligibility_criteria:
+      tag: quote
+      bracket: low
+      threshold: 0.8
+    display:
+      positive_examples: 2
+      negative_examples: 2
+    counterpart: 
+      - Quote-Heavy
+    reference_prompt: Base Prompt
+    messages:
+      debater_system: |
+        The style you are assigned is "Quote-Light". That means that you should have as few quotes as possible, while still trying to win the debate.
+      pre_opening_speech: |
+        Remember that you must debate in the "Quote-Light" style, otherwise you will not win.
+  Quote-Neutral:
+    eligibility_criteria:
+      tag: quote
+      bracket: neutral
+      threshold: 0.8
+    display:
+      positive_examples: 2
+      negative_examples: 2
+    counterpart: 
+      - Quote-Heavy
+      - Quote-Light
+    reference_prompt: Base Prompt
+    messages:
+      debater_system: |
+        The style you are assigned is "Quote-Neutral". That means that you should quote whenever possible, but no need to overdo it.
+      pre_opening_speech: |
+        Remember that you must debate in the "Quote-Neutral" style, otherwise you will not win.

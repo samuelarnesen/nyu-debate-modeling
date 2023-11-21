@@ -1,4 +1,5 @@
 from data.data import RawDataLoader, DatasetType
+from data.loaders.annotated_quality_debates_loader import AnnotatedQualityDebatesLoader
 from data.loaders.judge_preferences_loader import JudgePreferencesLoader
 from data.loaders.quality_loader import QualityLoader
 from data.loaders.quality_debates_loader import QualityDebatesLoader
@@ -16,4 +17,6 @@ class LoaderUtils:
             return QualityDebatesLoader
         elif dataset_type == DatasetType.JUDGE_PREFERENCES:
             return JudgePreferencesLoader
+        elif dataset_type == DatasetType.ANNOTATED_QUALITY_DEBATES:
+            return AnnotatedQualityDebatesLoader
         raise Exception(f"Loader {dataset_type} not found")

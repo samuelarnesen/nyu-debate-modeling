@@ -1,12 +1,13 @@
 from agents.model import RoleType
-from data.data import DataRow
+from data.data import AnnotationBracket, AnnotationTag, DataRow, SplitType
+from data.loaders.annotated_quality_debates_loader import AnnotatedQualityDebatesDataset
 import utils.constants as constants
 
 from pydantic import BaseModel
 import yaml
 
 from enum import Enum
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 
 class Message(BaseModel):
@@ -46,9 +47,33 @@ class PromptTag(Enum):
     BEST_OF_N_JUDGE_OVERVIEW_FOR_DEBATER_B = 20
 
 
+class ExamplesTag(Enum):
+    POSITIVE_EXAMPLES = 1
+    NEGATIVE_EXAMPLES = 2
+
+
 class Prompt(BaseModel):
     name: str
     messages: Union[dict[str, dict[str, Any]], dict[PromptTag, Message]]
+
+
+class DynamicEligibilityCriteria(BaseModel):
+    tag: str
+    bracket: Union[str, AnnotationBracket]
+    threshold: float
+
+
+class DynamicDisplayConfig(BaseModel):
+    positive_examples: int
+    negative_examples: int
+
+
+class DynamicPrompt(BaseModel):
+    eligibility_criteria: DynamicEligibilityCriteria
+    display: DynamicDisplayConfig
+    counterpart: list[str]
+    reference_prompt: str
+    messages: dict[Union[PromptTag, str], str]
 
 
 class PromptParser:
@@ -99,3 +124,74 @@ class PromptParser:
             topic=row.question,
             background_text=row.background_text,
         )
+
+
+class DynamicPromptParser:
+    @classmethod
+    def get_dynamic_prompt(
+        cls, row: DataRow, prompt_config: PromptConfig, dynamic_prompts: list[DynamicPrompt]
+    ) -> Optional[DynamicPrompt]:
+        predicate = lambda speech: speech.position == (
+            constants.DEBATER_A_POSITION
+            if prompt_config.name == constants.DEFAULT_DEBATER_A_NAME
+            else constants.DEBATER_B_POSITION
+        )
+
+        # TODO: -- note that this only works for opening speeches!!!!!
+        # TODO: -- note that this only works for single dynamic prompts (no combos)
+        speech_to_use = None
+        for speech in filter(lambda x: x.annotation.percentiles and predicate(x), row.speeches):
+            speech_to_use = speech
+            break
+
+        if not speech_to_use:
+            return
+
+        for prompt in dynamic_prompts:
+            tag = AnnotationTag[prompt.eligibility_criteria.tag.upper()]
+            meets_threshold = AnnotatedQualityDebatesDataset.meets_threshold(
+                tag=tag,
+                bracket=AnnotationBracket[prompt.eligibility_criteria.bracket.upper()],
+                threshold=prompt.eligibility_criteria.threshold,
+                positive=True,
+                speech=speech_to_use,
+            )
+            if meets_threshold:
+                return prompt
+
+        return None
+
+    @classmethod
+    def convert_to_dynamic_prompt(
+        cls,
+        dynamic_prompt_file_path: str,
+        prompt: Prompt,
+        prompt_config: PromptConfig,
+        dataset: AnnotatedQualityDebatesDataset,
+        index: int,
+        split: SplitType,
+        row: DataRow,
+        dynamic_prompt_name: str,
+    ) -> Prompt:
+        row = dataset.get_example(split=SplitType.TRAIN, idx=index)
+
+        with open(dynamic_prompt_file_path) as f:
+            dynamic_loaded_yaml = yaml.safe_load(f)
+
+        dynamic_prompts = [
+            DynamicPrompt(**dynamic_loaded_yaml[dynamic_prompt_name][name])
+            for name in dynamic_loaded_yaml[dynamic_prompt_name]
+        ]
+
+        dynamic_prompt = DynamicPromptParser.get_dynamic_prompt(
+            row=row, prompt_config=prompt_config, dynamic_prompts=dynamic_prompts
+        )
+
+        if dynamic_prompt:
+            for tag, message in dynamic_prompt.messages.items():
+                tag_to_use = PromptTag[tag.upper()]
+                if tag_to_use in prompt.messages:
+                    for i, existing_message in enumerate(prompt.messages[tag_to_use].content):
+                        prompt.messages[tag_to_use].content[i] = f"{existing_message}\n{message}"
+
+        return prompt

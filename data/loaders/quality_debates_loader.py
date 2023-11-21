@@ -60,6 +60,7 @@ class QualityDebatesDataset(RawDataset):
                 for turn in entry["turns"]
             ],
             correct_index=self.__get_correct_answer(entry),
+            debate_id="_".join([entry["storyTitle"], entry["debateId"]]),
         )
 
 
@@ -71,12 +72,19 @@ class QualityDebatesLoader(RawDataLoader):
         train_filepath: Optional[str] = None,
         val_filepath: Optional[str] = None,
         test_filepath: Optional[str] = None,
-        deduplicate: bool = True,
+        deduplicate: bool = False,
+        **kwargs,
     ) -> QualityDebatesDataset:
         def __should_keep(row: dict[str, Any]) -> bool:
             roles = [turn["role"] for turn in row["turns"]]
             positions = set([turn.get("index") for turn in row["turns"]])
-            return len(roles) >= 3 and "GPT-4" not in roles and 0 in positions and 1 in positions
+            return (
+                len(roles) >= 3
+                and "GPT-4" not in roles
+                and "Offline Judge" not in roles
+                and 0 in positions
+                and 1 in positions
+            )
 
         def __get_filtered_rows(file_path: str):
             rows = []
@@ -92,7 +100,7 @@ class QualityDebatesLoader(RawDataLoader):
                 if row["story"] not in story_to_row:
                     story_to_row[row["story"]] = []
                     story_to_question[row["story"]] = []
-                if row["question"] not in story_to_question[row["story"]]:
+                if row["question"] not in story_to_question[row["story"]] or not deduplicate:
                     story_to_row[row["story"]].append(row)
                     story_to_question[row["story"]].append(row["question"])
             train = []

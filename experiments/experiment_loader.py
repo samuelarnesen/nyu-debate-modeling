@@ -3,7 +3,7 @@ from agents.judge import BoNJudge, Judge
 from agents.debate_round import DebateRound, QuestionMetadata
 from agents.model import Model
 from agents.models.model_utils import ModelType, ModelUtils
-from agents.prompt import Prompt, PromptConfig, PromptParser
+from agents.prompt import DynamicPromptParser, Prompt, PromptConfig, PromptParser
 from data.data import DatasetType, RawDataLoader, RawDataset, SplitType
 from data.loaders.loader_utils import LoaderUtils
 from utils.logger_utils import LoggerUtils
@@ -21,6 +21,8 @@ import itertools
 class PromptLoadingConfig(BaseModel):
     file_path: str
     default_prompt_name: str
+    dynamic_prompts_file_path: Optional[str]
+    dynamic_prompt_name: Optional[str]
 
 
 class AgentConfig(BaseModel):
@@ -41,6 +43,7 @@ class DatasetConfig(BaseModel):
     train_file_path: Optional[str]
     val_file_path: Optional[str]
     test_file_path: Optional[str]
+    annotations_file_path: Optional[str]
     split_type: Optional[str]
 
 
@@ -144,6 +147,7 @@ class ExperimentLoader:
             train_filepath=dataset_config.train_file_path,
             val_filepath=dataset_config.val_file_path,
             test_filepath=dataset_config.test_file_path,
+            annotations_file_path=dataset_config.annotations_file_path,
         )
 
     @classmethod
@@ -268,6 +272,29 @@ class ExperimentLoader:
                 prompt_config=config_a,
                 name=experiment.prompt_config.default_prompt_name,
             )
+
+            if experiment.prompt_config.dynamic_prompts_file_path and experiment.prompt_config.dynamic_prompt_name:
+                prompt_a = DynamicPromptParser.convert_to_dynamic_prompt(
+                    dynamic_prompt_file_path=experiment.prompt_config.dynamic_prompts_file_path,
+                    prompt=prompt_a,
+                    prompt_config=config_a,
+                    dataset=dataset,
+                    index=i,
+                    split=split_type,
+                    row=example,
+                    dynamic_prompt_name=experiment.prompt_config.dynamic_prompt_name,
+                )
+
+                prompt_b = DynamicPromptParser.convert_to_dynamic_prompt(
+                    dynamic_prompt_file_path=experiment.prompt_config.dynamic_prompts_file_path,
+                    prompt=prompt_b,
+                    prompt_config=config_b,
+                    dataset=dataset,
+                    index=i,
+                    split=split_type,
+                    row=example,
+                    dynamic_prompt_name=experiment.prompt_config.dynamic_prompt_name,
+                )
 
             debater_a = Debater(
                 name=constants.DEFAULT_DEBATER_A_NAME,

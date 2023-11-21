@@ -58,7 +58,7 @@ class QualityDataset(RawDataset):
 class QualityLoader(RawDataLoader):
     @classmethod
     def load(
-        cls, full_dataset_filepath: Optional[str], train_filepath: str, val_filepath: str, test_filepath: str
+        cls, full_dataset_filepath: Optional[str], train_filepath: str, val_filepath: str, test_filepath: str, **kwargs
     ) -> QualityDataset:
         def __load_individual_file(filepath: str) -> list[str, Any]:
             entries = []

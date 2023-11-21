@@ -55,7 +55,7 @@ class Judge(Agent):
         return self.model.predict(inputs=model_inputs, max_new_tokens=max_new_tokens, speech_structure=speech_structure)
 
     def __call__(self) -> list[Union[str, bool]]:
-        batch_reasoning = self.generate(max_new_tokens=250, speech_structure=SpeechStructure.OPEN_ENDED)
+        batch_reasoning = self.generate(max_new_tokens=450, speech_structure=SpeechStructure.OPEN_ENDED)
         if self.transcripts[0].only_decision_remains():  # all formats should be the same so we can use any transcript
             for i, reasoning in enumerate(batch_reasoning):
                 super().receive_message(speaker=self.name, content=reasoning, idx=i)

@@ -1,6 +1,6 @@
 from abc import ABC
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel
 
@@ -15,6 +15,7 @@ class DatasetType(Enum):
     QUALITY = 1
     QUALITY_DEBATES = 2
     JUDGE_PREFERENCES = 3
+    ANNOTATED_QUALITY_DEBATES = 4
 
 
 class SpeakerType(Enum):
@@ -22,10 +23,38 @@ class SpeakerType(Enum):
     JUDGE = 2
 
 
+class AnnotationTag(Enum):
+    QUOTE = 0
+    SUMMARY = 1
+    REFUTATION = 2
+    ANALYSIS = 3
+    REPLY = 4
+    FLOURISH = 5
+    FRAMING = 6
+    STATEMENT = 7
+    LOGIC = 8
+    Q_CONTEXT = 9
+    POSITION = 10
+    OOB_QUOTE = 11
+    PROMISE = 12
+
+
+class AnnotationBracket(Enum):
+    HIGH = 1
+    LOW = 2
+    NEUTRAL = 3
+
+
+class AnnotationData(BaseModel):
+    percents: Optional[dict[Union[AnnotationTag, str], float]]
+    percentiles: Optional[dict[Union[AnnotationTag, str], float]]
+
+
 class SpeechData(BaseModel):
     text: str
     position: int
     speaker_type: SpeakerType
+    annotation: Optional[AnnotationData]
 
 
 class DataRow(BaseModel):
@@ -34,6 +63,7 @@ class DataRow(BaseModel):
     positions: Optional[tuple[str, str]]
     speeches: Optional[list[SpeechData]]
     correct_index: Optional[int]
+    debate_id: Optional[str]
 
 
 class JudgePreferenceDataRow(BaseModel):

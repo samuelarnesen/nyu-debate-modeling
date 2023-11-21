@@ -43,7 +43,7 @@ class JudgePreferencesDataset(RawDataset):
 
 class JudgePreferencesLoader(RawDataLoader):
     @classmethod
-    def load(cls, full_dataset_filepath: str) -> JudgePreferencesDataset:
+    def load(cls, full_dataset_filepath: str, **kwargs) -> JudgePreferencesDataset:
         train_data = []
         input_texts = InputUtils.read_file_texts(base_path=full_dataset_filepath, group_by_batch=True)
         for batch in input_texts:

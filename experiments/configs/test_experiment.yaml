@@ -215,19 +215,20 @@ Operational_Test:
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
+    dynamic_prompts_file_path: ./agents/prompts/dynamic_prompts.yaml
+    dynamic_prompt_name: Default Dynamic Prompt
   agents:
     debaters:
       - model_type: random
         alias: random-debater-1
       - model_type: random
         alias: random-debater-2
-      - model_type: random
-        alias: random-debater-3
     judge:
       model_type: random
       alias: random-judge
   dataset:
-    dataset_type: quality_debates
+    dataset_type: annotated_quality_debates
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
-    split_type: val
+    annotations_file_path:  /Users/samarnesen/nyu/debate-data/annotated-data-set.p
+    split_type: train
 
