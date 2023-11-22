@@ -3,6 +3,7 @@ from data.data import (
     AnnotationData,
     AnnotationTag,
     DataRow,
+    DatasetType,
     RawDataLoader,
     RawDataset,
     SpeakerType,
@@ -16,6 +17,7 @@ from pydantic import BaseModel
 from difflib import SequenceMatcher
 from enum import Enum
 from typing import Optional, Union
+import copy
 import pickle
 import re
 import sys
@@ -29,6 +31,7 @@ class Annotation(BaseModel):
 
 class AnnotatedQualityDebatesDataset(RawDataset):
     def __init__(self, dataset: QualityDebatesDataset, annotations_file_path: str):
+        super().__init__(DatasetType.ANNOTATED_QUALITY_DEBATES)
         self.data = {
             SplitType.TRAIN: dataset.get_data(SplitType.TRAIN),
             SplitType.VAL: dataset.get_data(SplitType.VAL),
@@ -109,8 +112,9 @@ class AnnotatedQualityDebatesDataset(RawDataset):
                     annotation.metrics = {AnnotationTag[key.upper()]: value for key, value in annotation.metrics.items()}
                 for speech in row.speeches:
                     matching = match_speeches(speech, annotations)
-                    speech.annotation = AnnotationData(percents=annotation.metrics or {}, percentiles={})
+                    speech.annotation = AnnotationData(percents={}, percentiles={})
                     if matching:
+                        speech.annotation = AnnotationData(percents=copy.deepcopy(matching.metrics), percentiles={})
                         annotated_speeches.append(speech)
 
         for tag in AnnotationTag:

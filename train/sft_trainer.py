@@ -23,16 +23,12 @@ except ImportError as e:
 class SupervisedTrainer:
     @classmethod
     def convert_row(
-        cls, row: DataRow, prompts_file_path: str, prompt_name: str, target: TrainingTarget, index: int = 0
+        cls, row: DataRow, config: TrainingConfig, target: TrainingTarget, dataset: RawDataset, index: int = 0
     ) -> list[dict[str, str]]:
         if target == TrainingTarget.DEBATER:
-            return RowConverter.convert_all_speeches_for_debater(
-                row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name, index=index
-            )
+            return RowConverter.convert_all_speeches_for_debater(row=row, config=config, dataset=dataset, index=index)
         elif target == TrainingTarget.JUDGE:
-            return RowConverter.convert_all_speeches_for_judge(
-                row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name, index=index
-            )
+            return RowConverter.convert_all_speeches_for_judge(row=row, config=config, dataset=dataset, index=index)
         else:
             raise Exception(f"Tried to train on an ineligible training target of {target}. This line should not be reached.")
 
@@ -50,19 +46,15 @@ class SupervisedTrainer:
         return instructions
 
     @classmethod
-    def convert_dataset(
-        cls, raw_dataset: RawDataset, prompts_file_path: str, prompt_name: str, target: TrainingTarget
-    ) -> Dataset:
+    def convert_dataset(cls, raw_dataset: RawDataset, config: TrainingConfig, target: TrainingTarget) -> Dataset:
         llama_input_lists = [
-            SupervisedTrainer.convert_row(
-                row=row, prompts_file_path=prompts_file_path, prompt_name=prompt_name, target=target, index=i
-            )
+            SupervisedTrainer.convert_row(row=row, config=config, target=target, dataset=raw_dataset, index=i)
             for i, row in enumerate(raw_dataset.get_data(split=SplitType.TRAIN))
         ]
         llama_inputs = [item for llama_input_list in llama_input_lists for item in llama_input_list]
         df = pd.DataFrame(data=llama_inputs)
 
-        return Dataset.from_pandas(df)
+        return Dataset.from_pandas(df).shuffle()
 
     @classmethod
     def get_trainer(
@@ -103,8 +95,7 @@ class SupervisedTrainer:
         target = TrainingTarget[config.target.upper()]
         train_dataset = SupervisedTrainer.convert_dataset(
             raw_dataset=raw_dataset,
-            prompts_file_path=config.prompt_config.prompts_file_path,
-            prompt_name=config.prompt_config.prompt_name,
+            config=config,
             target=target,
         )
 
@@ -121,7 +112,7 @@ class SupervisedTrainer:
             tokenizer=tokenizer,
             data_collator=collator,
             formatting_func=SupervisedTrainer.format_instruction,
-            max_seq_length=32_768,
+            max_seq_length=16384,
             args=training_args,
         )
 

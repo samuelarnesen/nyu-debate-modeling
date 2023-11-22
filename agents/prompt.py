@@ -140,7 +140,7 @@ class DynamicPromptParser:
         # TODO: -- note that this only works for opening speeches!!!!!
         # TODO: -- note that this only works for single dynamic prompts (no combos)
         speech_to_use = None
-        for speech in filter(lambda x: x.annotation.percentiles and predicate(x), row.speeches):
+        for speech in filter(lambda x: x.annotation and x.annotation.percentiles and predicate(x), row.speeches):
             speech_to_use = speech
             break
 
@@ -173,7 +173,7 @@ class DynamicPromptParser:
         row: DataRow,
         dynamic_prompt_name: str,
     ) -> Prompt:
-        row = dataset.get_example(split=SplitType.TRAIN, idx=index)
+        row = dataset.get_example(split=split, idx=index)
 
         with open(dynamic_prompt_file_path) as f:
             dynamic_loaded_yaml = yaml.safe_load(f)

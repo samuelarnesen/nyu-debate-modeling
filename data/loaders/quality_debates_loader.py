@@ -1,4 +1,4 @@
-from data.data import DataRow, RawDataLoader, RawDataset, SpeakerType, SpeechData, SplitType
+from data.data import DataRow, DatasetType, RawDataLoader, RawDataset, SpeakerType, SpeechData, SplitType
 
 from typing import Any, Optional
 import json
@@ -6,6 +6,7 @@ import json
 
 class QualityDebatesDataset(RawDataset):
     def __init__(self, train_data: list[str, Any], val_data: list[str, Any], test_data: list[str, Any]):
+        super().__init__(DatasetType.QUALITY_DEBATES)
         self.data = {
             SplitType.TRAIN: self.__convert_batch_to_rows(train_data),
             SplitType.VAL: self.__convert_batch_to_rows(val_data),

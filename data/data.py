@@ -73,6 +73,9 @@ class JudgePreferenceDataRow(BaseModel):
 
 
 class RawDataset(ABC):
+    def __init__(self, dataset_type: DatasetType):
+        self.dataset_type = dataset_type
+
     def get_data(self, split: SplitType = SplitType.TRAIN) -> list[tuple[str, Any]]:
         pass
 
@@ -81,6 +84,9 @@ class RawDataset(ABC):
 
     def get_example(self, split: SplitType = SplitType.TRAIN, idx: int = 0) -> DataRow:
         pass
+
+    def get_dataset_type(self):
+        return self.dataset_type
 
 
 class RawDataLoader(ABC):

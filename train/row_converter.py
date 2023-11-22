@@ -1,9 +1,11 @@
 from agents.debater import Debater, DebaterUtils
 from agents.judge import Judge, JudgeUtils
 from agents.models.llama_model import LlamaInput, LlamaModel
-from agents.prompt import Prompt, PromptParser, PromptTag
+from agents.prompt import DynamicPromptParser, Prompt, PromptParser, PromptTag
 from agents.transcript import Transcript
-from data.data import DataRow, SpeakerType, SpeechData
+from data.data import DataRow, DatasetType, RawDataset, SpeakerType, SpeechData, SplitType
+from data.loaders.annotated_quality_debates_loader import AnnotatedQualityDebatesDataset
+from train.train_utils import TrainingConfig
 import utils.constants as constants
 
 from typing import Any, Callable
@@ -11,11 +13,54 @@ from typing import Any, Callable
 
 class RowConverter:
     @classmethod
+    def generate_dynamic_prompt_from_speech(
+        cls,
+        config: TrainingConfig,
+        prompt: Prompt,
+        row: DataRow,
+        speech: SpeechData,
+        dataset: AnnotatedQualityDebatesDataset,
+        index: int,
+    ) -> Prompt:
+        return DynamicPromptParser.convert_to_dynamic_prompt(
+            dynamic_prompt_file_path=config.prompt_config.dynamic_prompts_file_path,
+            prompt=prompt,
+            prompt_config=PromptParser.convert_data_row_to_default_prompt_config(row=row, position=speech.position),
+            dataset=dataset,
+            index=index,
+            split=SplitType.TRAIN,
+            row=row,
+            dynamic_prompt_name=config.prompt_config.dynamic_prompt_name,
+        )
+
+    @classmethod
+    def is_dynamic_prompt(cls, config: TrainingConfig, dataset: RawDataset) -> bool:
+        return (
+            config.prompt_config.dynamic_prompts_file_path
+            and config.prompt_config.dynamic_prompt_name
+            and dataset.get_dataset_type() == DatasetType.ANNOTATED_QUALITY_DEBATES
+        )
+
+    @classmethod
     def generate_prompt_from_speech(
-        cls, row: DataRow, speech: SpeechData, prompts_file_path: str, prompt_name: str
+        cls, row: DataRow, speech: SpeechData, config: TrainingConfig, dataset: RawDataset, index: int
     ) -> Prompt:
         prompt_config = PromptParser.convert_data_row_to_default_prompt_config(row=row, position=speech.position)
-        prompt = PromptParser.parse(prompts_file_path=prompts_file_path, prompt_config=prompt_config, name=prompt_name)
+        prompt = PromptParser.parse(
+            prompts_file_path=config.prompt_config.prompts_file_path,
+            prompt_config=prompt_config,
+            name=config.prompt_config.prompt_name,
+        )
+
+        if RowConverter.is_dynamic_prompt(config=config, dataset=dataset):
+            return RowConverter.generate_dynamic_prompt_from_speech(
+                config=config,
+                prompt=prompt,
+                row=row,
+                speech=speech,
+                dataset=dataset,
+                index=index,
+            )
         return prompt
 
     @classmethod
@@ -30,10 +75,10 @@ class RowConverter:
     def convert_transcript(
         cls,
         row: DataRow,
-        prompts_file_path: str,
-        prompt_name: str,
+        config: TrainingConfig,
         skipping_func: Callable[[SpeechData], bool],
         is_debater: bool,
+        dataset: RawDataset,
         index: int = 0,
     ):
         llama_inputs = []
@@ -51,17 +96,21 @@ class RowConverter:
 
             if speech.speaker_type == SpeakerType.JUDGE and previous_speaker_type == SpeakerType.DEBATER:
                 rounds += 1
+                if config.opening_speeches_only:
+                    return llama_inputs
 
             if skipping_func(speech):
                 speeches_so_far.append(speech)
                 continue
 
             name = RowConverter.get_speaker_from_speech(speech)
+            prompt = RowConverter.generate_prompt_from_speech(
+                row=row, speech=speech, config=config, dataset=dataset, index=index
+            )
+
             transcript = Transcript(
                 name=name,
-                prompt=RowConverter.generate_prompt_from_speech(
-                    row=row, speech=speech, prompts_file_path=prompts_file_path, prompt_name=prompt_name
-                ),
+                prompt=prompt,
                 speech_format=(
                     DebaterUtils.get_default_speech_format(name=name, num_speeches=rounds, use_scratchpad=False)
                     if is_debater
@@ -87,26 +136,26 @@ class RowConverter:
 
     @classmethod
     def convert_all_speeches_for_debater(
-        cls, row: DataRow, prompts_file_path: str, prompt_name: str, index: int = 0
+        cls, row: DataRow, config: TrainingConfig, dataset: RawDataset, index: int = 0
     ) -> list[dict[str, str]]:
         return RowConverter.convert_transcript(
             row=row,
-            prompts_file_path=prompts_file_path,
-            prompt_name=prompt_name,
+            config=config,
             skipping_func=lambda speech: speech.speaker_type == SpeakerType.JUDGE,
             is_debater=True,
+            dataset=dataset,
             index=index,
         )
 
     @classmethod
     def convert_all_speeches_for_judge(
-        cls, row: DataRow, prompts_file_path: str, prompt_name: str, index: int = 0
+        cls, row: DataRow, config: TrainingConfig, dataset: RawDataset, index: int = 0
     ) -> list[dict[str, str]]:
         return RowConverter.convert_transcript(
             row=row,
-            prompts_file_path=prompts_file_path,
-            prompt_name=prompt_name,
+            config=config,
             skipping_func=lambda speech: speech.speaker_type == SpeakerType.DEBATER,
             is_debater=False,
+            dataset=raw_dataset,
             index=index,
         )

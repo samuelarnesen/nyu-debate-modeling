@@ -22,6 +22,9 @@ class TrainingTarget(Enum):
 class PromptConfig(BaseModel):
     prompts_file_path: str
     prompt_name: str
+    dynamic_prompts_file_path: Optional[str]
+    dynamic_prompt_name: Optional[str]
+    annotations_file_path: Optional[str]
 
 
 class LoggingAndSavingConfig(BaseModel):
@@ -50,6 +53,7 @@ class TrainingConfig(BaseModel):
     training_hyperparameters: Optional[TrainingHyperParameterConfig]
     target: Optional[Union[str, TrainingTarget]]
     deepspeed: Optional[str]
+    opening_speeches_only: Optional[bool]
 
 
 class TrainUtils:

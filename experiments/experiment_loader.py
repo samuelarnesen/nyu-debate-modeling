@@ -30,6 +30,7 @@ class AgentConfig(BaseModel):
     model_file_path: Optional[str]
     alias: str
     use_scratchpad: Optional[bool]
+    override_prompt: Optional[str]
 
 
 class AgentsConfig(BaseModel):
@@ -258,13 +259,29 @@ class ExperimentLoader:
             prompt_a = PromptParser.parse(
                 prompts_file_path=experiment.prompt_config.file_path,
                 prompt_config=config_a,
-                name=experiment.prompt_config.default_prompt_name,
+                name=experiment.agents.debaters[debater_idxs[0]].override_prompt
+                or experiment.prompt_config.default_prompt_name,
+            )
+
+            flipped_prompt_a = PromptParser.parse(
+                prompts_file_path=experiment.prompt_config.file_path,
+                prompt_config=config_a,
+                name=experiment.agents.debaters[debater_idxs[1]].override_prompt
+                or experiment.prompt_config.default_prompt_name,
             )
 
             prompt_b = PromptParser.parse(
                 prompts_file_path=experiment.prompt_config.file_path,
                 prompt_config=config_b,
-                name=experiment.prompt_config.default_prompt_name,
+                name=experiment.agents.debaters[debater_idxs[1]].override_prompt
+                or experiment.prompt_config.default_prompt_name,
+            )
+
+            flipped_prompt_b = PromptParser.parse(
+                prompts_file_path=experiment.prompt_config.file_path,
+                prompt_config=config_a,
+                name=experiment.agents.debaters[debater_idxs[0]].override_prompt
+                or experiment.prompt_config.default_prompt_name,
             )
 
             prompt_judge = PromptParser.parse(
@@ -309,7 +326,7 @@ class ExperimentLoader:
                 prompt=prompt_b,
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
-                use_scratchpad=False,  # change later
+                use_scratchpad=False,  # TODO: change later
             )
 
             judge = Judge(
@@ -335,7 +352,7 @@ class ExperimentLoader:
 
             flipped_debater_a = Debater(
                 name=constants.DEFAULT_DEBATER_A_NAME,
-                prompt=prompt_a,
+                prompt=flipped_prompt_a,
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
                 use_scratchpad=False,  # change later
@@ -343,7 +360,7 @@ class ExperimentLoader:
 
             flipped_debater_b = Debater(
                 name=constants.DEFAULT_DEBATER_B_NAME,
-                prompt=prompt_b,
+                prompt=flipped_prompt_b,
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
                 use_scratchpad=False,  # change later

@@ -72,16 +72,8 @@ class DirectPreferenceTrainer:
             task_type="CAUSAL_LM",
         )
 
-        # model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
         if FLASH_ATTENTION_AVAILABLE:
             model = upcast_layer_for_flash_attention(model, torch.bfloat16)
-
-        """
-        trainable_params, all_param = model.get_nb_trainable_parameters()
-        logger.info(
-            f"trainable params: {trainable_params:,d} || all params: {all_param:,d} || trainable%: {100 * trainable_params / all_param}"
-        )
-        """
 
         trainer = DPOTrainer(
             model=model,

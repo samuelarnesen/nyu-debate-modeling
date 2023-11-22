@@ -1,4 +1,4 @@
-from data.data import DataRow, RawDataLoader, RawDataset, SplitType
+from data.data import DataRow, DatasetType, RawDataLoader, RawDataset, SplitType
 
 from typing import Any, Optional
 import json
@@ -7,6 +7,7 @@ import random
 
 class QualityDataset(RawDataset):
     def __init__(self, train_data: list[dict[str, Any]], val_data: list[dict[str, Any]], test_data: list[dict[str, Any]]):
+        super().__init__(DatasetType.QUALITY)
         self.data = {
             SplitType.TRAIN: self.__convert_batch_to_rows(train_data),
             SplitType.VAL: self.__convert_batch_to_rows(val_data),

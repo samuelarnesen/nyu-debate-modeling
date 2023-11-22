@@ -36,14 +36,13 @@
   agents:
     debaters:
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged
-        alias: "sft-debater"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted/
+        alias: "heavy-quoter"
+        override_prompt: Quote Heavy
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current
-        alias: "dpo-debater"
-      - model_type: llama
-        model_file_path: Yukang/LongAlpaca-13B
-        alias: "base-debater"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted/
+        alias: "light-quoter"
+        override_prompt: Quote Light
     judge:
       model_type: random
       alias: "random-judge"
@@ -75,7 +74,7 @@
   dataset:
     dataset_type: quality_debates
     full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-    split_type: train # change this
+    split_type: val # change this
 70B Check:
   topic_config:
     topic_type: from_dataset

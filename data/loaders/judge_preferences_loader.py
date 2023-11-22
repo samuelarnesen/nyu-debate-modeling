@@ -1,5 +1,5 @@
 from agents.prompt import Prompt, PromptParser, PromptTag
-from data.data import JudgePreferenceDataRow, RawDataLoader, RawDataset, SpeakerType, SpeechData, SplitType
+from data.data import DatasetType, JudgePreferenceDataRow, RawDataLoader, RawDataset, SpeakerType, SpeechData, SplitType
 from utils.input_utils import InputUtils
 import utils.constants as constants
 
@@ -12,6 +12,7 @@ import sys
 
 class JudgePreferencesDataset(RawDataset):
     def __init__(self, train_data: list[str, Any], val_data: list[str, Any], test_data: list[str, Any]):
+        super().__init__(DatasetType.JUDGE_PREFERENCES)
         self.data = {
             SplitType.TRAIN: self.__convert_batch_to_rows(train_data),
             SplitType.VAL: self.__convert_batch_to_rows(val_data),

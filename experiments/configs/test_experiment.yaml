@@ -205,7 +205,7 @@ Human_Test:
   human:
     debaters:
       - 'human-debater'
-Operational_Test:
+Dynamic_Test:
   topic_config:
     topic_type: from_dataset
   word_limit: 500
@@ -223,6 +223,32 @@ Operational_Test:
         alias: random-debater-1
       - model_type: random
         alias: random-debater-2
+    judge:
+      model_type: random
+      alias: random-judge
+  dataset:
+    dataset_type: annotated_quality_debates
+    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+    annotations_file_path:  /Users/samarnesen/nyu/debate-data/annotated-data-set.p
+    split_type: train
+Operational_Test:
+  topic_config:
+    topic_type: from_dataset
+  word_limit: 500
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  prompt_config:
+    file_path: ./agents/prompts/prompts.yaml
+    default_prompt_name: Base Prompt
+  agents:
+    debaters:
+      - model_type: random
+        alias: random-debater-1
+        override_prompt: Quote Heavy
+      - model_type: random
+        alias: random-debater-2
+        override_prompt: Quote Light
     judge:
       model_type: random
       alias: random-judge
