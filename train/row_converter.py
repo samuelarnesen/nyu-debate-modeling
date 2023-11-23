@@ -5,7 +5,7 @@ from agents.prompt import DynamicPromptParser, Prompt, PromptParser, PromptTag
 from agents.transcript import Transcript
 from data.data import DataRow, DatasetType, RawDataset, SpeakerType, SpeechData, SplitType
 from data.loaders.annotated_quality_debates_loader import AnnotatedQualityDebatesDataset
-from train.train_utils import TrainingConfig
+from train.train_utils import TrainingConfig, TrainingTarget
 import utils.constants as constants
 
 from typing import Any, Callable
@@ -72,6 +72,10 @@ class RowConverter:
         )
 
     @classmethod
+    def get_dummy_name_for_speaker(cls, name: str) -> str:
+        return f"<{name}_Speech>"
+
+    @classmethod
     def convert_transcript(
         cls,
         row: DataRow,
@@ -80,11 +84,11 @@ class RowConverter:
         is_debater: bool,
         dataset: RawDataset,
         index: int = 0,
+        use_dummy: bool = False,
     ):
         llama_inputs = []
 
         only_judge_has_spoken = True
-        round_one_ongoing = True
         previous_speaker_type = SpeakerType.JUDGE
         speeches_so_far = []
         rounds = 1
@@ -94,10 +98,11 @@ class RowConverter:
                 continue
             only_judge_has_spoken = False
 
-            if speech.speaker_type == SpeakerType.JUDGE and previous_speaker_type == SpeakerType.DEBATER:
+            if speech.speaker_type == SpeakerType.JUDGE and (previous_speaker_type == SpeakerType.DEBATER or not is_debater):
                 rounds += 1
-                if config.opening_speeches_only:
-                    return llama_inputs
+
+            if config.opening_speeches_only and rounds > (1 if is_debater else 2):
+                return llama_inputs
 
             if skipping_func(speech):
                 speeches_so_far.append(speech)
@@ -114,14 +119,16 @@ class RowConverter:
                 speech_format=(
                     DebaterUtils.get_default_speech_format(name=name, num_speeches=rounds, use_scratchpad=False)
                     if is_debater
-                    else JudgeUtils.get_default_speech_format(num_speeches=rounds)
+                    else JudgeUtils.get_default_speech_format(num_speeches=(rounds - 1))
                 ),
             )
 
             if rounds > 1:  # this conditional lets us handle the simultaneity of the first round
                 for previous_speech in speeches_so_far:
+                    speaker = RowConverter.get_speaker_from_speech(speech=previous_speech)
+                    dummy_text = RowConverter.get_dummy_name_for_speaker(name=speaker)
                     transcript.add_speech(
-                        speaker=RowConverter.get_speaker_from_speech(speech=previous_speech), content=previous_speech.text
+                        speaker=speaker, content=previous_speech.text if not use_dummy else (dummy_text + "\n")
                     )
 
             llama_inputs.append(
@@ -136,7 +143,7 @@ class RowConverter:
 
     @classmethod
     def convert_all_speeches_for_debater(
-        cls, row: DataRow, config: TrainingConfig, dataset: RawDataset, index: int = 0
+        cls, row: DataRow, config: TrainingConfig, dataset: RawDataset, index: int = 0, use_dummy: bool = False
     ) -> list[dict[str, str]]:
         return RowConverter.convert_transcript(
             row=row,
@@ -145,17 +152,40 @@ class RowConverter:
             is_debater=True,
             dataset=dataset,
             index=index,
+            use_dummy=use_dummy,
         )
 
     @classmethod
     def convert_all_speeches_for_judge(
-        cls, row: DataRow, config: TrainingConfig, dataset: RawDataset, index: int = 0
+        cls, row: DataRow, config: TrainingConfig, dataset: RawDataset, index: int = 0, use_dummy: bool = False
     ) -> list[dict[str, str]]:
         return RowConverter.convert_transcript(
             row=row,
             config=config,
             skipping_func=lambda speech: speech.speaker_type == SpeakerType.DEBATER,
             is_debater=False,
-            dataset=raw_dataset,
+            dataset=dataset,
             index=index,
+            use_dummy=use_dummy,
         )
+
+    @classmethod
+    def convert_row(
+        cls,
+        row: DataRow,
+        target: TrainingTarget,
+        config: TrainingConfig,
+        dataset: RawDataset,
+        index: int = 0,
+        use_dummy: bool = False,
+    ) -> list[dict[str, str]]:
+        if target == TrainingTarget.DEBATER:
+            return RowConverter.convert_all_speeches_for_debater(
+                row=row, config=config, dataset=dataset, index=index, use_dummy=use_dummy
+            )
+        elif target == TrainingTarget.JUDGE:
+            return RowConverter.convert_all_speeches_for_judge(
+                row=row, config=config, dataset=dataset, index=index, use_dummy=use_dummy
+            )
+        else:
+            raise Exception(f"Tried to train on an ineligible training target of {target}. This line should not be reached.")

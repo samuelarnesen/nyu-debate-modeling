@@ -62,6 +62,7 @@ class QualityDebatesDataset(RawDataset):
             ],
             correct_index=self.__get_correct_answer(entry),
             debate_id="_".join([entry["storyTitle"], entry["debateId"]]),
+            story_title=entry["storyTitle"],
         )
 
 

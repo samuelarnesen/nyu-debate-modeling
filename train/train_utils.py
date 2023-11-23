@@ -1,6 +1,7 @@
 from peft import LoraConfig, PeftConfig, PeftType, PromptTuningInit, PromptTuningConfig, TaskType
 from pydantic import BaseModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from trl import AutoModelForCausalLMWithValueHead
 import torch
 import yaml
 
@@ -64,7 +65,7 @@ class TrainUtils:
         return TrainingConfig(**loaded_yaml[config_name])
 
     @classmethod
-    def load_model(cls, model_name: str, is_local: bool = False):
+    def load_model(cls, model_name: str, is_local: bool = False, requires_value_head: bool = False):
         local_rank = int(os.environ.get("LOCAL_RANK", "0"))
         device_map = {"": local_rank}
         if not is_local:
@@ -75,14 +76,24 @@ class TrainUtils:
                 bnb_4bit_compute_dtype=torch.float16,
             )
 
-            return AutoModelForCausalLM.from_pretrained(
-                pretrained_model_name_or_path=model_name,
-                quantization_config=bnb_config,
-                use_cache=False,
-                device_map=device_map,
-                trust_remote_code=True,
-                use_flash_attention_2=True,
-            )
+            if requires_value_head:
+                return AutoModelForCausalLMWithValueHead.from_pretrained(
+                    pretrained_model_name_or_path=model_name,
+                    quantization_config=bnb_config,
+                    use_cache=False,
+                    device_map=device_map,
+                    trust_remote_code=True,
+                    use_flash_attention_2=True,
+                )
+            else:
+                return AutoModelForCausalLM.from_pretrained(
+                    pretrained_model_name_or_path=model_name,
+                    quantization_config=bnb_config,
+                    use_cache=False,
+                    device_map=device_map,
+                    trust_remote_code=True,
+                    use_flash_attention_2=True,
+                )
         else:
             return AutoModelForCausalLM.from_pretrained(
                 pretrained_model_name_or_path=model_name,

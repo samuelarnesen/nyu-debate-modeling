@@ -22,17 +22,6 @@ except ImportError as e:
 
 class SupervisedTrainer:
     @classmethod
-    def convert_row(
-        cls, row: DataRow, config: TrainingConfig, target: TrainingTarget, dataset: RawDataset, index: int = 0
-    ) -> list[dict[str, str]]:
-        if target == TrainingTarget.DEBATER:
-            return RowConverter.convert_all_speeches_for_debater(row=row, config=config, dataset=dataset, index=index)
-        elif target == TrainingTarget.JUDGE:
-            return RowConverter.convert_all_speeches_for_judge(row=row, config=config, dataset=dataset, index=index)
-        else:
-            raise Exception(f"Tried to train on an ineligible training target of {target}. This line should not be reached.")
-
-    @classmethod
     def format_instruction(cls, llama_dictionary: dict[str, list[str]]) -> str:
         instructions = []
         for instruction_val, input_val, extra_suffix in zip(
@@ -48,7 +37,7 @@ class SupervisedTrainer:
     @classmethod
     def convert_dataset(cls, raw_dataset: RawDataset, config: TrainingConfig, target: TrainingTarget) -> Dataset:
         llama_input_lists = [
-            SupervisedTrainer.convert_row(row=row, config=config, target=target, dataset=raw_dataset, index=i)
+            RowConverter.convert_row(row=row, config=config, target=target, dataset=raw_dataset, index=i)
             for i, row in enumerate(raw_dataset.get_data(split=SplitType.TRAIN))
         ]
         llama_inputs = [item for llama_input_list in llama_input_lists for item in llama_input_list]

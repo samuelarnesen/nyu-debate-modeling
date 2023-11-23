@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from agents.model import Model, ModelInput, RoleType, SpeechStructure
 from utils.logger_utils import LoggerUtils
+from utils.string_utils import StringUtils
 from utils.timer_utils import timer
 import utils.constants as constants
 
@@ -31,7 +32,7 @@ class LlamaInput(BaseModel):
 
 
 class LlamaModel(Model):
-    def __init__(self, alias: str, file_path: Optional[str] = None, is_debater: bool = True):
+    def __init__(self, alias: str, file_path: Optional[str] = None, is_debater: bool = True, beam_search: bool = True):
         super().__init__(alias=alias, is_debater=is_debater)
         torch.cuda.empty_cache()
         self.logger = LoggerUtils.get_default_logger(__name__)
@@ -57,13 +58,8 @@ class LlamaModel(Model):
                 use_flash_attention_2=True,
             )
 
-            # TODO: change this -- this is the experiment with steerability
-            if file_path == "Yukang/LongAlpaca-13B":
-                self.logger.info("Loading peft")
-                self.model = PeftModel.from_pretrained(self.model, "/vast/spa9663/models/trained_models/Llama-2-13B-32K-PT")
-
             self.generation_config = GenerationConfig(
-                max_new_tokens=450,
+                max_new_tokens=300,
                 temperature=0.5,
                 top_p=0.9,
                 num_return_sequences=1,
@@ -72,7 +68,15 @@ class LlamaModel(Model):
                 repetition_penalty=1.2,
                 do_sample=True,
                 use_cache=True,
+                pad_token_id=self.tokenizer.eos_token_id,
             )
+
+            if beam_search:
+                self.generation_config.num_beams = 2
+                self.generation_config.do_sample = False
+                self.generation_config.top_p = None
+                self.generation_config.temperature = None
+
         else:
             self.is_debater = False
             self.tokenizer = None
@@ -132,7 +136,7 @@ class LlamaModel(Model):
     def predict(
         self,
         inputs: list[list[ModelInput]],
-        max_new_tokens=450,
+        max_new_tokens=300,
         speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
         num_return_sequences: int = 1,
         **kwargs,
@@ -170,7 +174,7 @@ class LlamaModel(Model):
                 if speech_structure == SpeechStructure.PREFERENCE and re.search("\\d+(\\.\\d+)?", new_tokens.strip()):
                     decoded_outputs.append(re.search("\\d+(\\.\\d+)?", new_tokens.strip()).group())
                 else:
-                    decoded_outputs.append(new_tokens.rstrip().replace("<s>", "").replace("</s>", ""))
+                    decoded_outputs.append(StringUtils.clean_string(new_tokens))
             else:
                 tokenized_debater_a = self.tokenizer(constants.DEFAULT_DEBATER_A_NAME)
                 tokenized_debater_b = self.tokenizer(constants.DEFAULT_DEBATER_B_NAME)

@@ -64,6 +64,7 @@ class DataRow(BaseModel):
     speeches: Optional[list[SpeechData]]
     correct_index: Optional[int]
     debate_id: Optional[str]
+    story_title: Optional[str]
 
 
 class JudgePreferenceDataRow(BaseModel):

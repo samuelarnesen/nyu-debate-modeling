@@ -37,6 +37,7 @@ class QualityDataset(RawDataset):
                 row = self.__example_to_row(entry, i)
                 if row:
                     rows.append(row)
+        random.shuffle(rows)
         return rows
 
     def __example_to_row(self, entry: dict[str, Any], question_idx: int) -> tuple[str, Any]:
@@ -49,17 +50,24 @@ class QualityDataset(RawDataset):
         return DataRow(
             background_text=entry["article"],
             question=question["question"],
+            correct_index=0 if debater_a_correct else 1,
             positions=(
                 question["options"][correct_answer if debater_a_correct else incorrect_answer],
                 question["options"][incorrect_answer if debater_a_correct else correct_answer],
             ),
+            story_title=entry["title"],
         )
 
 
 class QualityLoader(RawDataLoader):
     @classmethod
     def load(
-        cls, full_dataset_filepath: Optional[str], train_filepath: str, val_filepath: str, test_filepath: str, **kwargs
+        cls,
+        full_dataset_filepath: Optional[str] = None,
+        train_filepath: Optional[str] = None,
+        val_filepath: Optional[str] = None,
+        test_filepath: Optional[str] = None,
+        **kwargs,
     ) -> QualityDataset:
         def __load_individual_file(filepath: str) -> list[str, Any]:
             entries = []

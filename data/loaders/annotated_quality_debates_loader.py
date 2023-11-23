@@ -81,10 +81,15 @@ class AnnotatedQualityDebatesDataset(RawDataset):
                 )
 
     def get_annotation_examples(
-        self, tag: AnnotationTag, bracket: AnnotationBracket, threshold: float, positive: bool
+        self,
+        tag: AnnotationTag,
+        bracket: AnnotationBracket,
+        threshold: float,
+        positive: bool,
+        source_row: Optional[DataRow] = None,
     ) -> list[SpeechData]:
         eligible_examples = []
-        for row in self.data[SplitType.TRAIN]:
+        for row in filter(lambda x: not source_row or source_row.story_title != x.story_title, self.data[SplitType.TRAIN]):
             for speech in filter(
                 lambda x: AnnotatedQualityDebatesDataset.meets_threshold(tag, bracket, threshold, positive, x), row.speeches
             ):

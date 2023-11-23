@@ -313,6 +313,12 @@ Quote Heavy:
           - You must debate in the style that you are assigned.
         
         The style you are assigned is "Quote-Heavy". That means that as much of your speech as possible should be quotes, while still trying to win the debate.
+
+        Here are some examples of a "Quote-Heavy" speech in a different context:
+
+        1. <quote>Hearing the Captain's orders to Randall, and noting that no result had been obtained, Scotty Byrnes himself cut the jets. The Magnetic Repulsion Plates went into action, too late to save them from being drawn, but at least they could prevent a crash.</quote> Since Randall failed to follow orders, Scotty had to cut the jets instead. Note that B must prove 1) the jets were on and 2) the magnetic repulsion plates could not be activated. This quote directly refutes both parts. The jets were cut and the Magnetic Repulsion plates were turned on.
+
+        2. No matter what, it's clear that the narrator is obsessed with war mags, so much so that the man who he buys them from even calls him out on it: <quote>Don't tell me reading isn't a craving with some of you fellows</quote><quote>I've seen guys come in here</quote><quote>grab up them</quote><quote>magazines and read</quote>'until sweat starts rolling off the end of their nose', which is important because our protag later displays this exact same obsessive behavior to seeing more wartime mags: <quote>I stared at the stacks of flying story magazines and I felt the slow run of the drop of sweat down my nose</quote> 
   pre_opening_speech:
     role: system
     content: 

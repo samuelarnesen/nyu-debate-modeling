@@ -8,6 +8,8 @@ import yaml
 
 from enum import Enum
 from typing import Any, Optional, Union
+import random
+import re
 
 
 class Message(BaseModel):
@@ -129,7 +131,11 @@ class PromptParser:
 class DynamicPromptParser:
     @classmethod
     def get_dynamic_prompt(
-        cls, row: DataRow, prompt_config: PromptConfig, dynamic_prompts: list[DynamicPrompt]
+        cls,
+        row: DataRow,
+        prompt_config: PromptConfig,
+        dynamic_prompts: list[DynamicPrompt],
+        dataset: AnnotatedQualityDebatesDataset,
     ) -> Optional[DynamicPrompt]:
         predicate = lambda speech: speech.position == (
             constants.DEBATER_A_POSITION
@@ -157,6 +163,24 @@ class DynamicPromptParser:
                 speech=speech_to_use,
             )
             if meets_threshold:
+                examples = dataset.get_annotation_examples(
+                    tag=tag,
+                    bracket=AnnotationBracket[prompt.eligibility_criteria.bracket.upper()],
+                    threshold=prompt.eligibility_criteria.threshold,
+                    positive=True,
+                    source_row=row,
+                )
+
+                examples = random.sample(examples, k=prompt.display.positive_examples)
+                example_string = "\n\n".join(
+                    [
+                        "{}. {}".format(i + 1, re.sub("\n+", " ", speech_data.text, flags=re.DOTALL))
+                        for i, speech_data in enumerate(examples)
+                    ]
+                )
+                for key, value in prompt.messages.items():
+                    prompt.messages[key] = value.replace(f"<{ExamplesTag.POSITIVE_EXAMPLES.name}>", example_string)
+
                 return prompt
 
         return None
@@ -184,7 +208,7 @@ class DynamicPromptParser:
         ]
 
         dynamic_prompt = DynamicPromptParser.get_dynamic_prompt(
-            row=row, prompt_config=prompt_config, dynamic_prompts=dynamic_prompts
+            row=row, prompt_config=prompt_config, dynamic_prompts=dynamic_prompts, dataset=dataset
         )
 
         if dynamic_prompt:

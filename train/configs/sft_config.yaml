@@ -47,7 +47,7 @@ Train - 13B - Alpaca - Annotated:
     target: debater
     opening_speeches_only: True
     training_hyperparameters:
-        num_train_epochs: 12
+        num_train_epochs: 8
         per_device_train_batch_size: 4
         gradient_accumulation_steps: 4
         optim: paged_adamw_32bit

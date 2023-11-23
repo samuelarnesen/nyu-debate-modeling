@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from agents.model import Model, ModelInput, SpeechStructure
+from agents.model import Model, ModelInput, RoleType, SpeechStructure
 from utils.logger_utils import LoggerUtils
 import utils.constants as constants
 
 import openai
 
+from typing import Union
 import os
 import random
 import re
@@ -39,12 +40,14 @@ class OpenAIModel(Model):
 
     def predict(
         self,
-        inputs: list[list[ModelInput]],
+        inputs: list[Union[list[ModelInput], str]],
         max_new_tokens=450,
         speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
         **kwargs,
     ) -> list[str]:
-        def model_input_to_openai_format(model_input: ModelInput) -> dict[str, str]:
+        def model_input_to_openai_format(model_input: Union[ModelInput, str]) -> dict[str, str]:
+            if isinstance(model_input, str):
+                return {"role": RoleType.USER, "content": model_input}
             return {"role": model_input.role.name.lower(), "content": model_input.content}
 
         def add_addendum(messages: list[dict[str, str]], addendum: str) -> None:
