@@ -31,6 +31,7 @@ class AgentConfig(BaseModel):
     alias: str
     use_scratchpad: Optional[bool]
     override_prompt: Optional[str]
+    greedy: Optional[bool]
 
 
 class AgentsConfig(BaseModel):
@@ -60,7 +61,7 @@ class TopicConfig(BaseModel):
 
 
 class OfflineConfig(BaseModel):
-    debaters: list[bool]
+    debaters: list[str]
     file_path: str
 
 
@@ -186,6 +187,7 @@ class ExperimentLoader:
                 file_path=debater_one_model_path,
                 is_debater=True,
                 alias=experiment.agents.debaters[debater_idxs[0]].alias,
+                greedy=experiment.agents.debaters[debater_idxs[0]].greedy or True,
             )
             if f"{debater_one_model_type}_{debater_one_model_path}" not in model_cache
             else model_cache[f"{debater_one_model_type}_{debater_one_model_path}"].copy(
@@ -200,10 +202,13 @@ class ExperimentLoader:
                 file_path=debater_two_model_path,
                 is_debater=True,
                 alias=experiment.agents.debaters[debater_idxs[1]].alias,
+                greedy=experiment.agents.debaters[debater_idxs[1]].greedy,
             )
             if f"{debater_two_model_type}_{debater_two_model_path}" not in model_cache
             else model_cache[f"{debater_two_model_type}_{debater_two_model_path}"].copy(
-                alias=experiment.agents.debaters[debater_idxs[1]].alias, is_debater=True
+                alias=experiment.agents.debaters[debater_idxs[1]].alias,
+                is_debater=True,
+                greedy=experiment.agents.debaters[debater_idxs[1]].greedy or True,
             )
         )
         model_cache[f"{debater_two_model_type}_{debater_two_model_path}"] = debater_two_model
@@ -425,12 +430,13 @@ class ExperimentLoader:
                 )
 
             if experiment.offline:
-                if experiment.offline.debaters[0]:
+                if debate_round.first_debater.model.alias in experiment.offline.debaters:
                     debate_round.set_first_debater(
                         OfflineDebater(
                             debater=debate_round.first_debater,
                             file_path=experiment.offline.file_path,
                             first_debater_prompt=prompt_a,
+                            round_idx=(i * 2) if experiment.flip else i,
                         )
                     )
                     flipped_round.set_second_debater(
@@ -438,14 +444,16 @@ class ExperimentLoader:
                             debater=flipped_round.second_debater,
                             file_path=experiment.offline.file_path,
                             first_debater_prompt=prompt_a,
+                            round_idx=((i * 2) + 1) if experiment.flip else i,
                         )
                     )
-                if experiment.offline.debaters[1]:
+                if debate_round.second_debater.model.alias in experiment.offline.debaters:
                     debate_round.set_second_debater(
                         OfflineDebater(
                             debater=debate_round.second_debater,
                             file_path=experiment.offline.file_path,
                             first_debater_prompt=prompt_a,
+                            round_idx=(i * 2) if experiment.flip else i,
                         )
                     )
                     flipped_round.set_first_debater(
@@ -453,16 +461,15 @@ class ExperimentLoader:
                             debater=flipped_round.first_debater,
                             file_path=experiment.offline.file_path,
                             first_debater_prompt=prompt_a,
+                            round_idx=((i * 2) + 1) if experiment.flip else i,
                         )
                     )
             if experiment.human:
                 if debate_round.first_debater.model.alias in experiment.human.debaters:
                     debate_round.set_first_debater(HumanDebater(debater=debate_round.first_debater, speeches=speeches))
+                    flipped_round.set_first_debater(HumanDebater(debater=flipped_round.first_debater, speeches=speeches))
                 if debate_round.second_debater.model.alias in experiment.human.debaters:
                     debate_round.set_second_debater(HumanDebater(debater=debate_round.second_debater, speeches=speeches))
-                if flipped_round.first_debater.model.alias in experiment.human.debaters:
-                    flipped_round.set_first_debater(HumanDebater(debater=flipped_round.first_debater, speeches=speeches))
-                if flipped_round.second_debater.model.alias in experiment.human.debaters:
                     flipped_round.set_second_debater(HumanDebater(debater=flipped_round.second_debater, speeches=speeches))
 
             rounds.append(debate_round)

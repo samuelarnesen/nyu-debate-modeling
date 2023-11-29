@@ -7,6 +7,7 @@ import utils.constants as constants
 import openai
 
 from typing import Union
+import logging
 import os
 import random
 import re
@@ -29,10 +30,19 @@ class OpenAIModel(Model):
 
     preference_regex = ".*Overall Score: (\\d+(\\.\\d+)?)"
 
-    def __init__(self, alias: str, is_debater: bool = True):
+    def __init__(self, alias: str, is_debater: bool = True, **kwargs):
         super().__init__(alias=alias, is_debater=is_debater)
         self.__configure()
-        self.logger = LoggerUtils.get_default_logger(__name__)
+
+        self.logger = logging.getLogger("TestOpenAIModel")
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
+        stream_handler.setFormatter(formatter)
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.addHandler(stream_handler)
+        # self.logger = LoggerUtils.get_default_logger('TestOpenAIModel')
 
     def __configure(self):
         openai.organization = os.getenv("OPENAI_ORGANIZATION")
@@ -47,7 +57,7 @@ class OpenAIModel(Model):
     ) -> list[str]:
         def model_input_to_openai_format(model_input: Union[ModelInput, str]) -> dict[str, str]:
             if isinstance(model_input, str):
-                return {"role": RoleType.USER, "content": model_input}
+                return {"role": RoleType.USER.name.lower(), "content": model_input}
             return {"role": model_input.role.name.lower(), "content": model_input.content}
 
         def add_addendum(messages: list[dict[str, str]], addendum: str) -> None:
@@ -67,6 +77,7 @@ class OpenAIModel(Model):
         responses = []
         for model_input_list in inputs:
             messages = [model_input_to_openai_format(model_input) for model_input in model_input_list]
+
             if speech_structure == SpeechStructure.DECISION:
                 add_addendum(messages=messages, addendum=OpenAIModel.decision_addendum)
             elif speech_structure == SpeechStructure.PREFERENCE:
@@ -87,6 +98,8 @@ class OpenAIModel(Model):
                 )
 
             message = completion.choices[0].message["content"]
+
+            self.logger.info(f"Received message")
 
             if speech_structure == SpeechStructure.DECISION:
                 message = extract_response_from_structured_speech(

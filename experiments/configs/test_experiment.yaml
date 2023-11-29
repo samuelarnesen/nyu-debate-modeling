@@ -102,7 +102,7 @@ Offline_Test:
   word_limit: 500
   batch_size: 1
   num_speeches: 1
-  flip: True
+  flip: False
   prompt_config:
     file_path: ./agents/prompts/prompts.yaml
     default_prompt_name: Base Prompt
@@ -111,18 +111,20 @@ Offline_Test:
       - model_type: random
         alias: offline-debater-1
       - model_type: random
-        alias: offline-debater-2
+        alias: offline-debater-1
     judge:
       model_type: random
       alias: random-judge
   dataset:
-    dataset_type: quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+    dataset_type: quality
+    train_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.train
+    val_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev
+    test_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test
+    split_type: train
   offline:
     debaters:
-      - true
-      - true
-    file_path: /Users/samarnesen/nyu/debate-data/transcripts/2023-10-11_23:56:19.859778
+      - offline-debater-1
+    file_path: /Users/samarnesen/nyu/debate-data/transcripts/2023-11-28_11:09:25.726737
 BoN_Test:
   topic_config:
     topic_type: from_dataset
@@ -231,7 +233,7 @@ Dynamic_Test:
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
     annotations_file_path:  /Users/samarnesen/nyu/debate-data/annotated-data-set.p
     split_type: train
-Operational_Test:
+Dynamic_Override_Test:
   topic_config:
     topic_type: from_dataset
   word_limit: 500
@@ -246,9 +248,11 @@ Operational_Test:
       - model_type: random
         alias: random-debater-1
         override_prompt: Quote Heavy
+        greedy: True
       - model_type: random
         alias: random-debater-2
         override_prompt: Quote Light
+        greedy: False
     judge:
       model_type: random
       alias: random-judge
@@ -257,4 +261,30 @@ Operational_Test:
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
     annotations_file_path:  /Users/samarnesen/nyu/debate-data/annotated-data-set.p
     split_type: train
+Operational_Test:
+  topic_config:
+    topic_type: from_dataset
+  word_limit: 500
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  prompt_config:
+    file_path: ./agents/prompts/prompts.yaml
+    default_prompt_name: Base Prompt
+  agents:
+    debaters:
+      - model_type: random
+        alias: human-debater-1
+      - model_type: random
+        alias: human-debater-2
+    judge:
+      model_type: random
+      alias: random-judge
+  dataset:
+    dataset_type: quality_debates
+    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+  human:
+    debaters:
+      - human-debater-1
+      - human-debater-2
 

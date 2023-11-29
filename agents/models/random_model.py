@@ -8,7 +8,7 @@ import random
 
 
 class RandomModel(Model):
-    def __init__(self, alias: str, is_debater: bool = False):
+    def __init__(self, alias: str, is_debater: bool = False, **kwargs):
         super().__init__(alias=alias, is_debater=is_debater)
         self.alphabet = "abcdefghijklmnopqrstuvwxyz"
 
@@ -43,5 +43,5 @@ class RandomModel(Model):
         num_return_sequences = max(num_return_sequences, len(inputs))
         return [generate_random_text() for i in range(num_return_sequences)]
 
-    def copy(self, alias: str, is_debater: Optional[bool] = None) -> RandomModel:
+    def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> RandomModel:
         return RandomModel(alias=alias, is_debater=is_debater if is_debater is not None else False)

@@ -76,6 +76,26 @@ class RowConverter:
         return f"<{name}_Speech>"
 
     @classmethod
+    def get_default_speeches(cls) -> list[SpeechData]:
+        return [
+            SpeechData(
+                text="",
+                position=0,
+                speaker_type=SpeakerType.DEBATER,
+            ),
+            SpeechData(
+                text="",
+                position=1,
+                speaker_type=SpeakerType.DEBATER,
+            ),
+            SpeechData(
+                text="",
+                position=0,
+                speaker_type=SpeakerType.JUDGE,
+            ),
+        ]
+
+    @classmethod
     def convert_transcript(
         cls,
         row: DataRow,
@@ -92,7 +112,7 @@ class RowConverter:
         previous_speaker_type = SpeakerType.JUDGE
         speeches_so_far = []
         rounds = 1
-        for i, speech in enumerate(row.speeches):
+        for i, speech in enumerate(row.speeches or RowConverter.get_default_speeches()):
             # we want to skip whatever judgment the judge made before the round started
             if only_judge_has_spoken and speech.speaker_type == SpeakerType.JUDGE:
                 continue

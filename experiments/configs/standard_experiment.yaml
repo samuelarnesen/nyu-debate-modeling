@@ -63,11 +63,13 @@
   agents:
     debaters:
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged
-        alias: "sft-debater"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+        alias: "4-debater-full"
+        greedy: True
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current
-        alias: "dpo-debater"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+        alias: "4-debater-full"
+        greedy: True
     judge:
       model_type: openai
       alias: "openai-judge"
@@ -88,13 +90,11 @@
   agents:
     debaters:
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted/
-        alias: "heavy-quoter"
-        override_prompt: Quote Heavy
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-8/checkpoint-48
+        alias: "4-debater-opening"
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted/
-        alias: "light-quoter"
-        override_prompt: Quote Light
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-8/checkpoint-48
+        alias: "4-debater-opening"
     judge:
       model_type: openai
       alias: "openai-judge"
@@ -103,7 +103,7 @@
     train_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.train
     val_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.dev
     test_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.test
-    split_type: train
+    split_type: val
 70B Check:
   topic_config:
     topic_type: from_dataset

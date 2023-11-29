@@ -30,5 +30,5 @@ class DeterministicModel(Model):
         num_return_sequences = max(num_return_sequences, len(inputs))
         return [text_to_repeat for i in range(num_return_sequences)]
 
-    def copy(self, alias: str, is_debater: Optional[bool] = None) -> DeterministicModel:
+    def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> DeterministicModel:
         return DeterministicModel(alias=alias, is_debater=is_debater if is_debater is not None else False)

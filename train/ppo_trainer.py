@@ -10,9 +10,9 @@ from utils.string_utils import StringUtils
 import utils.constants as constants
 
 from datasets import Dataset
-from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model  # TODO: check if we need this
+from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from transformers import GenerationConfig
-from trl import AutoModelForCausalLMWithValueHead, PPOConfig, PPOTrainer
+from trl import PPOConfig, PPOTrainer
 import pandas as pd
 import torch
 import tqdm
@@ -41,57 +41,87 @@ class PPOTrainerWrapper:
     EXTRA_SUFFIX_COLUMN = "extra_suffix"
     BATCH_SIZE = 8
     DEFAULT_JUDGE_ALIAS = "openai-judge"
+    MAX_GENERATION_LENGTH = 300
 
     def __init__(self, ppo_trainer: PPOTrainer, config: TrainingConfig):
         self.ppo_trainer = ppo_trainer
-        self.reward_model = OpenAIModel(alias=DEFAULT_JUDGE_ALIAS, is_debater=False)
+        self.reward_model = OpenAIModel(alias=PPOTrainerWrapper.DEFAULT_JUDGE_ALIAS, is_debater=False)
         self.config = config
+        self.generation_config = GenerationConfig(
+            max_new_tokens=PPOTrainerWrapper.MAX_GENERATION_LENGTH,
+            temperature=0.5,
+            top_p=0.9,
+            num_return_sequences=1,
+            repetition_penalty=1.2,
+            do_sample=True,
+            use_cache=True,
+            pad_token_id=self.ppo_trainer.tokenizer.eos_token_id,
+        )
+        self.logger = LoggerUtils.get_default_logger(__name__)
 
     def train(self):
         # NOTE: TODO: This only optimizes Debater_A
-        for row in self.ppo_trainer.dataset:
-            query_tensors = self.ppo_trainer.tokenizer([row[PPOTrainerWrapper.QUERY_COLUMN]], return_tensors="pt").input_ids
+        for i, row in enumerate(self.ppo_trainer.dataset):
+            row_to_use = f"{row[PPOTrainerWrapper.QUERY_COLUMN]}\n {constants.INSTRUCTION_SUFFIX}"
+            query_tensors = self.ppo_trainer.tokenizer(row_to_use, return_tensors="pt").to("cuda")
             opponent_query_tensors = self.ppo_trainer.tokenizer(
-                [row[PPOTrainerWrapper.OPPONENT_QUERY_COLUMN]], return_tensors="pt"
-            ).input_ids
+                row[PPOTrainerWrapper.OPPONENT_QUERY_COLUMN], return_tensors="pt"
+            ).to("cuda")
 
-            response_tensors = ppo_trainer.generate(query_tensors, **generation_kwargs)
+            response_tensors = self.ppo_trainer.generate(
+                query_tensors.input_ids[0, :], generation_config=self.generation_config
+            )
             with torch.no_grad():
-                opponent_response_tensors = ppo_trainer.model.generate(opponent_query_tensors, **generation_kwargs)
+                opponent_response_tensors = self.ppo_trainer.model.generate(
+                    **opponent_query_tensors, generation_config=self.generation_config
+                )
 
-            input_lengths = (query_tensors.input_ids != self.tokenizer.pad_token_id).sum(axis=1)
-            opponent_input_lengths = (opponent_query_tensors.input_ids != self.tokenizer.pad_token_id).sum(axis=1)
+            input_lengths = (query_tensors.input_ids != self.ppo_trainer.tokenizer.pad_token_id).sum(axis=1)
+            opponent_input_lengths = (opponent_query_tensors.input_ids != self.ppo_trainer.tokenizer.pad_token_id).sum(
+                axis=1
+            )
 
             reward_tensors = []
-            for i in range(len(response_tensors)):
+            for j in range(len(response_tensors)):
                 decoded = StringUtils.clean_string(
-                    self.tokenizer.decode(response_tensors.sequences[i, input_lengths[min(i, len(input_lengths) - 1)] :])
-                )
-                opponent_decoded = StringUtils.clean_string(
-                    self.tokenizer.decode(
-                        opponent_response_tensors.sequences[
-                            i, opponent_input_lengths[min(i, len(opponent_input_lengths) - 1)] :
-                        ]
+                    self.ppo_trainer.tokenizer.decode(
+                        response_tensors[j, -PPOTrainerWrapper.MAX_GENERATION_LENGTH :].to("cpu")
                     )
                 )
-                texts.append((decoded, opponent_decoded))
+                opponent_decoded = StringUtils.clean_string(
+                    self.ppo_trainer.tokenizer.decode(
+                        opponent_response_tensors[i, -PPOTrainerWrapper.MAX_GENERATION_LENGTH :].to("cpu")
+                    )
+                )
 
                 judge_input_text = (
                     row[PPOTrainerWrapper.JUDGE_QUERY_COLUMN]
                     .replace(RowConverter.get_dummy_name_for_speaker(constants.DEFAULT_DEBATER_A_NAME), decoded)
-                    .replace(RowConverter.get_dummy_name_for_speaker(constants.DEFAULT_DEBATER_A_NAME), opponent_decoded)
+                    .replace(RowConverter.get_dummy_name_for_speaker(constants.DEFAULT_DEBATER_B_NAME), opponent_decoded)
                 )
 
-                reasoning = reward_model.predict(inputs=judge_input_text, max_new_tokens=450)
-                reward = reward_model.predict(
-                    inputs=[f"{judge_input_text}\n{reasoning}"],
+                self.logger.info(self.reward_model)
+
+                reasoning = self.reward_model.predict(inputs=[[judge_input_text]], max_new_tokens=450)
+
+                self.logger.info(reasoning)
+
+                reward = self.reward_model.predict(
+                    inputs=[[f"{judge_input_text}\n{reasoning}"]],
                     max_new_tokens=15,
                     speech_structure=SpeechStructure.PREFERENCE,
                 )
-                reward_tensors.append(torch.tensor(reward))
 
-            stats = ppo_trainer.step(queries=query_tensors, responses=response_tensors, scores=reward_tensors)
-            ppo_trainer.log_stats(stats=stats, batch=batch, rewards=rewards_tensor)
+                self.logger.info(float(reward[0]))
+
+                reward_tensors.append(torch.tensor(float(reward[0])))
+
+            stats = self.ppo_trainer.step(
+                queries=[query_tensors.input_ids[0, :].squeeze()],
+                responses=[response_tensors.squeeze()],
+                scores=reward_tensors,
+            )
+            self.ppo_trainer.log_stats(stats=stats, batch=batch, rewards=rewards_tensor)
 
     def save_model(self):
         self.ppo_trainer.save_model(config.logging_and_saving_config.output_dir)
@@ -150,31 +180,19 @@ class PPOTrainerWrapper:
             replace_attn_with_flash_attn()
 
         tokenizer = TrainUtils.get_tokenizer(config=config)
-        model = TrainUtils.load_model(model_name=config.model_name, is_local=is_local, requires_value_head=True)
+        model = TrainUtils.load_model(config=config, is_local=is_local, requires_value_head=True)
 
-        peft_config = TrainUtils.get_peft_config(config)
-
-        model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
+        # peft_config = TrainUtils.get_peft_config(config)
+        # model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
         if FLASH_ATTENTION_AVAILABLE:
             model = upcast_layer_for_flash_attention(model, torch.bfloat16)
 
         ppo_config = PPOConfig(
-            steps=config.training_hyperparameters.steps,  # TODO: add this HP
+            steps=config.training_hyperparameters.steps,
             learning_rate=config.training_hyperparameters.learning_rate,
-            batch_size=config.training_hyperparameters.mini_batch_size,
+            batch_size=config.training_hyperparameters.per_device_train_batch_size,
             gradient_accumulation_steps=config.training_hyperparameters.gradient_accumulation_steps,
-            ppo_epochs=config.training_hyperparameters.ppo_epochs,  # TODO: add this HP
-        )
-
-        generation_config = GenerationConfig(
-            max_new_tokens=300,
-            temperature=0.5,
-            top_p=0.9,
-            num_return_sequences=1,
-            repetition_penalty=1.2,
-            do_sample=True,
-            use_cache=True,
-            pad_token_id=tokenizer.eos_token_id,
+            ppo_epochs=config.training_hyperparameters.num_train_epochs,
         )
 
         train_dataset = PPOTrainerWrapper.convert_dataset(
@@ -192,4 +210,4 @@ class PPOTrainerWrapper:
             config=config,
         )
 
-        return trainer
+        return ppo_trainer

@@ -6,7 +6,6 @@ from utils.string_utils import StringUtils
 from utils.timer_utils import timer
 import utils.constants as constants
 
-from peft import PeftModel
 from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig
 import numpy as np
@@ -32,7 +31,7 @@ class LlamaInput(BaseModel):
 
 
 class LlamaModel(Model):
-    def __init__(self, alias: str, file_path: Optional[str] = None, is_debater: bool = True, beam_search: bool = True):
+    def __init__(self, alias: str, file_path: Optional[str] = None, is_debater: bool = True, greedy: bool = True):
         super().__init__(alias=alias, is_debater=is_debater)
         torch.cuda.empty_cache()
         self.logger = LoggerUtils.get_default_logger(__name__)
@@ -71,7 +70,7 @@ class LlamaModel(Model):
                 pad_token_id=self.tokenizer.eos_token_id,
             )
 
-            if beam_search:
+            if not greedy:
                 self.generation_config.num_beams = 2
                 self.generation_config.do_sample = False
                 self.generation_config.top_p = None
@@ -189,8 +188,8 @@ class LlamaModel(Model):
 
         return decoded_outputs
 
-    def copy(self, alias: str, is_debater: Optional[bool] = None) -> LlamaModel:
-        copy = LlamaModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater)
+    def copy(self, alias: str, is_debater: Optional[bool] = None, greedy: bool = False) -> LlamaModel:
+        copy = LlamaModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, greedy=greedy)
         copy.is_debater = self.is_debater if is_debater == None else is_debater
         copy.tokenizer = self.tokenizer
         copy.model = self.model

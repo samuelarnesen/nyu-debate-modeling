@@ -22,11 +22,16 @@ Default - Local:
         dynamic_prompts_file_path: /Users/samarnesen/nyu/debate/nyu-debate-modeling/agents/prompts/dynamic_prompts.yaml
         dynamic_prompt_name: Default Dynamic Prompt
         annotations_file_path: /Users/samarnesen/nyu/debate-data/annotated-data-set.p
+    dataset:
+        dataset_type: quality_debates
+        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
+        split_type: train
 Train - 13B - Alpaca:
     model_name: Yukang/LongAlpaca-13B
     target: debater
+    opening_speeches_only: False
     training_hyperparameters:
-        num_train_epochs: 2
+        num_train_epochs: 4
         per_device_train_batch_size: 4
         gradient_accumulation_steps: 4
         optim: paged_adamw_32bit
@@ -37,11 +42,15 @@ Train - 13B - Alpaca:
         peft_type: lora
     logging_and_saving_config:
         logging_steps: 10
-        output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K/
-        merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged/
+        output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full-4/
+        merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4/
     prompt_config:
         prompts_file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
         prompt_name: Base Prompt
+    dataset:
+        dataset_type: quality_debates
+        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
+        split_type: train
 Train - 13B - Alpaca - Annotated:
     model_name: Yukang/LongAlpaca-13B
     target: debater
@@ -66,6 +75,10 @@ Train - 13B - Alpaca - Annotated:
         dynamic_prompts_file_path: /home/spa9663/debate/agents/prompts/dynamic_prompts.yaml
         dynamic_prompt_name: Default Dynamic Prompt
         annotations_file_path: /home/spa9663/debate-data/annotated-data-set.p
+    dataset:
+        dataset_type: quality_debates
+        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
+        split_type: train
 Train - 13B - Alpaca - Prompt Tuning:
     model_name: Yukang/LongAlpaca-13B
     target: debater
@@ -86,6 +99,10 @@ Train - 13B - Alpaca - Prompt Tuning:
     prompt_config:
         prompts_file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
         prompt_name: Base Prompt
+    dataset:
+        dataset_type: quality_debates
+        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
+        split_type: train
 Train - 70B:
     model_name: Yukang/LongAlpaca-70B
     target: debater
@@ -105,3 +122,7 @@ Train - 70B:
     prompt_config:
         prompts_file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
         prompt_name: Base Prompt
+    dataset:
+        dataset_type: quality_debates
+        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
+        split_type: train

@@ -7,7 +7,6 @@ from utils.logger_utils import LoggingCallback, LoggerUtils
 
 from datasets import Dataset
 from pydantic import BaseModel
-from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 from trl import DPOTrainer
 import pandas as pd
@@ -44,7 +43,7 @@ class DirectPreferenceTrainer:
         if FLASH_ATTENTION_AVAILABLE:
             replace_attn_with_flash_attn()
         tokenizer = TrainUtils.get_tokenizer(config=config)
-        model = TrainUtils.load_model(model_name=config.model_name, is_local=is_local)
+        model = TrainUtils.load_model(config=config, is_local=is_local)
 
         training_args = TrainingArguments(
             output_dir=config.logging_and_saving_config.output_dir,

@@ -26,11 +26,12 @@ class ModelUtils:
         file_path: Optional[str] = None,
         is_debater: bool = True,
         speeches: Optional[list[str]] = None,
+        greedy: bool = False,
     ) -> Model:
         if model_type == ModelType.RANDOM:
             return RandomModel(alias=alias, is_debater=is_debater)
         elif model_type == ModelType.LLAMA:
-            return LlamaModel(alias=alias, file_path=file_path, is_debater=is_debater)
+            return LlamaModel(alias=alias, file_path=file_path, is_debater=is_debater, greedy=greedy)
         elif model_type == ModelType.DETERMINISTIC:
             return DeterministicModel(alias=alias, is_debater=is_debater)
         elif model_type == ModelType.OPENAI:

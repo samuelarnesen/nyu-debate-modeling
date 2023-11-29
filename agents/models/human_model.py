@@ -9,7 +9,7 @@ from typing import Union, Optional
 
 
 class HumanModel(Model):
-    def __init__(self, alias: str, is_debater: bool, debater_name: str, speeches: list[SpeechData]):
+    def __init__(self, alias: str, is_debater: bool, debater_name: str, speeches: list[SpeechData], **kwargs):
         super().__init__(alias=alias, is_debater=is_debater)
         position = 0 if debater_name == constants.DEFAULT_DEBATER_A_NAME else 1
         self.speeches = [
@@ -30,5 +30,5 @@ class HumanModel(Model):
             )
         return [speech]
 
-    def copy(self, alias: str, is_debater: Optional[bool] = None) -> HumanModel:
+    def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> HumanModel:
         return HumanModel(alias=alias, is_debater=is_debater, debater_name=self.debater_name, speeches=self.speeches)

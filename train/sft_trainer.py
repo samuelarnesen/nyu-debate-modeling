@@ -6,9 +6,8 @@ import utils.constants as constants
 
 from datasets import Dataset
 import pandas as pd
-from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
-from trl import DataCollatorForCompletionOnlyLM, SFTTrainer
+from trl import DataCollatorForCompletionOnlyLM, SFTTrainer, prepare_model_for_kbit_training, get_peft_model
 import torch
 
 try:
@@ -56,7 +55,7 @@ class SupervisedTrainer:
             replace_attn_with_flash_attn()
 
         tokenizer = TrainUtils.get_tokenizer(config=config)
-        model = TrainUtils.load_model(model_name=config.model_name, is_local=is_local)
+        model = TrainUtils.load_model(config=config, is_local=is_local)
 
         training_args = TrainingArguments(
             output_dir=config.logging_and_saving_config.output_dir,
@@ -89,7 +88,6 @@ class SupervisedTrainer:
         )
 
         peft_config = TrainUtils.get_peft_config(config)
-
         model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
         if FLASH_ATTENTION_AVAILABLE:
             model = upcast_layer_for_flash_attention(model, torch.bfloat16)

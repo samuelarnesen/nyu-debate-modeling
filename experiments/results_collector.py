@@ -1,6 +1,7 @@
 from agents.debate_round import DebateRoundSummary
 from data.data import DataRow
 from data.loaders.quality_debates_loader import QualityDebatesLoader, QualityDebatesDataset
+from experiments.annotator import Annotator
 from experiments.experiment_loader import ExperimentConfig, ExperimentLoader
 from experiments.quotes_collector import QuotesCollector
 from utils.logger_utils import LoggerUtils
@@ -17,6 +18,7 @@ from enum import Enum
 from typing import Optional, Union
 import math
 import re
+import time
 
 
 class WinStats(BaseModel):
@@ -40,6 +42,7 @@ class ResultsCollector:
     ):
         self.logger = LoggerUtils.get_default_logger(__name__)
         self.quotes_collector = QuotesCollector(experiment=experiment) if experiment else None
+        self.annotator = Annotator(model_path="/Users/samarnesen/nyu/scratch/classifier.p")  # TODO: make configurable
         self.num_debaters = len(set([debater.alias for debater in experiment.agents.debaters])) if experiment else 2
         self.save_file_path_prefix = save_file_path_prefix
         self.should_save = should_save
@@ -57,6 +60,9 @@ class ResultsCollector:
         for summary in summaries:
             self.summaries.append(summary)
             self.quotes_collector.record_result(summary=summary)
+
+            start = time.time()
+            self.annotator.classify_debate_round(summary=summary)
 
     def __get_num_debaters(self):
         return len(set([debater.alias for debater in self.experiment.agents.debaters]))
@@ -203,21 +209,24 @@ class ResultsCollector:
         plt.show()
         plt.clf()
 
-        computed_win_rate_matrix = []
-        for first in categories:
-            computed_win_rate_matrix.append([])
-            for second in categories:
-                computed_win_rate = debater_skills[first] / (debater_skills[first] + debater_skills[second])
-                computed_win_rate_matrix[-1].append(computed_win_rate)
-        ax = sns.heatmap(computed_win_rate_matrix, annot=True, fmt=".1%", cmap="coolwarm_r", cbar=False)
+        try:
+            computed_win_rate_matrix = []
+            for first in categories:
+                computed_win_rate_matrix.append([])
+                for second in categories:
+                    computed_win_rate = debater_skills[first] / (debater_skills[first] + debater_skills[second])
+                    computed_win_rate_matrix[-1].append(computed_win_rate)
+            ax = sns.heatmap(computed_win_rate_matrix, annot=True, fmt=".1%", cmap="coolwarm_r", cbar=False)
 
-        ax.set_xticklabels(categories)
-        ax.set_yticklabels(categories)
-        ax.set_xlabel("Losing Team")
-        ax.set_ylabel("Winning Team")
-        ax.set_title("Computed Win Rates")
-        self.__save("Computed_Win_Rates")
-        plt.show()
+            ax.set_xticklabels(categories)
+            ax.set_yticklabels(categories)
+            ax.set_xlabel("Losing Team")
+            ax.set_ylabel("Winning Team")
+            ax.set_title("Computed Win Rates")
+            self.__save("Computed_Win_Rates")
+            plt.show()
+        except:
+            plt.clf()
 
         return debater_skills
 
@@ -302,7 +311,43 @@ class ResultsCollector:
 
         return results
 
+    def __graph_features(self):
+        data = self.annotator.get_results()
+
+        common_tags = ["statement", "summary", "analysis", "quote", "q_context"]
+        rare_tags = ["flourish", "framing", "refutation", "promise", "logic", "reply"]
+
+        aliases = list(data.keys())
+
+        fig, axs = plt.subplots(2, 1, figsize=(12, 8))
+        
+        for i in range(2):
+            tags = (common_tags if i == 0 else rare_tags)
+            index = np.arange(len(tags))
+            bar_width = 3 / (self.num_debaters * len(tags))
+            for j, alias in enumerate(aliases):
+                values = [data[alias][feature] for feature in tags]
+                axs[i].bar(index + j * bar_width, values, bar_width, label=alias)
+            axs[i].set_ylabel('Frequency')
+            axs[i].set_xticks(index + bar_width / 2)
+            axs[i].set_xticklabels(tags)
+            axs[i].set_ylim(0)
+            if i == 0:
+                axs[i].set_title('Frequency of Attributes')
+            else:
+                axs[i].set_xlabel('Features')
+            axs[i].legend()
+
+        # Show the updated plot
+        plt.show()
+        return data
+
+
     def graph_results(self) -> None:
+        classifier_results = self.__graph_features()
+        self.logger.info(classifier_results)
+
+        plt.clf()
         bt_results = self.__graph_bradley_terry()
         self.logger.info(bt_results)
 

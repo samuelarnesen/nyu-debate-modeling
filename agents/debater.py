@@ -37,9 +37,9 @@ class Debater(Agent):
         self.use_scratchpad = use_scratchpad
         self.logger = LoggerUtils.get_default_logger(__name__)
 
-    def generate(self, max_new_tokens=300) -> Optional[list[str]]:
+    def generate(self, max_new_tokens=300, round_idx: int = 0) -> Optional[list[str]]:
         model_inputs = [transcript.to_model_input() for transcript in self.transcripts]
-        return self.model.predict(inputs=model_inputs, max_new_tokens=max_new_tokens, debater_name=self.name)
+        return self.model.predict(inputs=model_inputs, max_new_tokens=max_new_tokens, debater_name=self.name, round_idx=round_idx)
 
     def copy(self, transcripts: Optional[list[Transcript]] = None) -> Debater:
         debater = Debater(
@@ -97,7 +97,7 @@ class BoNDebater(Debater):
 
 
 class OfflineDebater(Debater):
-    def __init__(self, debater: Debater, file_path: str, first_debater_prompt: Prompt):
+    def __init__(self, debater: Debater, file_path: str, first_debater_prompt: Prompt, round_idx: int = 0):
         super().__init__(
             name=debater.name,
             prompt=debater.prompts,
@@ -107,6 +107,10 @@ class OfflineDebater(Debater):
             num_speeches=debater.num_speeches,
             speech_format=debater.speech_format,
         )
+        self.round_idx = round_idx
+
+    def __call__(self) -> Optional[list[str]]:
+        return self.generate(max_new_tokens=300, round_idx=self.round_idx)
 
 
 class HumanDebater(Debater):

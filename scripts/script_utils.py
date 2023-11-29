@@ -38,7 +38,7 @@ class ScriptUtils:
         parser.add_argument("--suppress_graphs", action="store_true", default=False)
         parser.add_argument("--local_rank", type=int, default=0)  # needed for multi-GPU training
         parser.add_argument("--bon", action="store_true", default=False)  # needed for best-of-n
-        parser.add_argument("--dpo", action="store_true", default=False)  # needed for dpo training
+        parser.add_argument("--train_type", type=str, default="")  # needed for dpo training
         parser.add_argument("--dataset", type=str, default="")  # needed for dpo training
         args = parser.parse_args()
         ScriptUtils.set_log_level(args)
@@ -88,8 +88,19 @@ class ScriptUtils:
         )
 
     @classmethod
+    def get_config_filepath(cls, args) -> str:
+        if args.train_type.lower() == "sft":
+            return "train/configs/sft_config.yaml"
+        elif args.train_type.lower() == "dpo":
+            return "train/configs/dpo_config.yaml"
+        elif args.train_type.lower() == "ppo":
+            return "train/configs/ppo_config.yaml"
+        else:
+            raise Exception(f"Train type {args.train_type} is not recognized")
+
+    @classmethod
     def get_model_run_script_config(cls, args) -> ModelRunScriptConfig:
-        config_filepath = "train/configs/sft_config.yaml" if not args.dpo else "train/configs/dpo_config.yaml"
+        config_filepath = ScriptUtils.get_config_filepath(args)
         full_dataset_filepath = args.dataset or "../../debate-data/debates-readable.jsonl"
         config_name = args.configuration or "Default - Local"
         if not args.local:
