@@ -4,8 +4,8 @@ import os
 
 class InputUtils:
     @classmethod
-    def read_file_texts(cls, base_path: str, group_by_batch: bool = False) -> list[Union[str, list[str]]]:
-        def add_batch(current_batch: list[str], file_texts: list[Union[str, list[str]]]):
+    def read_file_texts(cls, base_path: str, group_by_batch: bool = False) -> list[str | list[str]]:
+        def add_batch(current_batch: list[str], file_texts: list[str | list[str]]):
             if current_batch:
                 if group_by_batch:
                     file_texts.append([example for example in current_batch])

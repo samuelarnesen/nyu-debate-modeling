@@ -50,12 +50,12 @@ class OpenAIModel(Model):
 
     def predict(
         self,
-        inputs: list[Union[list[ModelInput], str]],
+        inputs: list[list[ModelInput] | str],
         max_new_tokens=450,
         speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
         **kwargs,
     ) -> list[str]:
-        def model_input_to_openai_format(model_input: Union[ModelInput, str]) -> dict[str, str]:
+        def model_input_to_openai_format(model_input: ModelInput | str) -> dict[str, str]:
             if isinstance(model_input, str):
                 return {"role": RoleType.USER.name.lower(), "content": model_input}
             return {"role": model_input.role.name.lower(), "content": model_input.content}

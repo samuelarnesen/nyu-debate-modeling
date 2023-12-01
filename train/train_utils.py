@@ -46,7 +46,7 @@ class TrainingHyperParameterConfig(BaseModel):
     max_grad_norm: float
     warmup_ratio: float
     lr_scheduler_type: str
-    peft_type: Union[PeftType, str]
+    peft_type: PeftType | str
     steps: Optional[int]
 
 
@@ -66,7 +66,7 @@ class TrainingConfig(BaseModel):
     prompt_config: PromptConfig
     logging_and_saving_config: Optional[LoggingAndSavingConfig]
     training_hyperparameters: Optional[TrainingHyperParameterConfig]
-    target: Optional[Union[str, TrainingTarget]]
+    target: Optional[str | TrainingTarget]
     dataset: Optional[DatasetConfig]
     deepspeed: Optional[str]
     opening_speeches_only: Optional[bool]
