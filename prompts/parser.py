@@ -40,7 +40,7 @@ class RoleType(Enum):
 
 class DynamicEligibilityCriteria(BaseModel):
     tag: str
-    bracket: Union[str, AnnotationBracket]
+    bracket: str | AnnotationBracket
     threshold: float
 
 
@@ -54,7 +54,7 @@ class DynamicPrompt(BaseModel):
     display: DynamicDisplayConfig
     counterpart: list[str]
     reference_prompt: str
-    messages: dict[Union[PromptTag, str], str]
+    messages: dict[PromptTag | str, str]
 
 
 class ExamplesTag(Enum):
@@ -63,13 +63,13 @@ class ExamplesTag(Enum):
 
 
 class Message(BaseModel):
-    role: Union[str, RoleType]
-    content: Union[str, list[str]]
+    role: str | RoleType
+    content: str | list[str]
 
 
 class Prompt(BaseModel):
     name: str
-    messages: Union[dict[str, dict[str, Any]], dict[PromptTag, Message]]
+    messages: dict[str, dict[str, Any]] | dict[PromptTag, Message]
 
 
 class PromptConfig(BaseModel):
