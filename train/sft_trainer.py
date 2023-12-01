@@ -1,5 +1,5 @@
-from agents.models.llama_model import LlamaInput, LlamaModel
-from data.data import DataRow, RawDataset, SplitType
+from agents import LlamaInput, LlamaModel
+from data import DataRow, RawDataset, SplitType
 from train.row_converter import RowConverter
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
 import utils.constants as constants
@@ -100,6 +100,7 @@ class SupervisedTrainer:
             data_collator=collator,
             formatting_func=SupervisedTrainer.format_instruction,
             max_seq_length=16384,
+            neftune_noise_alpha=5,
             args=training_args,
         )
 

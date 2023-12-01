@@ -13,13 +13,12 @@ Train - 13B - Alpaca:
         lr_scheduler_type: constant
         peft_type: lora
         steps: 100
-
     logging_and_saving_config:
         logging_steps: 1
         output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-PPO/
         merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-PPO-Merged/
     prompt_config:
-        prompts_file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+        prompts_file_path: /home/spa9663/debate/prompts/config/prompts.yaml
         prompt_name: Base Prompt
     dataset:
         dataset_type: quality

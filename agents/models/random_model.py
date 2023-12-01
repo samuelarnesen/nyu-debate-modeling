@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.model import Model, ModelInput, SpeechStructure
+from agents.models.model import Model, ModelInput, SpeechStructure
 import utils.constants as constants
 
 from typing import Union, Optional

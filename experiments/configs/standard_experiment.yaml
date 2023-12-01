@@ -6,7 +6,7 @@
   num_speeches: 1
   flip: True
   prompt_config:
-    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
@@ -31,7 +31,7 @@
   num_speeches: 1
   flip: True
   prompt_config:
-    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
@@ -58,7 +58,7 @@
   num_speeches: 1
   flip: True
   prompt_config:
-    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
@@ -84,17 +84,20 @@
   batch_size: 1
   num_speeches: 1
   flip: True
+  annotations_classifier_file_path: /home/spa9663/debate-data/classifier.p
   prompt_config:
-    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-8/checkpoint-48
-        alias: "4-debater-opening"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current
+        alias: "dpo"
+        greedy: True
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-8/checkpoint-48
-        alias: "4-debater-opening"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+        alias: "sft"
+        greedy: True
     judge:
       model_type: openai
       alias: "openai-judge"
@@ -112,7 +115,7 @@
   num_speeches: 1
   flip: False
   prompt_config:
-    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:

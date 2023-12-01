@@ -2,12 +2,9 @@ from script_utils import ScriptUtils
 
 ScriptUtils.setup_script()
 
-from data.data import RawDataset
-from data.loaders.annotated_quality_debates_loader import AnnotatedQualityDebatesLoader
-from data.loaders.quality_debates_loader import QualityDebatesLoader
-from train.train_utils import TrainUtils
-from train.sft_trainer import SupervisedTrainer
-from utils.save_utils import SaveUtils
+from data import AnnotatedQualityDebatesLoader, QualityDebatesLoader, RawDataset
+from train import SupervisedTrainer, TrainUtils
+from utils import SaveUtils
 
 args = ScriptUtils.get_args()
 script_config = ScriptUtils.get_model_run_script_config(args)

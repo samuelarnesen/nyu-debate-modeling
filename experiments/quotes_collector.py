@@ -1,8 +1,7 @@
-from agents.debate_round import DebateRoundSummary
+from agents import DebateRoundSummary
 from experiments.experiment_loader import ExperimentConfig, ExperimentLoader
-from utils.logger_utils import LoggerUtils
+from utils import LoggerUtils, QuoteUtils
 import utils.constants as constants
-from utils.quote_utils import QuoteUtils
 
 from pydantic import BaseModel
 
@@ -19,7 +18,6 @@ class QuotesCollector:
     def __init__(self, experiment: ExperimentConfig):
         self.logger = LoggerUtils.get_default_logger(__name__)
         self.dataset = ExperimentLoader.create_dataset(experiment)
-        self.split = ExperimentLoader.get_split(experiment)
         self.alias_to_results = {}
 
     def record_result(self, summary: DebateRoundSummary) -> None:
@@ -72,33 +70,35 @@ class QuotesCollector:
                 continue
             correct = is_correct(speech.speaker)
             winner = is_winner(speech.speaker)
+            only_one_alias = summary.winning_alias == summary.losing_alias
+
             for quote in outputted_quotes:
-                if QuoteUtils.validate_quote(quote, summary.metadata.background_text):
+                if QuoteUtils.validate_quote(quote, summary.metadata.background_text, speech.content):
                     self.alias_to_results[alias][constants.OVERALL].number_of_valid_quotes += 1
                     self.alias_to_results[alias][constants.OVERALL].total_valid_quote_length += len(quote.split())
-                    if winner:
+                    if winner or only_one_alias:
                         self.alias_to_results[alias][constants.WINNER].number_of_valid_quotes += 1
                         self.alias_to_results[alias][constants.WINNER].total_valid_quote_length += len(quote.split())
-                    else:
+                    if not winner or only_one_alias:
                         self.alias_to_results[alias][constants.LOSER].number_of_valid_quotes += 1
                         self.alias_to_results[alias][constants.LOSER].total_valid_quote_length += len(quote.split())
-                    if correct:
+                    if correct or only_one_alias:
                         self.alias_to_results[alias][constants.CORRECT].number_of_valid_quotes += 1
                         self.alias_to_results[alias][constants.CORRECT].total_valid_quote_length += len(quote.split())
-                    else:
+                    if not correct or only_one_alias:
                         self.alias_to_results[alias][constants.INCORRECT].number_of_valid_quotes += 1
                         self.alias_to_results[alias][constants.INCORRECT].total_valid_quote_length += len(quote.split())
                 else:
                     self.logger.debug("The following quote was invalid:\n{}".format(quote))
 
                 self.alias_to_results[alias][constants.OVERALL].number_of_quotes += 1
-                if alias == summary.winning_alias:
+                if winner or only_one_alias:
                     self.alias_to_results[alias][constants.WINNER].number_of_quotes += 1
-                if alias == summary.losing_alias:
+                if not winner or only_one_alias:
                     self.alias_to_results[alias][constants.LOSER].number_of_quotes += 1
-                if correct:
+                if correct or only_one_alias:
                     self.alias_to_results[alias][constants.CORRECT].number_of_quotes += 1
-                else:
+                if not correct or only_one_alias:
                     self.alias_to_results[alias][constants.INCORRECT].number_of_quotes += 1
 
     def get_results(self):

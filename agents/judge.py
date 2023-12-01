@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from agents.agent import Agent
-from agents.model import Model, SpeechStructure
-from agents.prompt import Prompt, PromptTag
+from agents.models import Model, SpeechStructure
 from agents.transcript import SpeechFormat, SpeechType, Transcript
-from utils.logger_utils import LoggerUtils
+from prompts import Prompt, PromptTag
+from utils import LoggerUtils
 import utils.constants as constants
 
 from enum import Enum
@@ -39,7 +39,8 @@ class Judge(Agent):
             prompt=prompt,
             model=model,
             num_speeches=num_speeches,
-            validate_quotes=True,
+            quotes_require_validation=False,
+            receive_validated_quotes=True,
             speech_format=speech_format if speech_format else JudgeUtils.get_default_speech_format(num_speeches),
         )
         self.logger = LoggerUtils.get_default_logger(__name__)
@@ -76,7 +77,7 @@ class Judge(Agent):
     def process_responses(self, responses: list[str]) -> list[Any]:
         return [constants.DEFAULT_DEBATER_A_NAME in response for response in responses]
 
-    def copy(self, transcripts: Optional[list[Transcript]]) -> Judge:
+    def copy(self, transcripts: Optional[list[Transcript]] = None) -> Judge:
         judge = Judge(
             name=self.name,
             prompt=[copy.deepcopy(prompt) for prompt in self.prompts],

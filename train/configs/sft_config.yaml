@@ -17,9 +17,9 @@ Default - Local:
         output_dir: /Users/samarnesen/nyu/scratch/not/a/real/folder
         merge_output_dir: /Users/samarnesen/nyu/scratch/not/a/real/folder
     prompt_config:
-        prompts_file_path: /Users/samarnesen/nyu/debate/nyu-debate-modeling/agents/prompts/prompts.yaml
+        prompts_file_path: /Users/samarnesen/nyu/debate/nyu-debate-modeling/prompts/config/prompts.yaml
         prompt_name: Base Prompt
-        dynamic_prompts_file_path: /Users/samarnesen/nyu/debate/nyu-debate-modeling/agents/prompts/dynamic_prompts.yaml
+        dynamic_prompts_file_path: /Users/samarnesen/nyu/debate/nyu-debate-modeling/prompts/config/dynamic_prompts.yaml
         dynamic_prompt_name: Default Dynamic Prompt
         annotations_file_path: /Users/samarnesen/nyu/debate-data/annotated-data-set.p
     dataset:
@@ -45,7 +45,7 @@ Train - 13B - Alpaca:
         output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Full-4/
         merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4/
     prompt_config:
-        prompts_file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+        prompts_file_path: /home/spa9663/debate/prompts/config/prompts.yaml
         prompt_name: Base Prompt
     dataset:
         dataset_type: quality_debates
@@ -70,9 +70,9 @@ Train - 13B - Alpaca - Annotated:
         output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted/
         merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted/
     prompt_config:
-        prompts_file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+        prompts_file_path: /home/spa9663/debate/prompts/config/prompts.yaml
         prompt_name: Base Prompt
-        dynamic_prompts_file_path: /home/spa9663/debate/agents/prompts/dynamic_prompts.yaml
+        dynamic_prompts_file_path: /home/spa9663/debate/prompts/config/dynamic_prompts.yaml
         dynamic_prompt_name: Default Dynamic Prompt
         annotations_file_path: /home/spa9663/debate-data/annotated-data-set.p
     dataset:
@@ -97,7 +97,7 @@ Train - 13B - Alpaca - Prompt Tuning:
         output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-PT/
         merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-PT/
     prompt_config:
-        prompts_file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+        prompts_file_path: /home/spa9663/debate/prompts/config/prompts.yaml
         prompt_name: Base Prompt
     dataset:
         dataset_type: quality_debates
@@ -120,7 +120,7 @@ Train - 70B:
         logging_steps: 10
         output_dir: /vast/spa9663/models/trained_models/Llama-2-70B/
     prompt_config:
-        prompts_file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+        prompts_file_path: /home/spa9663/debate/prompts/config/prompts.yaml
         prompt_name: Base Prompt
     dataset:
         dataset_type: quality_debates

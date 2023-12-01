@@ -1,4 +1,4 @@
-from agents.debate_round import DebateRoundSummary
+from agents import DebateRoundSummary
 import utils.constants as constants
 
 from pydantic import BaseModel
@@ -76,12 +76,24 @@ class Annotator:
         self.results = {}
 
     def classify(self, paragraph: str, config: ClassificationConfig = DEFAULT_CONFIG) -> ParagraphClassification:
+        def clean_string(original: str, removals: list[str] = []):
+            removals = removals + [
+                constants.INVALID_QUOTE_TAG,
+                constants.INVALID_UNQUOTE_TAG,
+                constants.QUOTE_TAG,
+                constants.UNQUOTE_TAG,
+                ".",
+                ",",
+                '"',
+            ]
+            new_version = copy.deepcopy(original)
+            for string_to_remove in removals:
+                new_version = new_version.replace(string_to_remove, "")
+            return new_version
+
         doc = self.nlp(paragraph)
         sentences = [sentence.text for sentence in doc.sents]
-        sentence_lengths = [
-            len(re.findall(r"\w+", sentence.replace(constants.QUOTE_TAG, "").replace(constants.UNQUOTE_TAG, "")))
-            for sentence in sentences
-        ]
+        sentence_lengths = [len(re.findall(r"\w+", clean_string(sentence))) for sentence in sentences]
         paragraph_length = sum(sentence_lengths)
         embeddings = self.base.encode(sentences)
         results = self.linear(torch.tensor(embeddings))
@@ -115,28 +127,33 @@ class Annotator:
                     for tag, prob in eligible_probs:
                         new_entry[tag] = prob / new_sum
                 temp_classification_results.append(PredictedAnnotation(**new_entry))
-                if temp_classification_results[-1].flourish > 0:
-                    print(sentences[i])
             classification_results = temp_classification_results
 
         if config.special_quotes_handling:
             temp_classification_results = []
-            for sentence_length, sentence, result in zip(sentence_lengths, sentences, classification_results):
-                quote_match = re.search(r"<quote>(.*?)<\/quote>|<quote>(.*)", sentence)
-                full_quotes = quote_match.groups() if quote_match else []
+            for i, (sentence_length, sentence, result) in enumerate(
+                zip(sentence_lengths, sentences, classification_results)
+            ):
+                quote_matches = re.findall(
+                    f"{constants.QUOTE_TAG}(.*?){constants.UNQUOTE_TAG}|{constants.QUOTE_TAG}(.*)|{constants.INVALID_QUOTE_TAG}(.*?){constants.INVALID_UNQUOTE_TAG}|{constants.INVALID_UNQUOTE_TAG}(.*)",
+                    sentence,
+                )
+                full_quotes = [match for tup in quote_matches for match in tup] if quote_matches else []
+
                 quote_length = 0
                 for quote in filter(lambda x: x, full_quotes):
-                    quoteless_sentence = (
-                        sentence.replace(quote, "").replace(constants.QUOTE_TAG, "").replace(constants.UNQUOTE_TAG, "")
-                    )
+                    quoteless_sentence = clean_string(sentence, [quote])
                     quoteless_length = len(re.findall(r"\w+", quoteless_sentence))
                     quote_length += sentence_length - quoteless_length
-                total_results = {tag: (prob * sentence_length) for tag, prob in result.dict().items()}
-                total_results["quote"] = quote_length
-                overall_total = max(sum(total_results.values()), 1)
-                temp_classification_results.append(
-                    PredictedAnnotation(**{tag: total_results[tag] / overall_total for tag in total_results})
-                )
+                if quote_length > 0:
+                    total_results = {tag: (prob * sentence_length) for tag, prob in result.dict().items()}
+                    total_results["quote"] = quote_length
+                    overall_total = max(sum(total_results.values()), 1)
+                    temp_classification_results.append(
+                        PredictedAnnotation(**{tag: total_results[tag] / overall_total for tag in total_results})
+                    )
+                else:
+                    temp_classification_results.append(classification_results[i])
             classification_results = temp_classification_results
 
         sentence_classifications = [
@@ -147,7 +164,8 @@ class Annotator:
         cumulative_annotation = {tag: 0.0 for tag in Annotator.TAGS}
         for i, sentence_classification in enumerate(sentence_classifications):
             for tag, prob in sentence_classification.annotation.dict().items():
-                cumulative_annotation[tag] += (sentence_lengths[i] * prob) / paragraph_length
+                cumulative_annotation[tag] += prob * (sentence_lengths[i] / paragraph_length)
+
         paragraph_annotation = PredictedAnnotation(**cumulative_annotation)
         paragraph_classification = ParagraphClassification(
             paragraph=paragraph, annotation=paragraph_annotation, sentences=sentence_classifications
@@ -159,7 +177,10 @@ class Annotator:
         self, summary: DebateRoundSummary, config: ClassificationConfig = DEFAULT_CONFIG
     ) -> dict[str, list[ParagraphClassification]]:
         speaker_to_classification = {}
-        for speech in filter(lambda x: x.speaker in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME], summary.transcript.speeches):
+        for speech in filter(
+            lambda x: x.speaker in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME],
+            summary.transcript.speeches,
+        ):
             classification = self.classify(paragraph=speech.content)
             speaker_alias = (
                 summary.first_debater_alias
@@ -173,16 +194,22 @@ class Annotator:
             self.results[speaker] += classifications
         return speaker_to_classification
 
-    def get_results(self):
-        cleaned_results = {}
+    def get_results(
+        self, percentile: float = 0.8
+    ) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, float]], dict[str, dict[str, float]]]:
+        average_speaker_results = {}
+        lower_speaker_results = {}
+        upper_speaker_results = {}
         for speaker in self.results:
-            average_results = {tag: 0 for tag in Annotator.TAGS}
+            average_speaker_results[speaker] = {}
+            lower_speaker_results[speaker] = {}
+            upper_speaker_results[speaker] = {}
+            all_results = {tag: [] for tag in Annotator.TAGS}
             for classification in self.results[speaker]:
-                for tag in average_results:
-                    average_results[tag] += classification.annotation.dict()[tag]
-            for tag in average_results:
-                average_results[tag] /= len(self.results[speaker])
-            cleaned_results[speaker] = average_results
-        return cleaned_results
-
-
+                for tag in all_results:
+                    all_results[tag].append(classification.annotation.dict()[tag])
+            for tag in all_results:
+                average_speaker_results[speaker][tag] = sum(all_results[tag]) / len(all_results[tag])
+                lower_speaker_results[speaker][tag] = sorted(all_results[tag])[int((1 - percentile) * len(all_results[tag]))]
+                upper_speaker_results[speaker][tag] = sorted(all_results[tag])[int(percentile * len(all_results[tag]))]
+        return average_speaker_results, lower_speaker_results, upper_speaker_results

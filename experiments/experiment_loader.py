@@ -1,12 +1,19 @@
-from agents.debater import BoNDebater, Debater, HumanDebater, OfflineDebater
-from agents.judge import BoNJudge, Judge
-from agents.debate_round import DebateRound, QuestionMetadata
-from agents.model import Model
-from agents.models.model_utils import ModelType, ModelUtils
-from agents.prompt import DynamicPromptParser, Prompt, PromptConfig, PromptParser
-from data.data import DatasetType, RawDataLoader, RawDataset, SplitType
-from data.loaders.loader_utils import LoaderUtils
-from utils.logger_utils import LoggerUtils
+from agents import (
+    BoNDebater,
+    BoNJudge,
+    Debater,
+    DebateRound,
+    HumanDebater,
+    Judge,
+    Model,
+    ModelType,
+    ModelUtils,
+    OfflineDebater,
+    QuestionMetadata,
+)
+from data import DatasetType, LoaderUtils, RawDataLoader, RawDataset, SplitType
+from prompts import DynamicPromptParser, Prompt, PromptConfig, PromptParser
+from utils import LoggerUtils
 import utils.constants as constants
 
 from pydantic import BaseModel
@@ -86,6 +93,7 @@ class ExperimentConfig(BaseModel):
     offline: Optional[OfflineConfig]
     best_of_n: Optional[BoNConfig]
     human: Optional[HumanConfig]
+    annotations_classifier_file_path: Optional[str]
 
 
 class ExperimentLoader:
@@ -118,24 +126,9 @@ class ExperimentLoader:
             for metadata in debate_round.metadata:
                 metadata_list.append(metadata)
 
-        first_debater = Debater(
-            name=debate_rounds[0].first_debater.name,
-            prompt=first_debater_prompts,
-            model=debate_rounds[0].first_debater.model,
-            num_speeches=debate_rounds[0].first_debater.num_speeches,
-        )
-        second_debater = Debater(
-            name=debate_rounds[0].second_debater.name,
-            prompt=second_debater_prompts,
-            model=debate_rounds[0].second_debater.model,
-            num_speeches=debate_rounds[0].first_debater.num_speeches,
-        )
-        judge = Judge(
-            name=debate_rounds[0].judge.name,
-            prompt=judge_prompts,
-            model=debate_rounds[0].judge.model,
-            num_speeches=debate_rounds[0].first_debater.num_speeches,
-        )
+        first_debater = debate_rounds[0].first_debater.copy()
+        second_debater = debate_rounds[0].second_debater.copy()
+        judge = debate_rounds[0].judge.copy()
 
         return DebateRound(first_debater=first_debater, second_debater=second_debater, judge=judge, metadata=metadata_list)
 
@@ -391,7 +384,7 @@ class ExperimentLoader:
 
                 debater_a_prompts = []
                 debater_b_prompts = []
-                logger.info(
+                logger.debug(
                     f"Using {(len(experiment.best_of_n.prompts) if experiment.best_of_n.prompts else 0)} new prompts"
                 )
                 for prompt_name in experiment.best_of_n.prompts or [experiment.prompt_config.default_prompt_name]:

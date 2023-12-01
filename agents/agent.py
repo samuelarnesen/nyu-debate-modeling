@@ -1,7 +1,7 @@
-from agents.model import Model
-from agents.prompt import Prompt
+from agents.models import Model
 from agents.transcript import SpeechFormat, Transcript
-from utils.logger_utils import LoggerUtils
+from prompts import Prompt
+from utils import LoggerUtils
 
 from typing import Optional, Union
 
@@ -14,14 +14,17 @@ class Agent:
         prompt: Union[Prompt, list[Prompt]],
         model: Model,
         num_speeches: int,
-        validate_quotes: bool,
+        receive_validated_quotes: bool,
+        quotes_require_validation: bool,
         speech_format: SpeechFormat,
     ):
         self.name = name
         self.is_debater = is_debater
         self.model = model
         self.num_speeches = num_speeches
-        self.validate_quotes = validate_quotes
+        self.receive_validated_quotes = receive_validated_quotes
+        self.quotes_require_validation = quotes_require_validation
+
         self.speech_format = speech_format
 
         self.prompts = prompt if type(prompt) == list else [prompt]

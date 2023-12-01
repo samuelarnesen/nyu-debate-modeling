@@ -1,10 +1,10 @@
 13B - Alpaca - Basic:
-    model_name: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged/
+    model_name: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4/
     target: debater
     training_hyperparameters:
         num_train_epochs: 1
         per_device_train_batch_size: 1
-        gradient_accumulation_steps: 4
+        gradient_accumulation_steps: 8
         optim: paged_adamw_32bit
         learning_rate: 5e-4
         max_grad_norm: 0.3
@@ -16,7 +16,7 @@
         output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-1/
         merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
     prompt_config:
-        prompts_file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+        prompts_file_path: /home/spa9663/debate/prompts/config/prompts.yaml
         prompt_name: Base Prompt
 13B - Alpaca - Updated:
     model_name: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
@@ -36,5 +36,5 @@
         output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-2/
         merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
     prompt_config:
-        prompts_file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+        prompts_file_path: /home/spa9663/debate/prompts/config/prompts.yaml
         prompt_name: Base Prompt

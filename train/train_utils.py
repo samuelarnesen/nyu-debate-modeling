@@ -1,5 +1,5 @@
-from data.data import DatasetType, RawDataset
-from data.loaders.loader_utils import LoaderUtils
+from data import DatasetType, LoaderUtils, RawDataset
+import utils.constants as constants
 
 from peft import LoraConfig, PeftConfig, PeftType, PromptTuningInit, PromptTuningConfig, TaskType
 from pydantic import BaseModel
@@ -135,10 +135,15 @@ class TrainUtils:
                 use_flash_attention_2=True,
             )
 
+            model.config.max_position_embeddings = constants.MAX_LENGTH
+            model.config.transformers_version = "4.34.0"
+            model.generation_config.transformers_version = "4.34.0"
+
             if requires_value_head:
                 peft_config = TrainUtils.get_peft_config(config=config)
+                model.gradient_checkpointing_enable()
                 return AutoModelForCausalLMWithValueHead.from_pretrained(
-                    pretrained_model_name_or_path=config.model_name,
+                    pretrained_model_name_or_path=model,
                     quantization_config=bnb_config,
                     use_cache=False,
                     device_map=device_map,

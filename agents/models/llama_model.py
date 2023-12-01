@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from agents.model import Model, ModelInput, RoleType, SpeechStructure
-from utils.logger_utils import LoggerUtils
-from utils.string_utils import StringUtils
-from utils.timer_utils import timer
+from agents.models.model import Model, ModelInput, SpeechStructure
+from prompts import RoleType
+from utils import LoggerUtils, StringUtils, timer
 import utils.constants as constants
 
 from pydantic import BaseModel
@@ -14,14 +13,6 @@ import torch
 from typing import Optional, Union
 import copy
 import re
-
-try:
-    from utils.flash_attn_utils import replace_with_flash_decoding
-
-    FLASH_ATTENTION_AVAILABLE = True
-except ImportError as e:
-    print("Running without flash attention")
-    FLASH_ATTENTION_AVAILABLE = False
 
 
 class LlamaInput(BaseModel):
@@ -36,9 +27,6 @@ class LlamaModel(Model):
         torch.cuda.empty_cache()
         self.logger = LoggerUtils.get_default_logger(__name__)
         if file_path:
-            if FLASH_ATTENTION_AVAILABLE:
-                # replace_with_flash_decoding()
-                pass
             self.is_debater = is_debater
             self.tokenizer = AutoTokenizer.from_pretrained(file_path)
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id  # for open-ended generation
@@ -83,11 +71,9 @@ class LlamaModel(Model):
             self.generation_config = None
 
         if self.model:
-            self.model.config.max_position_embeddings = 32768
+            self.model.config.max_position_embeddings = constants.MAX_LENGTH
             self.model.config.transformers_version = "4.34.0"
             self.model.generation_config.transformers_version = "4.34.0"
-            self.logger.debug(self.model.config)
-            self.logger.debug(f"Flash attention 2 enabled? {self.model.config._flash_attn_2_enabled}")
 
     @classmethod
     def generate_input_str(cls, llama_input: LlamaInput) -> str:

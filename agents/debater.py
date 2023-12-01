@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 from agents.agent import Agent
-from agents.model import Model
-from agents.models.human_model import HumanModel
-from agents.models.offline_model import OfflineModel
-from agents.prompt import Prompt, PromptTag
+from agents.models import Model, HumanModel, OfflineModel
 from agents.transcript import SpeechFormat, Transcript
-from utils.logger_utils import LoggerUtils
+from prompts import Prompt, PromptTag
+from utils import LoggerUtils
 import utils.constants as constants
 
 from typing import Optional, Union
@@ -22,6 +20,7 @@ class Debater(Agent):
         num_speeches: int,
         speech_format: Optional[SpeechFormat] = None,
         use_scratchpad: bool = False,
+        quotes_require_validation: bool = True,
     ):
         super().__init__(
             name=name,
@@ -29,7 +28,8 @@ class Debater(Agent):
             prompt=prompt,
             model=model,
             num_speeches=num_speeches,
-            validate_quotes=False,
+            receive_validated_quotes=False,
+            quotes_require_validation=quotes_require_validation,
             speech_format=speech_format
             if speech_format
             else DebaterUtils.get_default_speech_format(name, num_speeches, use_scratchpad),
@@ -39,7 +39,9 @@ class Debater(Agent):
 
     def generate(self, max_new_tokens=300, round_idx: int = 0) -> Optional[list[str]]:
         model_inputs = [transcript.to_model_input() for transcript in self.transcripts]
-        return self.model.predict(inputs=model_inputs, max_new_tokens=max_new_tokens, debater_name=self.name, round_idx=round_idx)
+        return self.model.predict(
+            inputs=model_inputs, max_new_tokens=max_new_tokens, debater_name=self.name, round_idx=round_idx
+        )
 
     def copy(self, transcripts: Optional[list[Transcript]] = None) -> Debater:
         debater = Debater(
@@ -81,6 +83,10 @@ class BoNDebater(Debater):
         prompts = prompts if prompts else debater.prompts
         return [copy.deepcopy(prompts[i % len(prompts)]) for i in range(n)]
 
+    def copy(self, transcripts: Optional[list[Transcript]] = None) -> Debater:
+        debater = super().copy(transcripts=self.transcripts)
+        return BoNDebater(debater=debater, n=self.n, prompts=self.prompts, evaluated=self.evaluated)
+
     def generate(self, max_new_tokens=300) -> Optional[list[str]]:
         prediction = []
         for transcript in self.transcripts:
@@ -106,8 +112,20 @@ class OfflineDebater(Debater):
             ),
             num_speeches=debater.num_speeches,
             speech_format=debater.speech_format,
+            quotes_require_validation=False,
         )
         self.round_idx = round_idx
+        self.file_path = file_path
+        self.first_debater_prompt = first_debater_prompt
+
+    def copy(self, transcripts: Optional[list[Transcript]] = None) -> Debater:
+        debater = super().copy(transcripts=self.transcripts)
+        return OfflineDebater(
+            debater=debater,
+            file_path=self.file_path,
+            first_debater_prompt=self.first_debater_prompt,
+            round_idx=self.round_idx,
+        )
 
     def __call__(self) -> Optional[list[str]]:
         return self.generate(max_new_tokens=300, round_idx=self.round_idx)
@@ -123,6 +141,7 @@ class HumanDebater(Debater):
             ),
             num_speeches=debater.num_speeches,
             speech_format=debater.speech_format,
+            quotes_require_validation=False,
         )
 
 

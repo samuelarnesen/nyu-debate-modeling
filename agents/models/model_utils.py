@@ -1,4 +1,4 @@
-from agents.model import Model
+from agents.models.model import Model
 from agents.models.deterministic_model import DeterministicModel
 from agents.models.llama_model import LlamaModel
 from agents.models.openai_model import OpenAIModel
