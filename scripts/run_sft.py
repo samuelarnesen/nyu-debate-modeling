@@ -23,7 +23,7 @@ dataset = (
     )
 )
 
-trainer = SupervisedTrainer.get_trainer(config=config, raw_dataset=datsaset, is_local=args.local)
+trainer = SupervisedTrainer.get_trainer(config=config, raw_dataset=dataset, is_local=args.local)
 if not args.load_only:
     trainer.train()
 trainer.save_model()
