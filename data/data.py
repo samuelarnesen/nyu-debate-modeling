@@ -46,8 +46,8 @@ class AnnotationBracket(Enum):
 
 
 class AnnotationData(BaseModel):
-    percents: Optional[dict[Union[AnnotationTag, str], float]]
-    percentiles: Optional[dict[Union[AnnotationTag, str], float]]
+    percents: Optional[dict[AnnotationTag | str, float]]
+    percentiles: Optional[dict[AnnotationTag | str, float]]
 
 
 class SpeechData(BaseModel):

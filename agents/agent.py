@@ -11,7 +11,7 @@ class Agent:
         self,
         name: str,
         is_debater: bool,
-        prompt: Union[Prompt, list[Prompt]],
+        prompt: Prompt | list[Prompt],
         model: Model,
         num_speeches: int,
         validate_quotes: bool,
