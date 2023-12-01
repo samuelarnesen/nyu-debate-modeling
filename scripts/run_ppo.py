@@ -2,10 +2,9 @@ from script_utils import ScriptUtils
 
 ScriptUtils.setup_script()
 
-from data.data import RawDataset
-from train.train_utils import TrainUtils
-from train.ppo_trainer import PPOTrainerWrapper
-from utils.save_utils import SaveUtils
+from data import RawDataset
+from train import PPOTrainerWrapper, TrainUtils
+from utils import SaveUtils
 
 args = ScriptUtils.get_args()
 script_config = ScriptUtils.get_model_run_script_config(args)

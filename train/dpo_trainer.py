@@ -1,9 +1,9 @@
-from agents.models.llama_model import LlamaInput, LlamaModel
-from data.data import DataRow, RawDataset, SplitType
+from agents import LlamaInput, LlamaModel
+from data import DataRow, RawDataset, SplitType
 from train.row_converter import RowConverter
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
+from utils import LoggingCallback, LoggerUtils
 import utils.constants as constants
-from utils.logger_utils import LoggingCallback, LoggerUtils
 
 from datasets import Dataset
 from pydantic import BaseModel
@@ -63,13 +63,7 @@ class DirectPreferenceTrainer:
 
         train_dataset = DirectPreferenceTrainer.convert_dataset(raw_dataset=raw_dataset)
 
-        peft_config = LoraConfig(
-            lora_alpha=16,
-            lora_dropout=0.1,
-            r=64,
-            bias="none",
-            task_type="CAUSAL_LM",
-        )
+        peft_config = TrainUtils.get_peft_config(config=config)
 
         if FLASH_ATTENTION_AVAILABLE:
             model = upcast_layer_for_flash_attention(model, torch.bfloat16)
@@ -85,6 +79,7 @@ class DirectPreferenceTrainer:
             tokenizer=tokenizer,
             peft_config=peft_config,
             callbacks=[LoggingCallback],
+            loss_type="ipo",
         )
 
         torch.cuda.empty_cache()

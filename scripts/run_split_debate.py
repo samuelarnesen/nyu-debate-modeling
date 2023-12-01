@@ -2,8 +2,8 @@ from script_utils import ScriptUtils
 
 ScriptUtils.setup_script()
 
-from agents.debate_round import SplittableDebateRound, SplittingRule
-from experiments.experiment_loader import ExperimentLoader
+from agents import SplittableDebateRound, SplittingRule
+from experiments import ExperimentLoader
 
 from datetime import datetime
 

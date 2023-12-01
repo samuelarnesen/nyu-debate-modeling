@@ -1,12 +1,10 @@
 from agents.agent import Agent
 from agents.debater import Debater
 from agents.judge import Judge, JudgeType
-from agents.prompt import Prompt, PromptConfig, PromptParser
 from agents.transcript import Transcript
-from data.data import RawDataset, SplitType
-from utils.logger_utils import LoggerUtils
+from prompts import Prompt, PromptConfig, PromptParser
+from utils import LoggerUtils, QuoteUtils
 import utils.constants as constants
-from utils.quote_utils import QuoteUtils
 
 from pydantic import BaseModel
 
@@ -20,7 +18,6 @@ class QuestionMetadata(BaseModel):
     first_debater_correct: bool
     question_idx: int
     background_text: str
-    split: SplitType = SplitType.TRAIN
 
 
 class DebateRoundSummary(BaseModel):
@@ -77,12 +74,14 @@ class DebateRound:
             speaker = self.name_to_agent[next_speaker]
             batch_response = speaker()
             for idx, response in enumerate(batch_response):
-                validated_response = QuoteUtils.validate_and_replace_quotes(
-                    speech_content=str(response),
-                    background_text=self.metadata[min(idx, len(self.metadata) - 1)].background_text,
-                )
+                validated_response = str(response)
+                if speaker.quotes_require_validation:
+                    validated_response = QuoteUtils.validate_and_replace_quotes(
+                        speech_content=str(response),
+                        background_text=self.metadata[min(idx, len(self.metadata) - 1)].background_text,
+                    )
                 for _, agent in self.name_to_agent.items():
-                    response_to_use = validated_response if agent.validate_quotes else response
+                    response_to_use = validated_response if agent.receive_validated_quotes else response
                     agent.receive_message(speaker=speaker.name, content=response_to_use, idx=idx)
             next_speaker = self.judge.get_next_expected_speaker()
             last_output = batch_response

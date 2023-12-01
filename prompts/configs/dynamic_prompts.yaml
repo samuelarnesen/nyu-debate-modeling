@@ -1,0 +1,68 @@
+Default Dynamic Prompt:
+  Quote-Heavy:
+    eligibility_criteria:
+      tag: quote
+      bracket: high
+      threshold: 0.84
+    display:
+      positive_examples: 2
+      negative_examples: 2
+    counterpart: 
+      - Quote-Light
+    reference_prompt: Base Prompt
+    messages:
+      debater_system: |
+        The style you are assigned is "Quote-Heavy". That means that as much of your speech as possible should be quotes, while still trying to win the debate.
+
+        Here are some examples of a "Quote-Heavy" speech in a different context:
+
+        1. Mait got kidnapped and then saw that<quote> Last night Venus hadn't been there.      Venus was a morning star just now....</quote> and he realized that was only possible in a different time, he realized <quote> Only one question of importance remained:      What year was this?      He grimaced in the darkness, an involuntary muscular expression of    jubilation and excitement. The   future</quote>. Then he says<quote> Somewhere, out there in the night, there must be men who had walked    beside the Martian canals and pierced the shining cloud mantle of</quote> and<quote>he   had a chance to become a part of all that!</quote> Once he realized he was hostage in the future, he thought he could go to mars which caused his excitement. He is later disappointed that people don't care about mars - after asking about space travel<quote>His present position was like that of an    earnest 12th Century crusader, deposited by some freak of nature into    the year 1950, trying to find a way of reanimating the anti-Mohammedan    movement. What chance would he have?</quote> 
+
+        2. Seargents Stevenson and Pauling discuss how the robbers ended up getting caught, after their get-away vehicle was stolen crashed: <quote>Pauling shrugged. "They always slip up," he said. "Sooner or later, on some minor detail, they always slip up."     "Yes, but their tires."     "Well," said Pauling, "it was a stolen car. I suppose they just grabbed whatever was handiest."</quote>
+      pre_opening_speech: |
+        Remember that you must debate in the "Quote-Heavy" style, otherwise you will not win.
+  Quote-Light:
+    eligibility_criteria:
+      tag: quote
+      bracket: low
+      threshold: 0.84
+    display:
+      positive_examples: 2
+      negative_examples: 2
+    counterpart: 
+      - Quote-Heavy
+    reference_prompt: Base Prompt
+    messages:
+      debater_system: |
+        The style you are assigned is "Quote-Light". That means that you should have as few quotes as possible, while still trying to win the debate.
+
+        Here are some examples of a "Quote-Light" speech in a different context:
+
+        1. The narrator refers to a <quote>Packard parked</quote>. Upon research, the Packard car brand merged with Studebaker to form Studebaker-Packard in 1954; 'Packard' brand name dropped in 1959, so it seems as though in the 60's people would not refer to such a vehicle as a Packard - indicating the narrator is living in the 50s. As opposed to relying on the actors and music the narrator mentions, which can be timeless references, prefer the car terminology as an indicator of the time period. 
+
+        2. Context: Asa is convicted by the Hayzeltyne company for studying slider eggs on Jordan's planet. Asa, in prison, has the option to be in jail for 5 years, or become a challenging, change his body, and work on a far out planet as prison labor for one year. Asa accepts the deal to return to jordan's planet. He misses studying slider eggs and he want's to return to study them in their natural habitat. B/c it's so hard to get people to become challenging, challenging's have the offer to stay at their work site/study abroad planet after their labor service is over, but majority of folks don't. They want to return to earth and be free. Asa, however, is fascinated with slider eggs and mulls staying to continue his research.
+      pre_opening_speech: |
+        Remember that you must debate in the "Quote-Light" style, otherwise you will not win.
+  Quote-Neutral:
+    eligibility_criteria:
+      tag: quote
+      bracket: neutral
+      threshold: 0.84
+    display:
+      positive_examples: 2
+      negative_examples: 2
+    counterpart: 
+      - Quote-Heavy
+      - Quote-Light
+    reference_prompt: Base Prompt
+    messages:
+      debater_system: |
+        The style you are assigned is "Quote-Neutral". That means that you should quote whenever possible, but no need to overdo it.
+      pre_opening_speech: |
+        Remember that you must debate in the "Quote-Neutral" style, otherwise you will not win.
+
+        Here are some examples of a "Quote-Light" speech in a different context:
+
+        1. Dennis is sent to by a <quote>I.S.P. Commander</quote> and told to sit down. Once there, he is told <quote>Marla Starland, your fiancee</quote><quote>is three days overdue. All passengers, a cargo of radium from Venus worth untold millions, the spacer itself-seem to have vanished</quote> The person that sent for him is <quote>Commander Bertram</quote>. It is logistically impossible for it to be Randall as he is introduced as: <quote>Randall, the junior member of the crew</quote>. He is a member of the crew of the ship that went missing, meaning he can't explain anything to Dennis.
+
+        2. There were less than three months between the last time Dan saw his wife Erica and when Dan got out of the hospital. He bruised her in bed the prior night (not knowing his own strength in his new body): <quote>"Maybe I was impetuous," he said. "But it was such a long time."</quote> ... <quote>"Almost three months. But most of that time you were floating in gelatin in the regrowth tank</quote> So three is impossible, and some time had passed before the accident which landed him in the hospital, where as Erica relates: <quote>"A Moon ship collided with a Mars liner in the upper atmosphere.</quote> So the better answer here is two months.

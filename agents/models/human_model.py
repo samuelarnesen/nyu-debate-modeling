@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from agents.model import Model, ModelInput
-from data.data import SpeakerType, SpeechData
-from utils.logger_utils import LoggerUtils
+from agents.models.model import Model, ModelInput
+from data import SpeakerType, SpeechData
+from utils import LoggerUtils
 import utils.constants as constants
 
 from typing import Union, Optional

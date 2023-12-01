@@ -1,10 +1,9 @@
-from agents.debate_round import DebateRoundSummary
-from data.data import DataRow
-from data.loaders.quality_debates_loader import QualityDebatesLoader, QualityDebatesDataset
+from agents import DebateRoundSummary
+from data import DataRow, QualityDebatesLoader, QualityDebatesDataset
 from experiments.annotator import Annotator
 from experiments.experiment_loader import ExperimentConfig, ExperimentLoader
 from experiments.quotes_collector import QuotesCollector
-from utils.logger_utils import LoggerUtils
+from utils import LoggerUtils
 import utils.constants as constants
 
 from pydantic import BaseModel
@@ -42,7 +41,11 @@ class ResultsCollector:
     ):
         self.logger = LoggerUtils.get_default_logger(__name__)
         self.quotes_collector = QuotesCollector(experiment=experiment) if experiment else None
-        self.annotator = Annotator(model_path="/Users/samarnesen/nyu/scratch/classifier.p")  # TODO: make configurable
+        self.annotator = (
+            Annotator(model_path=experiment.annotations_classifier_file_path)
+            if experiment.annotations_classifier_file_path
+            else None
+        )
         self.num_debaters = len(set([debater.alias for debater in experiment.agents.debaters])) if experiment else 2
         self.save_file_path_prefix = save_file_path_prefix
         self.should_save = should_save
@@ -59,10 +62,10 @@ class ResultsCollector:
         summaries = summaries if type(summaries) == list else [summaries]
         for summary in summaries:
             self.summaries.append(summary)
-            self.quotes_collector.record_result(summary=summary)
-
-            start = time.time()
-            self.annotator.classify_debate_round(summary=summary)
+            if self.quotes_collector:
+                self.quotes_collector.record_result(summary=summary)
+            if self.annotator:
+                self.annotator.classify_debate_round(summary=summary)
 
     def __get_num_debaters(self):
         return len(set([debater.alias for debater in self.experiment.agents.debaters]))
@@ -245,7 +248,7 @@ class ResultsCollector:
         for name in results:
             win_stats = win_stats_dict[name]
             category_to_counts[name] = {
-                constants.OVERALL: win_stats.matches,
+                constants.OVERALL: win_stats.matches if self.num_debaters > 1 else int(win_stats.matches / 2),
                 constants.WINNER: win_stats.wins,
                 constants.LOSER: win_stats.matches - win_stats.wins,
                 constants.CORRECT: win_stats.correct_matches,
@@ -312,42 +315,39 @@ class ResultsCollector:
         return results
 
     def __graph_features(self):
-        data = self.annotator.get_results()
+        average, lower, upper = self.annotator.get_results()
 
         common_tags = ["statement", "summary", "analysis", "quote", "q_context"]
         rare_tags = ["flourish", "framing", "refutation", "promise", "logic", "reply"]
 
-        aliases = list(data.keys())
+        aliases = list(average.keys())
 
         fig, axs = plt.subplots(2, 1, figsize=(12, 8))
-        
+
         for i in range(2):
-            tags = (common_tags if i == 0 else rare_tags)
+            tags = common_tags if i == 0 else rare_tags
             index = np.arange(len(tags))
-            bar_width = 3 / (self.num_debaters * len(tags))
+            bar_width = 4 / (self.num_debaters * len(tags))
             for j, alias in enumerate(aliases):
-                values = [data[alias][feature] for feature in tags]
-                axs[i].bar(index + j * bar_width, values, bar_width, label=alias)
-            axs[i].set_ylabel('Frequency')
-            axs[i].set_xticks(index + bar_width / 2)
+                average_values = [average[alias][feature] for feature in tags]
+                lower_errors = [max(average[alias][feature] - lower[alias][feature], 0) for feature in tags]
+                upper_errors = [max(upper[alias][feature] - average[alias][feature], 0) for feature in tags]
+                axs[i].bar(index + j * bar_width, average_values, bar_width, label=alias, yerr=[lower_errors, upper_errors])
+            axs[i].set_ylabel("Frequency")
+            axs[i].set_xticks(index + (bar_width * (len(aliases) - 1) / 2))
             axs[i].set_xticklabels(tags)
             axs[i].set_ylim(0)
             if i == 0:
-                axs[i].set_title('Frequency of Attributes')
+                axs[i].set_title("Frequency of Attributes")
             else:
-                axs[i].set_xlabel('Features')
+                axs[i].set_xlabel("Features")
             axs[i].legend()
 
-        # Show the updated plot
         plt.show()
-        return data
-
+        self.__save("Features")
+        return {"average": average, "lower": lower, "upper": upper}
 
     def graph_results(self) -> None:
-        classifier_results = self.__graph_features()
-        self.logger.info(classifier_results)
-
-        plt.clf()
         bt_results = self.__graph_bradley_terry()
         self.logger.info(bt_results)
 
@@ -356,9 +356,15 @@ class ResultsCollector:
         self.logger.info(win_results)
 
         plt.clf()
-        quote_results = self.__graph_quotes(win_stats_dict=win_results)
-        self.logger.info(quote_results)
-
-        plt.clf()
         judge_results = self.__graph_judge()
         self.logger.info(judge_results)
+
+        if self.quotes_collector:
+            plt.clf()
+            quote_results = self.__graph_quotes(win_stats_dict=win_results)
+            self.logger.info(quote_results)
+
+        if self.annotator:
+            plt.clf()
+            classifier_results = self.__graph_features()
+            self.logger.info(classifier_results)

@@ -11,7 +11,7 @@ Hardcoded_Test:
       - Michael Jordan
       - LeBron James
   prompt_config:
-    file_path: ./agents/prompts/prompts.yaml
+    file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
@@ -36,7 +36,7 @@ Simple_Test:
   num_speeches: 1
   flip: False
   prompt_config:
-    file_path: ./agents/prompts/prompts.yaml
+    file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
@@ -59,7 +59,7 @@ Batched_Test:
   num_speeches: 3
   flip: False
   prompt_config:
-    file_path: ./agents/prompts/prompts.yaml
+    file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
@@ -82,7 +82,7 @@ Single_Test:
   num_speeches: 3
   flip: True
   prompt_config:
-    file_path: ./agents/prompts/prompts.yaml
+    file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
@@ -103,8 +103,9 @@ Offline_Test:
   batch_size: 1
   num_speeches: 1
   flip: False
+  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
   prompt_config:
-    file_path: ./agents/prompts/prompts.yaml
+    file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
@@ -133,7 +134,7 @@ BoN_Test:
   num_speeches: 1
   flip: False
   prompt_config:
-    file_path: ./agents/prompts/prompts.yaml
+    file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
@@ -160,7 +161,7 @@ Quality_Test:
   num_speeches: 1
   flip: False
   prompt_config:
-    file_path: ./agents/prompts/prompts.yaml
+    file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
@@ -189,15 +190,16 @@ Human_Test:
   batch_size: 1
   num_speeches: 1
   flip: True
+  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
   prompt_config:
-    file_path: ./agents/prompts/prompts.yaml
+    file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: random
         alias: 'human-debater'
       - model_type: random
-        alias: 'random-debater'
+        alias: 'human-debater'
     judge:
       model_type: random
       alias: random-judge
@@ -214,10 +216,11 @@ Dynamic_Test:
   batch_size: 1
   num_speeches: 1
   flip: True
+  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
   prompt_config:
-    file_path: ./agents/prompts/prompts.yaml
+    file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
-    dynamic_prompts_file_path: ./agents/prompts/dynamic_prompts.yaml
+    dynamic_prompts_file_path: ./prompts/configs/dynamic_prompts.yaml
     dynamic_prompt_name: Default Dynamic Prompt
   agents:
     debaters:
@@ -240,8 +243,9 @@ Dynamic_Override_Test:
   batch_size: 1
   num_speeches: 1
   flip: True
+  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
   prompt_config:
-    file_path: ./agents/prompts/prompts.yaml
+    file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
@@ -268,23 +272,26 @@ Operational_Test:
   batch_size: 1
   num_speeches: 1
   flip: False
+  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
   prompt_config:
-    file_path: ./agents/prompts/prompts.yaml
+    file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: random
-        alias: human-debater-1
+        alias: dpo
       - model_type: random
-        alias: human-debater-2
+        alias: sft
     judge:
       model_type: random
       alias: random-judge
   dataset:
-    dataset_type: quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
-  human:
+    dataset_type: quality
+    train_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.train
+    val_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev
+    test_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test
+    split_type: train
+  offline:
     debaters:
-      - human-debater-1
-      - human-debater-2
-
+      - offline-debater-1
+    file_path: /Users/samarnesen/nyu/debate-data/transcripts/2023-12-01_12:08:23.713059

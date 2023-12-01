@@ -22,7 +22,14 @@ class QuoteUtils:
         return re.sub("\s+", " ", replaced_text)
 
     @classmethod
-    def validate_quote(cls, quote: str, background_text: str) -> bool:
+    def validate_quote(cls, quote: str, background_text: str, prevalidated_speech: Optional[str] = None) -> bool:
+        if prevalidated_speech:
+            if re.search(f"{constants.QUOTE_TAG}\s*{re.escape(quote)}\s*{constants.UNQUOTE_TAG}", prevalidated_speech):
+                return True
+            elif re.search(
+                f"{constants.INVALID_QUOTE_TAG}\s*{re.escape(quote)}\s*{constants.INVALID_UNQUOTE_TAG}", prevalidated_speech
+            ):
+                return False
         return quote in background_text or QuoteUtils.simplify_text(quote) in QuoteUtils.simplify_text(background_text)
 
     @classmethod

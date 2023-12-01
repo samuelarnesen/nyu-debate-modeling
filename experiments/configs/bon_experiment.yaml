@@ -8,7 +8,7 @@
   best_of_n:
     count: 2
   prompt_config:
-    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
@@ -35,7 +35,7 @@
   best_of_n:
     count: 2
   prompt_config:
-    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:
@@ -64,7 +64,7 @@
     prompts:
       - Base Prompt
   prompt_config:
-    file_path: /home/spa9663/debate/agents/prompts/prompts.yaml
+    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
   agents:
     debaters:

@@ -1,10 +1,6 @@
-from agents.debater import Debater, DebaterUtils
-from agents.judge import Judge, JudgeUtils
-from agents.models.llama_model import LlamaInput, LlamaModel
-from agents.prompt import DynamicPromptParser, Prompt, PromptParser, PromptTag
-from agents.transcript import Transcript
-from data.data import DataRow, DatasetType, RawDataset, SpeakerType, SpeechData, SplitType
-from data.loaders.annotated_quality_debates_loader import AnnotatedQualityDebatesDataset
+from agents import Debater, DebaterUtils, Judge, JudgeUtils, LlamaInput, LlamaModel, Transcript
+from data import AnnotatedQualityDebatesDataset, DataRow, DatasetType, RawDataset, SpeakerType, SpeechData, SplitType
+from prompts import DynamicPromptParser, Prompt, PromptParser, PromptTag
 from train.train_utils import TrainingConfig, TrainingTarget
 import utils.constants as constants
 

@@ -2,11 +2,9 @@ from script_utils import ScriptUtils
 
 ScriptUtils.setup_script()
 
-from data.data import RawDataset
-from data.loaders.judge_preferences_loader import JudgePreferencesLoader
-from train.train_utils import TrainUtils
-from train.dpo_trainer import DirectPreferenceTrainer
-from utils.save_utils import SaveUtils
+from data import RawDataset, JudgePreferencesLoader
+from train import DirectPreferenceTrainer, TrainUtils
+from utils import SaveUtils
 
 args = ScriptUtils.get_args()
 script_config = ScriptUtils.get_model_run_script_config(args)

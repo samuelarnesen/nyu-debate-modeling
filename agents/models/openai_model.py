@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from agents.model import Model, ModelInput, RoleType, SpeechStructure
-from utils.logger_utils import LoggerUtils
+from agents.models.model import Model, ModelInput, RoleType, SpeechStructure
+from utils import LoggerUtils
 import utils.constants as constants
 
 import openai

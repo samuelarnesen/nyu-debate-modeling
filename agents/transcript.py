@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from agents.model import ModelInput, RoleType
-from agents.prompt import Prompt, PromptTag
+from agents.models import ModelInput
+from prompts import Prompt, PromptTag, RoleType
 import utils.constants as constants
 
 from pydantic import BaseModel

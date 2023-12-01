@@ -2,9 +2,8 @@ from script_utils import ScriptUtils
 
 ScriptUtils.setup_script()
 
-from experiments.experiment_loader import ExperimentLoader
-from experiments.results_collector import ResultsCollector
-from utils.logger_utils import LoggerUtils
+from experiments import ExperimentLoader, ResultsCollector
+from utils import LoggerUtils
 
 from datetime import datetime
 from tqdm import tqdm
@@ -23,7 +22,7 @@ results_collector = ResultsCollector(
     should_save=(not args.local),
 )
 
-for i, debate_round in tqdm(enumerate(debate_rounds)):
+for i, debate_round in enumerate(debate_rounds):
     logger.debug(f"Beginning round {i} out of {len(debate_rounds)}")
     save_file_path_prefix = f"{config.save_path_base}/{start_time}_{i}" if not args.local else None
     summary = debate_round(save_file_path_prefix=save_file_path_prefix)
