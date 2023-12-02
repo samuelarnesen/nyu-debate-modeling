@@ -15,7 +15,7 @@ class Debater(Agent):
     def __init__(
         self,
         name: str,
-        prompt: Union[Prompt, list[Prompt]],
+        prompt: Prompt | list[Prompt],
         model: Model,
         num_speeches: int,
         speech_format: Optional[SpeechFormat] = None,

@@ -16,7 +16,7 @@
         output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-1/
         merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
     prompt_config:
-        prompts_file_path: /home/spa9663/debate/prompts/config/prompts.yaml
+        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
         prompt_name: Base Prompt
 13B - Alpaca - Updated:
     model_name: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
@@ -36,5 +36,5 @@
         output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-2/
         merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
     prompt_config:
-        prompts_file_path: /home/spa9663/debate/prompts/config/prompts.yaml
+        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
         prompt_name: Base Prompt

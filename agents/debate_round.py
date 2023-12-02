@@ -22,7 +22,7 @@ class QuestionMetadata(BaseModel):
 
 class DebateRoundSummary(BaseModel):
     metadata: QuestionMetadata
-    transcript: Union[Any]
+    transcript: Any
     winning_alias: str
     losing_alias: str
     first_debater_alias: str
@@ -42,7 +42,7 @@ class DebateRound:
         first_debater: Debater,
         second_debater: Debater,
         judge: Judge,
-        metadata: Union[QuestionMetadata, list[QuestionMetadata]],
+        metadata: QuestionMetadata | list[QuestionMetadata],
     ):
         self.first_debater = first_debater
         self.second_debater = second_debater

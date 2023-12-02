@@ -26,7 +26,7 @@ import sys
 class Annotation(BaseModel):
     text: str
     clean: str
-    metrics: dict[Union[str, AnnotationTag], float]
+    metrics: dict[str | AnnotationTag, float]
 
 
 class AnnotatedQualityDebatesDataset(RawDataset):

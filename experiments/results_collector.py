@@ -58,7 +58,7 @@ class ResultsCollector:
         if self.save_file_path_prefix and self.should_save:
             plt.savefig(f"{self.save_file_path_prefix}{name}.png")
 
-    def record_result(self, summaries: Union[DebateRoundSummary, list[DebateRoundSummary]]) -> None:
+    def record_result(self, summaries: DebateRoundSummary | list[DebateRoundSummary]) -> None:
         summaries = summaries if type(summaries) == list else [summaries]
         for summary in summaries:
             self.summaries.append(summary)

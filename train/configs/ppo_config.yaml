@@ -18,7 +18,7 @@ Train - 13B - Alpaca:
         output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-PPO/
         merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-PPO-Merged/
     prompt_config:
-        prompts_file_path: /home/spa9663/debate/prompts/config/prompts.yaml
+        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
         prompt_name: Base Prompt
     dataset:
         dataset_type: quality
