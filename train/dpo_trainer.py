@@ -38,7 +38,6 @@ class DirectPreferenceTrainer:
         raw_dataset: RawDataset,
         is_local: bool = False,
     ) -> DPOTrainer:
-
         if FLASH_ATTENTION_AVAILABLE:
             replace_attn_with_flash_attn()
         tokenizer = TrainUtils.get_tokenizer(config=config)

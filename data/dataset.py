@@ -16,6 +16,7 @@ class DatasetType(Enum):
     QUALITY_DEBATES = 2
     JUDGE_PREFERENCES = 3
     ANNOTATED_QUALITY_DEBATES = 4
+    SCRATCHPAD_QUALITY_DEBATES = 5
 
 
 class SpeakerType(Enum):
@@ -55,6 +56,7 @@ class SpeechData(BaseModel):
     position: int
     speaker_type: SpeakerType
     annotation: Optional[AnnotationData]
+    scratchpad: Optional[str]
 
 
 class DataRow(BaseModel):

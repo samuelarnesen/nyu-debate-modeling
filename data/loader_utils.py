@@ -1,6 +1,7 @@
 from data.dataset import RawDataLoader, DatasetType
 from data.annotated_quality_debates_loader import AnnotatedQualityDebatesLoader
 from data.judge_preferences_loader import JudgePreferencesLoader
+from data.scratchpad_quality_debates_loader import ScratchpadQualityDebatesLoader
 from data.quality_loader import QualityLoader
 from data.quality_debates_loader import QualityDebatesLoader
 
@@ -19,4 +20,6 @@ class LoaderUtils:
             return JudgePreferencesLoader
         elif dataset_type == DatasetType.ANNOTATED_QUALITY_DEBATES:
             return AnnotatedQualityDebatesLoader
+        elif dataset_type == DatasetType.SCRATCHPAD_QUALITY_DEBATES:
+            return ScratchpadQualityDebatesLoader
         raise Exception(f"Loader {dataset_type} not found")

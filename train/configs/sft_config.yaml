@@ -126,3 +126,26 @@ Train - 70B:
         dataset_type: quality_debates
         full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
         split_type: train
+Load - 13B - Yarn:
+    model_name: NousResearch/Yarn-Llama-2-13b-64k
+    target: debater
+    training_hyperparameters:
+        num_train_epochs: 1
+        per_device_train_batch_size: 4
+        gradient_accumulation_steps: 4
+        optim: paged_adamw_8bit
+        learning_rate: 2e-4
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+    logging_and_saving_config:
+        logging_steps: 10
+        output_dir: /vast/spa9663/models/trained_models/Yarn-Llama-2-13b-64k/
+    prompt_config:
+        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
+        prompt_name: Base Prompt
+    dataset:
+        dataset_type: quality_debates
+        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
+        split_type: train

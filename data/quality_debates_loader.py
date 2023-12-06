@@ -2,15 +2,22 @@ from data.dataset import DataRow, DatasetType, RawDataLoader, RawDataset, Speake
 
 from typing import Any, Optional
 import json
+import re
 
 
 class QualityDebatesDataset(RawDataset):
-    def __init__(self, train_data: list[str, Any], val_data: list[str, Any], test_data: list[str, Any]):
-        super().__init__(DatasetType.QUALITY_DEBATES)
+    def __init__(
+        self,
+        train_data: list[str, Any],
+        val_data: list[str, Any],
+        test_data: list[str, Any],
+        override_type: DatasetType = None,
+    ):
+        super().__init__(override_type or DatasetType.QUALITY_DEBATES)
         self.data = {
-            SplitType.TRAIN: self.__convert_batch_to_rows(train_data),
-            SplitType.VAL: self.__convert_batch_to_rows(val_data),
-            SplitType.TEST: self.__convert_batch_to_rows(test_data),
+            SplitType.TRAIN: self.convert_batch_to_rows(train_data),
+            SplitType.VAL: self.convert_batch_to_rows(val_data),
+            SplitType.TEST: self.convert_batch_to_rows(test_data),
         }
         self.idxs = {SplitType.TRAIN: 0, SplitType.VAL: 0, SplitType.TEST: 0}
 
@@ -29,7 +36,7 @@ class QualityDebatesDataset(RawDataset):
     def get_example(self, split: SplitType = SplitType.TRAIN, idx: int = 0) -> DataRow:
         return self.data[split][idx % len(self.data[split])]
 
-    def __convert_batch_to_rows(self, batch: list[dict[str, Any]]):
+    def convert_batch_to_rows(self, batch: list[dict[str, Any]]):
         return [self.__example_to_row(entry) for entry in batch]
 
     def __get_correct_answer(self, entry: dict[str, Any]) -> int:
@@ -68,15 +75,7 @@ class QualityDebatesDataset(RawDataset):
 
 class QualityDebatesLoader(RawDataLoader):
     @classmethod
-    def load(
-        cls,
-        full_dataset_filepath: str,
-        train_filepath: Optional[str] = None,
-        val_filepath: Optional[str] = None,
-        test_filepath: Optional[str] = None,
-        deduplicate: bool = False,
-        **kwargs,
-    ) -> QualityDebatesDataset:
+    def get_splits(cls, file_path: str, deduplicate: bool = False) -> list[dict]:
         def __should_keep(row: dict[str, Any]) -> bool:
             roles = [turn["role"] for turn in row["turns"]]
             positions = set([turn.get("index") for turn in row["turns"]])
@@ -95,7 +94,7 @@ class QualityDebatesLoader(RawDataLoader):
                     rows.append(json.loads(line))
             return [row for row in filter(__should_keep, rows)]
 
-        def create_splits(filtered_rows: list[dict]):
+        def __create_splits(filtered_rows: list[dict]):
             story_to_row = {}
             story_to_question = {}
             for row in filtered_rows:
@@ -117,8 +116,20 @@ class QualityDebatesLoader(RawDataLoader):
                     test.extend(story_to_row[story])
             return train, val, test
 
-        filtered_rows = __get_filtered_rows(file_path=full_dataset_filepath)
-        train, val, test = create_splits(filtered_rows)
+        filtered_rows = __get_filtered_rows(file_path=file_path)
+        return __create_splits(filtered_rows)
+
+    @classmethod
+    def load(
+        cls,
+        full_dataset_filepath: str,
+        train_filepath: Optional[str] = None,
+        val_filepath: Optional[str] = None,
+        test_filepath: Optional[str] = None,
+        deduplicate: bool = False,
+        **kwargs,
+    ) -> QualityDebatesDataset:
+        train, val, test = QualityDebatesLoader.get_splits(file_path=full_dataset_filepath, deduplicate=deduplicate)
         return QualityDebatesDataset(
             train_data=train,
             val_data=val,

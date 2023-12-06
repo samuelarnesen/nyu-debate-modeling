@@ -286,10 +286,8 @@ Operational_Test:
       model_type: random
       alias: random-judge
   dataset:
-    dataset_type: quality
-    train_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.train
-    val_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev
-    test_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test
+    dataset_type: scratchpad_quality_debates
+    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
     split_type: train
   offline:
     debaters:

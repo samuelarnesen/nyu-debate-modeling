@@ -11,7 +11,8 @@ args = parser.parse_args()
 base_model = AutoModelForCausalLM.from_pretrained(
     args.model_name,
     return_dict=True,
+    trust_remote_code=True,
     torch_dtype=torch.float16,
 )
 
-base_model.save(args.save_name)
+base_model.save_pretrained(args.save_name)

@@ -29,6 +29,7 @@ try:
         replace_attn_with_flash_attn,
         upcast_layer_for_flash_attention,
     )
+
     FLASH_ATTENTION_AVAILABLE = True
 except ImportError as e:
     print("Running without flash attention")
@@ -43,14 +44,15 @@ def logprobs_from_logits(logits, labels, gather=True):
     logpy = torch.gather(logp, 2, labels.unsqueeze(2)).squeeze(-1)
     return logpy
 
+
 def batched_forward_pass(
     self,
-    model ,
+    model,
     queries,
     responses,
     model_inputs,
-    return_logits = None,
-    response_masks = None,
+    return_logits=None,
+    response_masks=None,
 ):
     torch.cuda.empty_cache()
     bs = len(queries)
@@ -97,9 +99,7 @@ def batched_forward_pass(
                     start += attention_mask[j, :].nonzero()[0]
                 end = start + len(response_batch[j])
                 if response_masks is not None:
-                    response_masks_batch[j] = torch.cat(
-                        (torch.zeros_like(query_batch[j]), response_masks_batch[j])
-                    )[1:]
+                    response_masks_batch[j] = torch.cat((torch.zeros_like(query_batch[j]), response_masks_batch[j]))[1:]
 
             masks[j, :start] = 0
             masks[j, end:] = 0
@@ -120,6 +120,8 @@ def batched_forward_pass(
         torch.cat(all_values)[:, :-1],
         torch.cat(all_masks)[:, :-1],
     )
+
+
 PPOTrainer.batched_forward_pass = batched_forward_pass
 
 
@@ -154,7 +156,6 @@ class PPOTrainerWrapper:
         self.logger = LoggerUtils.get_default_logger(__name__)
 
     def train(self):
-
         # NOTE: TODO: This only optimizes Debater_A
         self.ppo_trainer.model.eval()
         for i, row in tqdm(enumerate(self.ppo_trainer.dataset)):
@@ -271,7 +272,6 @@ class PPOTrainerWrapper:
                 manager.register_module_override(module, "weight", {"optim_bits": 32})
         return optimizer
 
-
     @classmethod
     def get_trainer(
         cls,
@@ -279,7 +279,6 @@ class PPOTrainerWrapper:
         raw_dataset: RawDataset,
         is_local: bool = False,
     ) -> PPOTrainerWrapper:
-
         if FLASH_ATTENTION_AVAILABLE:
             replace_attn_with_flash_attn()
 
@@ -292,7 +291,9 @@ class PPOTrainerWrapper:
 
         model.gradient_checkpointing_enable()
         model.pretrained_model.gradient_checkpointing_enable()
-        model.pretrained_model = prepare_model_for_kbit_training(model.pretrained_model, use_gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant":False})
+        model.pretrained_model = prepare_model_for_kbit_training(
+            model.pretrained_model, use_gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant": False}
+        )
         model.gradient_checkpointing_enable = model.pretrained_model.gradient_checkpointing_enable
 
         optimizer = PPOTrainerWrapper.get_optimizer(model=model)
@@ -313,11 +314,7 @@ class PPOTrainerWrapper:
 
         ppo_trainer = PPOTrainerWrapper(
             ppo_trainer=PPOTrainer(
-                model=model,
-                config=ppo_config,
-                dataset=train_dataset,
-                tokenizer=tokenizer,
-                optimizer=optimizer
+                model=model, config=ppo_config, dataset=train_dataset, tokenizer=tokenizer, optimizer=optimizer
             ),
             config=config,
         )
