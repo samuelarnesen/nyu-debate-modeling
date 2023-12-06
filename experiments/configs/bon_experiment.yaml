@@ -13,17 +13,19 @@
   agents:
     debaters:
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged/
-        alias: "13b-32k-sft"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+        alias: "sft"
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged/
-        alias: "13b-32k-sft"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+        alias: "sft"
     judge:
-      model_type: openai
-      alias: "openai-judge"
+      model_type: random
+      alias: "random"
   dataset:
-    dataset_type: quality_debates
-    full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
+    dataset_type: quality
+    train_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.train
+    val_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.dev
+    test_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.test
     split_type: train
 13B Experiment - Train - DPO:
   topic_config:

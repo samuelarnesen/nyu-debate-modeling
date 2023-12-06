@@ -13,25 +13,29 @@ from transformers import GenerationConfig
 from trl import PPOConfig, PPOTrainer
 from tqdm import tqdm
 import pandas as pd
+import torch.nn as nn
+import torch.nn.functional as F
 import torch
 
-# TODO: remove
-import torch.nn.functional as F
-import logging
 import math
+
+try:
+    import bitsandbytes as bnb
+except:
+    print("Unable to import bitsandbytes")
 
 try:
     from utils.flash_attn_utils import (
         replace_attn_with_flash_attn,
         upcast_layer_for_flash_attention,
     )
-
     FLASH_ATTENTION_AVAILABLE = True
 except ImportError as e:
     print("Running without flash attention")
     FLASH_ATTENTION_AVAILABLE = False
 
 
+# Extended monkeypatch script to fix a bug in PPOTrainer
 def logprobs_from_logits(logits, labels, gather=True):
     logp = F.log_softmax(logits, dim=2)
     if not gather:
@@ -39,8 +43,16 @@ def logprobs_from_logits(logits, labels, gather=True):
     logpy = torch.gather(logp, 2, labels.unsqueeze(2)).squeeze(-1)
     return logpy
 
-
-def override_fwd_pass(self, model, queries, responses, model_inputs, return_logits=False, response_masks=None):
+def batched_forward_pass(
+    self,
+    model ,
+    queries,
+    responses,
+    model_inputs,
+    return_logits = None,
+    response_masks = None,
+):
+    torch.cuda.empty_cache()
     bs = len(queries)
     fbs = self.config.mini_batch_size
     all_logprobs = []
@@ -48,16 +60,11 @@ def override_fwd_pass(self, model, queries, responses, model_inputs, return_logi
     all_masks = []
     all_values = []
 
-    logger = logging.getLogger("inner_fwd_pass_logger")
-    log_level = logging.DEBUG
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(log_level)
-    stream_handler.setFormatter(formatter)
-    logger.setLevel(log_level)
-    logger.addHandler(stream_handler)
-
-    model.eval()
+    # This is the only change
+    if torch.is_grad_enabled():
+        model.train()
+    else:
+        model.eval()
 
     for i in range(math.ceil(bs / fbs)):
         input_kwargs = {key: value[i * fbs : (i + 1) * fbs] for key, value in model_inputs.items()}
@@ -65,13 +72,6 @@ def override_fwd_pass(self, model, queries, responses, model_inputs, return_logi
         response_batch = responses[i * fbs : (i + 1) * fbs]
         if response_masks is not None:
             response_masks_batch = response_masks[i * fbs : (i + 1) * fbs]
-
-        device_id = torch.cuda.current_device()
-        gpu_properties = torch.cuda.get_device_properties(device_id)
-        free_memory = torch.cuda.mem_get_info()[0] / 1024 / 1024
-        logger.info(f"Forward Pass: Free Memory: {free_memory} MB")
-        logger.info(input_kwargs["input_ids"].shape)
-
         logits, _, values = model(**input_kwargs)
 
         if self.is_encoder_decoder:
@@ -79,6 +79,7 @@ def override_fwd_pass(self, model, queries, responses, model_inputs, return_logi
             attention_mask = input_kwargs["decoder_attention_mask"]
         else:
             input_ids = input_kwargs["input_ids"]
+            LOGGER.info(f"Input id size: {input_ids.shape}")
             attention_mask = input_kwargs["attention_mask"]
 
         logprobs = logprobs_from_logits(logits[:, :-1, :], input_ids[:, 1:])
@@ -96,7 +97,9 @@ def override_fwd_pass(self, model, queries, responses, model_inputs, return_logi
                     start += attention_mask[j, :].nonzero()[0]
                 end = start + len(response_batch[j])
                 if response_masks is not None:
-                    response_masks_batch[j] = torch.cat((torch.zeros_like(query_batch[j]), response_masks_batch[j]))[1:]
+                    response_masks_batch[j] = torch.cat(
+                        (torch.zeros_like(query_batch[j]), response_masks_batch[j])
+                    )[1:]
 
             masks[j, :start] = 0
             masks[j, end:] = 0
@@ -117,6 +120,7 @@ def override_fwd_pass(self, model, queries, responses, model_inputs, return_logi
         torch.cat(all_values)[:, :-1],
         torch.cat(all_masks)[:, :-1],
     )
+PPOTrainer.batched_forward_pass = batched_forward_pass
 
 
 class PPOTrainerWrapper:
@@ -135,8 +139,7 @@ class PPOTrainerWrapper:
 
     def __init__(self, ppo_trainer: PPOTrainer, config: TrainingConfig):
         self.ppo_trainer = ppo_trainer
-        # self.reward_model = OpenAIModel(alias=PPOTrainerWrapper.DEFAULT_JUDGE_ALIAS, is_debater=False)
-        self.reward_model = RandomModel(alias=PPOTrainerWrapper.DEFAULT_JUDGE_ALIAS, is_debater=False)
+        self.reward_model = OpenAIModel(alias=PPOTrainerWrapper.DEFAULT_JUDGE_ALIAS, is_debater=False)
         self.config = config
         self.generation_config = GenerationConfig(
             max_new_tokens=PPOTrainerWrapper.MAX_GENERATION_LENGTH,
@@ -150,22 +153,10 @@ class PPOTrainerWrapper:
         )
         self.logger = LoggerUtils.get_default_logger(__name__)
 
-    # TODO: remove this
-    def print_gpu_memory(self, description: str = ""):
-        if torch.cuda.is_available():
-            device_id = torch.cuda.current_device()
-            gpu_properties = torch.cuda.get_device_properties(device_id)
-            free_memory = torch.cuda.mem_get_info()[0] / 1024 / 1024
-            self.logger.info(f"{description}: Free Memory: {free_memory} MB")
-        else:
-            self.logger.info("CUDA is not available.")
-
     def train(self):
-        self.ppo_trainer.model.gradient_checkpointing_enable()
 
         # NOTE: TODO: This only optimizes Debater_A
-        PPOTrainer.batched_forward_pass = override_fwd_pass
-
+        self.ppo_trainer.model.eval()
         for i, row in tqdm(enumerate(self.ppo_trainer.dataset)):
             row_to_use = f"{row[PPOTrainerWrapper.QUERY_COLUMN]}\n {constants.INSTRUCTION_SUFFIX}"
             query_tensors = self.ppo_trainer.tokenizer(row_to_use, return_tensors="pt").to("cuda")
@@ -181,15 +172,11 @@ class PPOTrainerWrapper:
             output_length = response_tensors.shape[1]
             response_mask = torch.zeros(output_length, dtype=torch.int32)
             response_mask[-PPOTrainerWrapper.MAX_GENERATION_LENGTH :] = 1
-            self.logger.info(f"Output length is {output_length}")
 
-            """
             with torch.no_grad():
-
                 opponent_response_tensors = self.ppo_trainer.model.generate(
                     **opponent_query_tensors, generation_config=self.generation_config
                 )
-            """
 
             reward_tensors = []
             for j in range(len(response_tensors)):
@@ -199,15 +186,11 @@ class PPOTrainerWrapper:
                     )
                 )
 
-                self.logger.info(decoded)
-                """
                 opponent_decoded = StringUtils.clean_string(
                     self.ppo_trainer.tokenizer.decode(
                         opponent_response_tensors[i, -PPOTrainerWrapper.MAX_GENERATION_LENGTH :].to("cpu")
                     )
                 )
-                """
-                opponent_decoded = "Vote for Debater_B. Vote for Debater_B"
 
                 judge_input_text = (
                     row[PPOTrainerWrapper.JUDGE_QUERY_COLUMN]
@@ -224,8 +207,6 @@ class PPOTrainerWrapper:
                 )
 
                 reward_tensors.append(torch.tensor(float(reward[0])))
-
-            # del opponent_response_tensors # clears memory
 
             stats = self.ppo_trainer.step(
                 queries=[query_tensors.input_ids[0, :].squeeze()],
@@ -279,25 +260,42 @@ class PPOTrainerWrapper:
         return Dataset.from_pandas(df).shuffle()
 
     @classmethod
+    def get_optimizer(cls, model):
+        trainable_params = [p for p in model.parameters() if p.requires_grad]
+        optimizer = bnb.optim.PagedAdamW(trainable_params, lr=10e-4, weight_decay=10e-3)
+        manager = bnb.optim.GlobalOptimManager.get_instance()
+        skipped = 0
+        for module in model.modules():
+            if isinstance(module, nn.Embedding):
+                skipped += sum({p.data_ptr(): p.numel() for p in module.parameters()}.values())
+                manager.register_module_override(module, "weight", {"optim_bits": 32})
+        return optimizer
+
+
+    @classmethod
     def get_trainer(
         cls,
         config: TrainingConfig,
         raw_dataset: RawDataset,
         is_local: bool = False,
     ) -> PPOTrainerWrapper:
-        logger = LoggerUtils.get_default_logger(__name__)
 
         if FLASH_ATTENTION_AVAILABLE:
-            logger.info("Starting to use flash attention")
             replace_attn_with_flash_attn()
-        else:
-            logger.warning("Flash attention will not be used")
 
         tokenizer = TrainUtils.get_tokenizer(config=config)
         model = TrainUtils.load_model(config=config, is_local=is_local, requires_value_head=True)
 
         if FLASH_ATTENTION_AVAILABLE:
             model = upcast_layer_for_flash_attention(model, torch.bfloat16)
+            model.pretrained_model = upcast_layer_for_flash_attention(model.pretrained_model, torch.bfloat16)
+
+        model.gradient_checkpointing_enable()
+        model.pretrained_model.gradient_checkpointing_enable()
+        model.pretrained_model = prepare_model_for_kbit_training(model.pretrained_model, use_gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant":False})
+        model.gradient_checkpointing_enable = model.pretrained_model.gradient_checkpointing_enable
+
+        optimizer = PPOTrainerWrapper.get_optimizer(model=model)
 
         ppo_config = PPOConfig(
             steps=config.training_hyperparameters.steps,
@@ -319,8 +317,11 @@ class PPOTrainerWrapper:
                 config=ppo_config,
                 dataset=train_dataset,
                 tokenizer=tokenizer,
+                optimizer=optimizer
             ),
             config=config,
         )
+
+        accelerator = ppo_trainer.ppo_trainer.accelerator
 
         return ppo_trainer

@@ -12,11 +12,6 @@ from enum import Enum
 from typing import Optional, Union
 import os
 
-try:
-    from utils.flash_attn_utils import replace_attn_with_flash_attn, upcast_layer_for_flash_attention
-except ImportError as e:
-    print("Running without flash attention")
-
 
 class TrainingTarget(Enum):
     DEBATER = 1
@@ -141,7 +136,6 @@ class TrainUtils:
 
             if requires_value_head:
                 peft_config = TrainUtils.get_peft_config(config=config)
-                model.gradient_checkpointing_enable()
                 return AutoModelForCausalLMWithValueHead.from_pretrained(
                     pretrained_model_name_or_path=model,
                     quantization_config=bnb_config,

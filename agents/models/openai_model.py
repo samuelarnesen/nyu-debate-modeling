@@ -33,16 +33,7 @@ class OpenAIModel(Model):
     def __init__(self, alias: str, is_debater: bool = True, **kwargs):
         super().__init__(alias=alias, is_debater=is_debater)
         self.__configure()
-
-        self.logger = logging.getLogger("TestOpenAIModel")
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
-        stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(logging.DEBUG)
-        stream_handler.setFormatter(formatter)
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.addHandler(stream_handler)
-        # self.logger = LoggerUtils.get_default_logger('TestOpenAIModel')
+        self.logger = LoggerUtils.get_default_logger(__name__)
 
     def __configure(self):
         openai.organization = os.getenv("OPENAI_ORGANIZATION")
