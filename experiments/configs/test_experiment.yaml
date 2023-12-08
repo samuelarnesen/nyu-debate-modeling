@@ -24,9 +24,9 @@ Hardcoded_Test:
       alias: random-judge
   dataset:
     dataset_type: quality
-    train_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.train
-    val_file_path: ./Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev
-    test_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test
+    train_file_path: data/datasets/quality/QuALITY.v1.0.1.htmlstripped.train
+    val_file_path: data/datasets/quality/QuALITY.v1.0.1.htmlstripped.dev
+    test_file_path: data/datasets/quality/QuALITY.v1.0.1.htmlstripped.test
     split_type: val
 Simple_Test:
   topic_config:
@@ -49,7 +49,7 @@ Simple_Test:
       alias: deterministic-judge
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+    full_dataset_file_path: data/datasets/debates-readable.jsonl
     split_type: val
 Batched_Test:
   topic_config:
@@ -72,7 +72,7 @@ Batched_Test:
       alias: random-judge
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+    full_dataset_file_path: data/datasets/debates-readable.jsonl
     split_type: val
 Single_Test:
   topic_config:
@@ -95,7 +95,7 @@ Single_Test:
       alias: random-judge
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+    full_dataset_file_path: data/datasets/debates-readable.jsonl
 Offline_Test:
   topic_config:
     topic_type: from_dataset
@@ -103,7 +103,7 @@ Offline_Test:
   batch_size: 1
   num_speeches: 1
   flip: False
-  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
+  annotations_classifier_file_path: agents/models/classifier.p
   prompt_config:
     file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
@@ -118,14 +118,14 @@ Offline_Test:
       alias: random-judge
   dataset:
     dataset_type: quality
-    train_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.train
-    val_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev
-    test_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test
+    train_file_path: data/datasets/quality/QuALITY.v1.0.1.htmlstripped.train
+    val_file_path: data/datasets/quality/QuALITY.v1.0.1.htmlstripped.dev
+    test_file_path: data/datasets/quality/QuALITY.v1.0.1.htmlstripped.test
     split_type: train
   offline:
     debaters:
       - offline-debater-1
-    file_path: /Users/samarnesen/nyu/debate-data/transcripts/2023-11-28_11:09:25.726737
+    file_path: /Users/samarnesen/nyu/data/datasets/transcripts/2023-11-28_11:09:25.726737
 BoN_Test:
   topic_config:
     topic_type: from_dataset
@@ -147,7 +147,7 @@ BoN_Test:
       alias: random-judge
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+    full_dataset_file_path: data/datasets/debates-readable.jsonl
   best_of_n:
     count: 2
     prompts:
@@ -174,9 +174,9 @@ Quality_Test:
       alias: random-judge
   dataset:
     dataset_type: quality
-    train_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.train
-    val_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev
-    test_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test
+    train_file_path: data/datasets/quality/QuALITY.v1.0.1.htmlstripped.train
+    val_file_path: data/datasets/quality/QuALITY.v1.0.1.htmlstripped.dev
+    test_file_path: data/datasets/quality/QuALITY.v1.0.1.htmlstripped.test
     split_type: train
   best_of_n:
     count: 2
@@ -190,7 +190,7 @@ Human_Test:
   batch_size: 1
   num_speeches: 1
   flip: True
-  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
+  annotations_classifier_file_path: agents/models/classifier.p
   prompt_config:
     file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
@@ -205,7 +205,7 @@ Human_Test:
       alias: random-judge
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+    full_dataset_file_path: data/datasets/debates-readable.jsonl
   human:
     debaters:
       - 'human-debater'
@@ -216,7 +216,7 @@ Dynamic_Test:
   batch_size: 1
   num_speeches: 1
   flip: True
-  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
+  annotations_classifier_file_path: agents/models/classifier.p
   prompt_config:
     file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
@@ -233,8 +233,8 @@ Dynamic_Test:
       alias: random-judge
   dataset:
     dataset_type: annotated_quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
-    annotations_file_path:  /Users/samarnesen/nyu/debate-data/annotated-data-set.p
+    full_dataset_file_path: data/datasets/debates-readable.jsonl
+    annotations_file_path:  /Users/samarnesen/nyu/data/datasets/annotated-data-set.p
     split_type: train
 Dynamic_Override_Test:
   topic_config:
@@ -243,7 +243,7 @@ Dynamic_Override_Test:
   batch_size: 1
   num_speeches: 1
   flip: True
-  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
+  annotations_classifier_file_path: agents/models/classifier.p
   prompt_config:
     file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
@@ -262,8 +262,8 @@ Dynamic_Override_Test:
       alias: random-judge
   dataset:
     dataset_type: annotated_quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
-    annotations_file_path:  /Users/samarnesen/nyu/debate-data/annotated-data-set.p
+    full_dataset_file_path: data/datasets/debates-readable.jsonl
+    annotations_file_path:  /Users/samarnesen/nyu/data/datasets/annotated-data-set.p
     split_type: train
 Operational_Test:
   topic_config:
@@ -272,7 +272,7 @@ Operational_Test:
   batch_size: 1
   num_speeches: 1
   flip: False
-  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
+  annotations_classifier_file_path: agents/models/classifier.p
   prompt_config:
     file_path: ./prompts/configs/prompts.yaml
     default_prompt_name: Base Prompt
@@ -289,9 +289,9 @@ Operational_Test:
       alias: random-judge
   dataset:
     dataset_type: scratchpad_quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
+    full_dataset_file_path: data/datasets/debates-readable.jsonl
     split_type: train
   offline:
     debaters:
       - offline-debater-1
-    file_path: /Users/samarnesen/nyu/debate-data/transcripts/2023-12-01_12:08:23.713059
+    file_path: /Users/samarnesen/nyu/data/datasets/transcripts/2023-12-01_12:08:23.713059
