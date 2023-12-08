@@ -24,6 +24,7 @@ class SpeechType(Enum):
 class SpeechFormatEntry(BaseModel):
     speech_type: SpeechType
     prompt_tag: Optional[PromptTag]
+    last_only_prompt_tag: Optional[PromptTag]
     expected_speaker: Optional[str]
 
 
@@ -36,11 +37,17 @@ class SpeechFormat:
         self,
         speech_type: Optional[SpeechType] = None,
         prompt_tag: Optional[PromptTag] = None,
+        last_only_prompt_tag: Optional[PromptTag] = None,
         expected_speaker: Optional[str] = None,
     ):
         speech_type = speech_type if speech_type else (SpeechType.PRE_FILLED if prompt_tag else SpeechType.USER_INPUTTED)
         self.progression.append(
-            SpeechFormatEntry(speech_type=speech_type, prompt_tag=prompt_tag, expected_speaker=expected_speaker)
+            SpeechFormatEntry(
+                speech_type=speech_type,
+                prompt_tag=prompt_tag,
+                last_only_prompt_tag=last_only_prompt_tag,
+                expected_speaker=expected_speaker,
+            )
         )
         return self
 
@@ -53,10 +60,11 @@ class SpeechFormat:
 
     def add_format(self, speech_format: SpeechFormat, repeats: num_repetitions = 1):
         for i in range(repeats):
-            for speech_type, prompt_tag, expected_speaker in speech_format:
+            for speech_type, prompt_tag, last_only_prompt_tag, expected_speaker in speech_format:
                 self.add(
                     speech_type=speech_type,
                     prompt_tag=prompt_tag,
+                    last_only_prompt_tag=last_only_prompt_tag,
                     expected_speaker=expected_speaker,
                 )
         return self
@@ -69,7 +77,7 @@ class SpeechFormat:
         if self.idx < len(self.progression):
             entry = self.progression[self.idx]
             self.idx += 1
-            return entry.speech_type, entry.prompt_tag, entry.expected_speaker
+            return entry.speech_type, entry.prompt_tag, entry.last_only_prompt_tag, entry.expected_speaker
         else:
             raise StopIteration
 
@@ -108,14 +116,18 @@ class Transcript:
 
         model_inputs = []
         index = 0
-        for i, (speech_type, prompt_tag, expected_speaker) in enumerate(self.speech_format):
+        for i, (speech_type, prompt_tag, last_only_prompt_tag, expected_speaker) in enumerate(self.speech_format):
             if speech_type == SpeechType.PRE_FILLED:
+                prompt_tag_to_use = (
+                    prompt_tag if (index < len(self.speeches) or not last_only_prompt_tag) else last_only_prompt_tag
+                )
+
                 add_to_model_inputs(
                     model_inputs,
                     ModelInput(
                         role=RoleType.SYSTEM if i < 2 else RoleType.USER,
-                        content=self.prompt.messages[prompt_tag].content[
-                            index % len(self.prompt.messages[prompt_tag].content)
+                        content=self.prompt.messages[prompt_tag_to_use].content[
+                            index % len(self.prompt.messages[prompt_tag_to_use].content)
                         ],
                     ),
                 )
@@ -136,12 +148,12 @@ class Transcript:
         return ""
 
     def get_next_expected_speaker(self) -> Optional[str]:
-        expected_speakers = [expected_speaker for _, _, expected_speaker in filter(lambda x: x[-1], self.speech_format)]
+        expected_speakers = [expected_speaker for _, _, _, expected_speaker in filter(lambda x: x[-1], self.speech_format)]
         expected_speaker = expected_speakers[len(self.speeches)] if len(self.speeches) < len(expected_speakers) else None
         return expected_speaker
 
     def only_decision_remains(self) -> bool:
-        expected_speakers = [expected_speaker for _, _, expected_speaker in filter(lambda x: x[-1], self.speech_format)]
+        expected_speakers = [expected_speaker for _, _, _, expected_speaker in filter(lambda x: x[-1], self.speech_format)]
         remaining_speakers = (
             set(expected_speakers[len(self.speeches) :]) if len(self.speeches) < len(expected_speakers) else set()
         )

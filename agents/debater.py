@@ -178,7 +178,9 @@ class DebaterUtils:
         )
 
         scratchpad = (
-            SpeechFormat(name).add(prompt_tag=PromptTag.DEBATER_SCRATCHPAD).add_user_inputted_speech(expected_speaker=name)
+            SpeechFormat(name)
+            .add(prompt_tag=PromptTag.PREVIOUS_DEBATER_SCRATCHPAD, last_only_prompt_tag=PromptTag.DEBATER_SCRATCHPAD)
+            .add_user_inputted_speech(expected_speaker=name)
         )
         own_speech = SpeechFormat(name).add(prompt_tag=PromptTag.PRE_SPEECH).add_user_inputted_speech(expected_speaker=name)
         if use_scratchpad:

@@ -156,7 +156,6 @@ class PPOTrainerWrapper:
         self.logger = LoggerUtils.get_default_logger(__name__)
 
     def train(self):
-        # NOTE: TODO: This only optimizes Debater_A
         self.ppo_trainer.model.eval()
         for i, row in tqdm(enumerate(self.ppo_trainer.dataset)):
             row_to_use = f"{row[PPOTrainerWrapper.QUERY_COLUMN]}\n {constants.INSTRUCTION_SUFFIX}"
@@ -214,7 +213,21 @@ class PPOTrainerWrapper:
                 responses=[response_tensors[:, -PPOTrainerWrapper.MAX_GENERATION_LENGTH :].squeeze()],
                 scores=reward_tensors,
             )
-            # self.ppo_trainer.log_stats(stats=stats, batch=batch, rewards=rewards_tensor)
+            self.ppo_trainer.log_stats(
+                stats=stats, batch={"query": query_tensors, "response": response_tensors}, rewards=rewards_tensor
+            )
+
+            opponent_reward_tensors = constants.MAX_SCORE - reward_tensors
+            stats = self.ppo_trainer.step(
+                queries=[opponent_query_tensors.input_ids[0, :].squeeze()],
+                responses=[opponent_response_tensors[:, -PPOTrainerWrapper.MAX_GENERATION_LENGTH :].squeeze()],
+                scores=opponent_reward_tensors,
+            )
+            self.ppo_trainer.log_stats(
+                stats=stats,
+                batch={"query": opponent_query_tensors, "response": opponent_response_tensors},
+                rewards=opponent_reward_tensors,
+            )
 
     def save_model(self):
         self.ppo_trainer.save_model(config.logging_and_saving_config.output_dir)
@@ -280,7 +293,7 @@ class PPOTrainerWrapper:
         is_local: bool = False,
     ) -> PPOTrainerWrapper:
         if FLASH_ATTENTION_AVAILABLE:
-            replace_attn_with_flash_attn()
+            replace_attn_with_flash_attn(disable_dropout=True)
 
         tokenizer = TrainUtils.get_tokenizer(config=config)
         model = TrainUtils.load_model(config=config, is_local=is_local, requires_value_head=True)

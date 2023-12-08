@@ -32,9 +32,6 @@ class ScratchpadQualityDebatesDataset(QualityDebatesDataset):
 
     def _generate_scratchpad(self, speech: SpeechData, row: DataRow) -> Optional[str]:
         original_quotes = QuoteUtils.extract_quotes(speech.text)
-        if not original_quotes and "<quote>" in speech.text and "</quote>" in speech.text:
-            print(speech.text)
-            print("\n\n\n\n#====#\n\n\n\n")
         contexts = [
             QuoteUtils.extract_quote_context(
                 quote_text=quote,
