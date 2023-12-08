@@ -7,7 +7,7 @@ COMMON_ARGS=("--local --test --suppress_graphs --log_level=INFO")
 # Loop over each argument and run the Python program
 for ARG in "${ARGUMENTS[@]}"; do
     eval $(echo python "$PYTHON_PROGRAM" "${COMMON_ARGS[@]}" "$ARG")
-    #echo python "$PYTHON_PROGRAM" "${COMMON_ARGS[@]}" "$ARG"
+    echo "$ARG"
     
     # Check if the Python script exited with an error
     if [ $? -ne 0 ]; then
@@ -15,4 +15,4 @@ for ARG in "${ARGUMENTS[@]}"; do
         echo $(echo python "$PYTHON_PROGRAM" "${COMMON_ARGS[@]}" "$ARG")
         break
     fi
-done | tqdm --total ${#ARGUMENTS[@]} >> /dev/null
+done | tqdm --total ${#ARGUMENTS[@]}
