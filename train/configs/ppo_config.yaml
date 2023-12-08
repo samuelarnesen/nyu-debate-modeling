@@ -1,5 +1,5 @@
 Train - 13B - Alpaca:
-    model_name: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+    model_name: /vast/{USERNAME}/models/trained_models/Llama-2-13B-32K-Merged-Full-4
     target: debater
     opening_speeches_only: False
     training_hyperparameters:
@@ -15,14 +15,14 @@ Train - 13B - Alpaca:
         steps: 100
     logging_and_saving_config:
         logging_steps: 1
-        output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-PPO/
-        merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-PPO-Merged/
+        output_dir: /vast/{USERNAME}/models/trained_models/Llama-2-13B-32K-PPO/
+        merge_output_dir: /vast/{USERNAME}/models/trained_models/Llama-2-13B-32K-Merged-PPO-Merged/
     prompt_config:
-        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
+        prompts_file_path: /home/{USERNAME}/debate/prompts/configs/prompts.yaml
         prompt_name: Base Prompt
     dataset:
         dataset_type: quality
-        train_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.train
-        val_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.dev
-        test_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.test
+        train_file_path: /home/{USERNAME}/debate-data/quality/QuALITY.v1.0.1.htmlstripped.train
+        val_file_path: /home/{USERNAME}/debate-data/quality/QuALITY.v1.0.1.htmlstripped.dev
+        test_file_path: /home/{USERNAME}/debate-data/quality/QuALITY.v1.0.1.htmlstripped.test
         split_type: train

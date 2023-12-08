@@ -9,7 +9,7 @@ import torch
 import yaml
 
 from enum import Enum
-from typing import Optional, Union
+from typing import Optional, Union, Any
 import os
 
 
@@ -82,12 +82,21 @@ class TrainUtils:
             annotations_file_path=dataset_config.annotations_file_path,
             deduplicate=deduplicate,
         )
+    @classmethod
+    def fill_yaml_values(yaml: dict[str, Any]) -> dict[str, Any]:
+        for key, value in yaml.items():
+            if isinstance(value, dict):
+                yaml[key] = TrainUtils.fill_yaml_values(value)
+            elif isinstance(value, str) and "{" in value and "}" in value:
+                yaml[key] = value.format(**os.environ)
+        return yaml
 
     @classmethod
     def parse_config(cls, config_name: str, config_filepath: str) -> TrainingConfig:
         with open(config_filepath) as f:
             loaded_yaml = yaml.safe_load(f)
-        return TrainingConfig(**loaded_yaml[config_name])
+            replaced_yaml = TrainUtils.fill_yaml_values(loaded_yaml)
+        return TrainingConfig(**replaced_yaml[config_name])
 
     @classmethod
     def get_peft_config(cls, config: TrainingConfig) -> Optional[PeftConfig]:
