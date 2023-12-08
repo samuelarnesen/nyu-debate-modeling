@@ -3,6 +3,8 @@ from data.quality_debates_loader import QualityDebatesLoader, QualityDebatesData
 from utils import QuoteUtils
 import utils.constants as constants
 
+from tqdm import tqdm
+
 from typing import Any, Optional
 import re
 
@@ -11,6 +13,7 @@ class ScratchpadQualityDebatesDataset(QualityDebatesDataset):
     ELLIPSES = "..."
     MINIMUM_QUOTE_LENGTH = 4
     CONTEXT_SIZE = 10
+    DEFAULT_SCRATCHPAD_TEXT = "No quotes needed"
 
     def __init__(self, train_data: list[str, Any], val_data: list[str, Any], test_data: list[str, Any]):
         super().__init__(
@@ -29,6 +32,9 @@ class ScratchpadQualityDebatesDataset(QualityDebatesDataset):
 
     def _generate_scratchpad(self, speech: SpeechData, row: DataRow) -> Optional[str]:
         original_quotes = QuoteUtils.extract_quotes(speech.text)
+        if not original_quotes and "<quote>" in speech.text and "</quote>" in speech.text:
+            print(speech.text)
+            print("\n\n\n\n#====#\n\n\n\n")
         contexts = [
             QuoteUtils.extract_quote_context(
                 quote_text=quote,
@@ -39,11 +45,15 @@ class ScratchpadQualityDebatesDataset(QualityDebatesDataset):
                 lambda x: len(x.split()) >= ScratchpadQualityDebatesDataset.MINIMUM_QUOTE_LENGTH, original_quotes
             )
         ]
-        speech.scratchpad = "\n\n".join(
-            [
-                f"{(i + 1)}. {ScratchpadQualityDebatesDataset}{context}{ScratchpadQualityDebatesDataset}"
-                for i, context in enumerate(filter(lambda x: x, contexts))
-            ]
+        speech.scratchpad = (
+            "\n\n".join(
+                [
+                    f"{(i + 1)}. {ScratchpadQualityDebatesDataset.ELLIPSES}{context}{ScratchpadQualityDebatesDataset.ELLIPSES}"
+                    for i, context in enumerate(filter(lambda x: x, contexts))
+                ]
+            )
+            if contexts
+            else ScratchpadQualityDebatesDataset.DEFAULT_SCRATCHPAD_TEXT
         )
 
 

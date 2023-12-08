@@ -63,13 +63,15 @@
   agents:
     debaters:
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Neft-4
-        alias: "4-debater-full"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted
+        alias: "4-debater-scratchpad"
         greedy: True
+        use_scratchpad: True
       - model_type: llama
         model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
-        alias: "4-debater-full"
+        alias: "4-debater-none"
         greedy: True
+        use_scratchpad: False
     judge:
       model_type: openai
       alias: "openai-judge"
@@ -91,16 +93,18 @@
   agents:
     debaters:
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
-        alias: "sft"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted
+        alias: "4-debater-scratchpad"
         greedy: True
+        use_scratchpad: True
       - model_type: llama
         model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
-        alias: "sft"
+        alias: "4-debater-none"
         greedy: True
+        use_scratchpad: False
     judge:
-      model_type: random
-      alias: "random-judge"
+      model_type: openai
+      alias: "openai-judge"
   dataset:
     dataset_type: quality
     train_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.train

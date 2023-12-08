@@ -38,9 +38,9 @@ class QuoteUtils:
 
     @classmethod
     def extract_quotes(cls, speech_content: str):
-        return re.findall(f"{constants.QUOTE_TAG}(.*?){constants.UNQUOTE_TAG}", speech_content) + re.findall(
-            f"{constants.INVALID_QUOTE_TAG}(.*?){constants.INVALID_UNQUOTE_TAG}", speech_content
-        )
+        return re.findall(
+            f"{constants.QUOTE_TAG}(.*?){constants.UNQUOTE_TAG}", speech_content, flags=re.DOTALL
+        ) + re.findall(f"{constants.INVALID_QUOTE_TAG}(.*?){constants.INVALID_UNQUOTE_TAG}", speech_content, flags=re.DOTALL)
 
     @classmethod
     def find_best_match(
@@ -109,20 +109,43 @@ class QuoteUtils:
     def extract_quote_context(
         cls, quote_text: str, background_text: str, context_size: int = 10, retried: bool = False
     ) -> Optional[str]:
+        def get_match(quote_text: str, background_text: str, context_size: int) -> Optional[str]:
+            if not quote_text or not background_text:
+                return None
+
+            pattern = r"((?:\A|\b)\s*(?:\w+\W+){0,%d})%s((?:\W+\w+){0,%d}\s*(?:\Z|\b))" % (
+                context_size,
+                re.escape(quote_text),
+                context_size,
+            )
+            match = re.search(pattern, background_text, flags=re.DOTALL)
+            if match:
+                return "{}{}{}".format(match.group(1), quote_text, match.group(2))
+
         if not quote_text:
             return None
-        pattern = r"((?:\A|\b)\s*(?:\w+\W+){0,%d})%s((?:\W+\w+){0,%d}\s*(?:\Z|\b))" % (
-            context_size,
-            re.escape(quote_text),
-            context_size,
+
+        # normal matching
+        matched_text = get_match(quote_text=quote_text, background_text=background_text, context_size=context_size)
+        if matched_text:
+            return matched_text
+
+        # quotation-mark-less matching
+        matched_text = get_match(
+            quote_text=quote_text.replace('"', ""),
+            background_text=background_text.replace('"', ""),
+            context_size=context_size,
         )
-        match = re.search(pattern, background_text)
-        if match:
-            return "{}{}{}".format(match.group(1), quote_text, match.group(2))
-        elif retried:
-            return quote_text
-        replacement = QuoteUtils.find_best_match(quote=quote_text, background_text=background_text)
-        stripped_background_text = " ".join(QuoteUtils.split_text(text=background_text))
-        return QuoteUtils.extract_quote_context(
-            quote_text=replacement, background_text=stripped_background_text, context_size=context_size, retried=True
+        if matched_text:
+            return matched_text
+
+        # replacement matching
+        matched_text = get_match(
+            quote_text=QuoteUtils.find_best_match(quote=quote_text, background_text=background_text),
+            background_text=" ".join(QuoteUtils.split_text(text=background_text)),
+            context_size=context_size,
         )
+        if matched_text:
+            return matched_text
+
+        return None

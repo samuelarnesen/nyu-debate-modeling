@@ -180,25 +180,14 @@ Base Prompt:
     role: user
     content: 
       - |
-        Now it is your turn as <NAME>. To help plan for your next speech, please draft an outline of what you expect to say in your speech.
+        Now it is your turn as <NAME>. To help plan for your next speech, please list the quotes you plan on using from the story above.
           - Do not actually give your speech -- that will happen later.
-          - The outline should have one of the following structures:
-            - Opening Speech Outline:
-              - 1. Restatement of original claim
-              - 2. The title of your first argument
-              - 3. The title of your second argument
-            - Rebuttal Outline:
-              - 1. Restatement of original claim
-              - 2. Restatement of judge claim that you will answer
-              - 3. Restatement of first opponent claim that you will criticize
-              - 4. Restatement of second opponent claim that you will criticize
+          - Only specify your quotes - do not attach any commentary.
+          - If you do not think any quotes are useful to share, then just write "No quotes needed".
+          - You should number each quote.
 
-        Some examples of criticism include:
-        - My opponent tries to use X quote to support their claim, but that quote was taken out of context. Here is the rest of the quote.
-        - My opponent is trying to claim the X is true, but they have no evidence to support that. Meanwhile, this quote says the opposite.
+        Now generate your outline:
 
-        Some examples answering the judge's question include:
-        - Good question -- here is the rest of the quote as requested.
   best_of_n_judge_overview_for_debater_a:
     role: user
     content: 

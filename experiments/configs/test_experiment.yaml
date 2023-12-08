@@ -280,8 +280,10 @@ Operational_Test:
     debaters:
       - model_type: random
         alias: dpo
+        use_scratchpad: true
       - model_type: random
         alias: sft
+        use_scratchpad: true
     judge:
       model_type: random
       alias: random-judge

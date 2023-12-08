@@ -10,15 +10,7 @@ args = ScriptUtils.get_args()
 script_config = ScriptUtils.get_model_run_script_config(args)
 
 config = TrainUtils.parse_config(config_name=script_config.config_name, config_filepath=script_config.config_filepath)
-dataset = (
-    TrainUtils.create_dataset(config=config)
-    if not config.prompt_config.dynamic_prompts_file_path or not config.prompt_config.dynamic_prompt_name
-    else AnnotatedQualityDebatesLoader.load(
-        full_dataset_filepath=config.dataset.full_dataset_filepath,
-        deduplicate=False,
-        annotations_file_path=config.prompt_config.annotations_file_path,
-    )
-)
+dataset = TrainUtils.create_dataset(config=config)
 
 trainer = SupervisedTrainer.get_trainer(config=config, raw_dataset=dataset, is_local=args.local)
 if not args.load_only:

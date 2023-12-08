@@ -133,7 +133,9 @@ class RowConverter:
                 name=name,
                 prompt=prompt,
                 speech_format=(
-                    DebaterUtils.get_default_speech_format(name=name, num_speeches=rounds, use_scratchpad=False)
+                    DebaterUtils.get_default_speech_format(
+                        name=name, num_speeches=rounds, use_scratchpad=config.prompt_config.use_scratchpad
+                    )
                     if is_debater
                     else JudgeUtils.get_default_speech_format(num_speeches=(rounds - 1))
                 ),
@@ -143,9 +145,21 @@ class RowConverter:
                 for previous_speech in speeches_so_far:
                     speaker = RowConverter.get_speaker_from_speech(speech=previous_speech)
                     dummy_text = RowConverter.get_dummy_name_for_speaker(name=speaker)
+                    if config.prompt_config.use_scratchpad and speaker == name:
+                        transcript.add_speech(
+                            speaker=speaker, content=previous_speech.scratchpad if not use_dummy else (dummy_text + "\n")
+                        )
                     transcript.add_speech(
                         speaker=speaker, content=previous_speech.text if not use_dummy else (dummy_text + "\n")
                     )
+
+            if config.prompt_config.use_scratchpad:
+                llama_inputs.append(
+                    LlamaModel.generate_llama_input_from_model_inputs(
+                        input_list=transcript.to_model_input(), extra_suffix=speech.scratchpad
+                    ).dict()
+                )
+                transcript.add_speech(speaker=name, content=speech.scratchpad if not use_dummy else (dummy_text + "\n"))
 
             llama_inputs.append(
                 LlamaModel.generate_llama_input_from_model_inputs(

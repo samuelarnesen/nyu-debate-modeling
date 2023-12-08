@@ -316,7 +316,7 @@ class ExperimentLoader:
                 prompt=prompt_a,
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
-                use_scratchpad=False,  # TODO: change later
+                use_scratchpad=experiment.agents.debaters[debater_idxs[0]].use_scratchpad,
             )
 
             debater_b = Debater(
@@ -324,7 +324,7 @@ class ExperimentLoader:
                 prompt=prompt_b,
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
-                use_scratchpad=False,  # TODO: change later
+                use_scratchpad=experiment.agents.debaters[debater_idxs[1]].use_scratchpad,
             )
 
             judge = Judge(
@@ -353,7 +353,7 @@ class ExperimentLoader:
                 prompt=flipped_prompt_a,
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
-                use_scratchpad=False,  # change later
+                use_scratchpad=experiment.agents.debaters[debater_idxs[1]].use_scratchpad,
             )
 
             flipped_debater_b = Debater(
@@ -361,7 +361,7 @@ class ExperimentLoader:
                 prompt=flipped_prompt_b,
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
-                use_scratchpad=False,  # change later
+                use_scratchpad=experiment.agents.debaters[debater_idxs[0]].use_scratchpad,
             )
 
             flipped_round = DebateRound(

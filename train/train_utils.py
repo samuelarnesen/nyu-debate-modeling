@@ -24,6 +24,7 @@ class PromptConfig(BaseModel):
     dynamic_prompts_file_path: Optional[str]
     dynamic_prompt_name: Optional[str]
     annotations_file_path: Optional[str]
+    use_scratchpad: Optional[bool] = False
 
 
 class LoggingAndSavingConfig(BaseModel):
@@ -63,13 +64,13 @@ class TrainingConfig(BaseModel):
     training_hyperparameters: Optional[TrainingHyperParameterConfig]
     target: Optional[str | TrainingTarget]
     dataset: Optional[DatasetConfig]
-    deepspeed: Optional[str]
-    opening_speeches_only: Optional[bool]
+    deepspeed: Optional[str] = False
+    opening_speeches_only: Optional[bool] = False
 
 
 class TrainUtils:
     @classmethod
-    def create_dataset(cls, config: TrainingConfig) -> RawDataset:
+    def create_dataset(cls, config: TrainingConfig, deduplicate: bool = False) -> RawDataset:
         dataset_config = config.dataset
         dataset_type = DatasetType[dataset_config.dataset_type.upper()]
         loader_cls = LoaderUtils.get_loader_type(dataset_type)
@@ -79,6 +80,7 @@ class TrainUtils:
             val_filepath=dataset_config.val_file_path,
             test_filepath=dataset_config.test_file_path,
             annotations_file_path=dataset_config.annotations_file_path,
+            deduplicate=deduplicate,
         )
 
     @classmethod
