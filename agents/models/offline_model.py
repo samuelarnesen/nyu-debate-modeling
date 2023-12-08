@@ -12,6 +12,17 @@ import random
 
 class OfflineModel(Model):
     def __init__(self, alias: str, is_debater: bool, file_path: str, prompt: Prompt, **kwargs):
+        """
+        An offline model returns the text that was previously generated during an earlier run. This is useful if you
+        want to re-judge a round.
+
+        Args:
+            alias: String that identifies the model for metrics and deduplication
+            is_debater: Boolean indicating whether the model is a debater (true) or judge (false)
+            file_path: The path to the directory of
+            prompt: The prompt structure that was used to generate the speeches originally. This is required so that
+                it can correctly parse the speech transcripts.
+        """
         super().__init__(alias=alias, is_debater=is_debater)
         self.speeches = self.__load(file_path=file_path, prompt=prompt)
         self.speech_idx = 0
@@ -22,10 +33,33 @@ class OfflineModel(Model):
     def predict(
         self, inputs: list[list[ModelInput]], max_new_tokens: int = 250, debater_name: str = "", round_idx: int = 0, **kwargs
     ) -> str:
+        """
+        Generates a list of texts in response to the given input.
+
+        Args:
+            inputs: A list of list of model inputs. Each ModelInput corresponds roughly to one command,
+                a list of ModelInputs corresponds to a single debate (or entry in a batch), and so the
+                list of lists is basically a batch of debates. Since the model will return the same
+                deterministic response no matter what, the content of the input does not matter.
+            max_new_tokens: the total number of new tokens to generate. This is ignored here.
+            debater_name: The name of the debater (typically Debater_A or Debater_B). This is used so that we can
+                return the correct speech. Since one model may be shared across multiple debaters, this has to
+                be passed in with each prediction.
+            round_idx: Which round is being debated. This is needed to match the previously generated speeches
+                with the current round beign debated.
+
+        Returns:
+            A list of length one containing the text generation.
+
+        Raises:
+            Exception: Raises Exception if the model is being used for judging or if the number of inputs is >1.
+        """
         if not debater_name:
             raise Exception(
                 "Debater name cannot be empty -- did you try using the OfflineModel as a judge? That's not supported"
             )
+        if len(inputs) > 1:
+            raise Exception(f"OfflineModel does not support a batch size of >1 ({len(inputs)}) was passed in.")
         if self.last_debater_name != debater_name:
             self.last_round_idx = -1
         if self.last_round_idx != round_idx:
@@ -38,6 +72,7 @@ class OfflineModel(Model):
         return [speech]
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> OfflineModel:
+        """Generates a deepcopy of this model"""
         return OfflineModel(alias=alias, is_debater=is_debater, prompt=self.prompt)
 
     def __load(self, file_path: str, prompt: Prompt):

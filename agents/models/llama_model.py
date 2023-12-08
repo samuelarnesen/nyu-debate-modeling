@@ -23,6 +23,14 @@ class LlamaInput(BaseModel):
 
 class LlamaModel(Model):
     def __init__(self, alias: str, file_path: Optional[str] = None, is_debater: bool = True, greedy: bool = True):
+        """
+        A Llama model uses Llama2 to generate text.
+
+        Args:
+            alias: String that identifies the model for metrics and deduplication
+            is_debater: Boolean indicating whether the model is a debater (true) or judge (false)
+            greedy: Whether greedy decoding (true) or beam_search (false) should be used.
+        """
         super().__init__(alias=alias, is_debater=is_debater)
         torch.cuda.empty_cache()
         self.logger = LoggerUtils.get_default_logger(__name__)
@@ -77,6 +85,7 @@ class LlamaModel(Model):
 
     @classmethod
     def generate_input_str(cls, llama_input: LlamaInput) -> str:
+        """Transforms a LlamaInput into a standardized format"""
         return "{}{}\n\n{}\n\n {} {}".format(
             constants.INSTRUCTION_PREFIX,
             llama_input.instruction,
@@ -87,6 +96,7 @@ class LlamaModel(Model):
 
     @classmethod
     def generate_llama_input_from_model_inputs(cls, input_list: list[ModelInput], extra_suffix: str = "") -> LlamaInput:
+        """Converts a ModelInput into the LlamaInput that's expected by the model"""
         return LlamaInput(
             instruction="\n".join(
                 model_input.content for model_input in filter(lambda x: x.role == RoleType.SYSTEM, input_list)
@@ -103,8 +113,8 @@ class LlamaModel(Model):
         alias: str = "",
         speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
     ) -> LlamaInput:
-        # TODO: remove this -- I think the base model is not responding to commands because its instruction format
-        # is non-standard so this is just a patch until I figure that out and train the debating model accordingly
+        """Creates the string that can be passed into Llama for it to generate responses"""
+
         def get_extra_suffix():
             if speech_structure == SpeechStructure.DECISION:
                 return "\n\n" + constants.JUDGING_PREFIX
@@ -126,6 +136,29 @@ class LlamaModel(Model):
         num_return_sequences: int = 1,
         **kwargs,
     ) -> list[str]:
+        """
+        Generates a list of texts in response to the given input.
+
+        Args:
+            inputs: A list of list of model inputs. Each ModelInput corresponds roughly to one command,
+                a list of ModelInputs corresponds to a single debate (or entry in a batch), and so the
+                list of lists is basically a batch of debates.
+            max_new_tokens: the maximum number of new tokens to generate.
+            speech_structure: the format that the answer is expected to be in. Option includes "open-ended"
+                (which is just free text), "preference" (which means a number is expected), and "decision"
+                (which means a boolean is expected)
+            num_return_sequences: the number of responses that the model is expected to generate. If a batch
+                size of >1 is passed in, then this value will be overridden by the batch size (so you cannot
+                have both num_return_sequences > 1 and len(inputs) > 1)
+
+        Returns:
+            A list of text, with one string for each entry in the batch (or for as many sequences are specified
+            to be returned by num_return_sequences).
+
+        Raises:
+            Exception: Raises Exception if num_return_sequences > 1 and len(inputs) > 1
+        """
+
         def validate():
             if num_return_sequences > 1 and len(inputs) > 1:
                 raise Exception("You cannot have multiple return sequences and a batch size of >1")
@@ -175,6 +208,7 @@ class LlamaModel(Model):
         return decoded_outputs
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, greedy: bool = False) -> LlamaModel:
+        """Generates a deepcopy of this model"""
         copy = LlamaModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, greedy=greedy)
         copy.is_debater = self.is_debater if is_debater == None else is_debater
         copy.tokenizer = self.tokenizer

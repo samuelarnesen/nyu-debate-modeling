@@ -2,6 +2,7 @@ from agents import LlamaInput, LlamaModel
 from data import DataRow, RawDataset, SplitType
 from train.row_converter import RowConverter
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
+from utils import LoggingCallback
 import utils.constants as constants
 
 from datasets import Dataset
@@ -102,6 +103,7 @@ class SupervisedTrainer:
             formatting_func=SupervisedTrainer.format_instruction,
             max_seq_length=16384,
             neftune_noise_alpha=5,
+            callbacks=[LoggingCallback],
             args=training_args,
         )
 

@@ -25,9 +25,27 @@ class ModelUtils:
         model_type: ModelType,
         file_path: Optional[str] = None,
         is_debater: bool = True,
-        speeches: Optional[list[str]] = None,
         greedy: bool = False,
     ) -> Model:
+        """
+        Builds a model using the given inputs.
+
+        Args:
+            alias: A unique string to identify the model for metrics and deduplication
+            model_type: The kind of model to be instantiated.
+            file_path: If the model has to be loaded locally, this should contain the path to that file.
+                This is used only for the LlamaModel at the moment.
+            is_debater: Boolean indicating if the model is to be used as a debater or judge.
+            greedy: Whether the model should decode using greedy decoding (True) or beam search (False).
+                This is used only for the LlamaModel at the moment.
+
+        Returns:
+            An instantiated model of the given type.
+
+        Raises:
+            Exception: Raises exception if the model type does not exist or if the model cannot be instantiated
+                directly. At the moment, neither the OfflineModel nor the HumanModel can be instantiated directly.
+        """
         if model_type == ModelType.RANDOM:
             return RandomModel(alias=alias, is_debater=is_debater)
         elif model_type == ModelType.LLAMA:

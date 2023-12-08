@@ -31,6 +31,13 @@ class OpenAIModel(Model):
     preference_regex = ".*Overall Score: (\\d+(\\.\\d+)?)"
 
     def __init__(self, alias: str, is_debater: bool = True, **kwargs):
+        """
+        An OpenAIModel calls GPT4 to generate the appropriate text.
+
+        Args:
+            alias: String that identifies the model for metrics and deduplication
+            is_debater: Boolean indicating whether the model is a debater (true) or judge (false)
+        """
         super().__init__(alias=alias, is_debater=is_debater)
         self.__configure()
         self.logger = LoggerUtils.get_default_logger(__name__)
@@ -46,6 +53,22 @@ class OpenAIModel(Model):
         speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
         **kwargs,
     ) -> list[str]:
+        """
+        Generates a list of texts in response to the given input.
+
+        Args:
+            inputs: A list of list of model inputs. Each ModelInput corresponds roughly to one command,
+                a list of ModelInputs corresponds to a single debate (or entry in a batch), and so the
+                list of lists is basically a batch of debates.
+            max_new_tokens: The maximum total number of new tokens to generate.
+            speech_structure: the format that the answer is expected to be in. Option includes "open-ended"
+                (which is just free text), "preference" (which means a number is expected), and "decision"
+                (which means a boolean is expected)
+
+        Returns:
+            A list of text, with one string for each entry in the batch.
+        """
+
         def model_input_to_openai_format(model_input: ModelInput | str) -> dict[str, str]:
             if isinstance(model_input, str):
                 return {"role": RoleType.USER.name.lower(), "content": model_input}
@@ -108,3 +131,7 @@ class OpenAIModel(Model):
             responses.append(message)
 
         return responses
+
+    def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> HumanModel:
+        """Generates a deepcopy of this model"""
+        return HumanModel(alias=alias, is_debater=is_debater)
