@@ -15,4 +15,4 @@ for ARG in "${ARGUMENTS[@]}"; do
         echo $(echo python "$PYTHON_PROGRAM" "${COMMON_ARGS[@]}" "$ARG")
         break
     fi
-done
+done | tqdm --total ${#ARGUMENTS[@]} >> /dev/null
