@@ -12,6 +12,7 @@ from typing import Type
 class LoaderUtils:
     @classmethod
     def get_loader_type(cls, dataset_type: DatasetType) -> Type[RawDataLoader]:
+        """Returns the class associated with the inputted DatasetType"""
         if dataset_type == DatasetType.QUALITY:
             return QualityLoader
         elif dataset_type == DatasetType.QUALITY_DEBATES:

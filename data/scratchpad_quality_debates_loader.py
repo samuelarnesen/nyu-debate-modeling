@@ -10,12 +10,13 @@ import re
 
 
 class ScratchpadQualityDebatesDataset(QualityDebatesDataset):
-    ELLIPSES = "..."
-    MINIMUM_QUOTE_LENGTH = 4
-    CONTEXT_SIZE = 10
+    MINIMUM_QUOTE_LENGTH = 1
+    CONTEXT_SIZE = 0
     DEFAULT_SCRATCHPAD_TEXT = "No quotes needed"
 
     def __init__(self, train_data: list[str, Any], val_data: list[str, Any], test_data: list[str, Any]):
+        """Dataset where each row has a question, position, debate transcript (from the human debates) and an
+        automatically generated scratchpad continuation for each speech that lists out the quotes used""" 
         super().__init__(
             train_data=train_data,
             val_data=val_data,
@@ -45,7 +46,7 @@ class ScratchpadQualityDebatesDataset(QualityDebatesDataset):
         speech.scratchpad = (
             "\n\n".join(
                 [
-                    f"{(i + 1)}. {ScratchpadQualityDebatesDataset.ELLIPSES}{context}{ScratchpadQualityDebatesDataset.ELLIPSES}"
+                    f"{(i + 1)}. {constants.QUOTE_TAG}{context}{constants.UNQUOTE_TAG}"
                     for i, context in enumerate(filter(lambda x: x, contexts))
                 ]
             )
@@ -59,12 +60,10 @@ class ScratchpadQualityDebatesLoader(RawDataLoader):
     def load(
         cls,
         full_dataset_filepath: str,
-        train_filepath: Optional[str] = None,
-        val_filepath: Optional[str] = None,
-        test_filepath: Optional[str] = None,
         deduplicate: bool = False,
         **kwargs,
     ) -> ScratchpadQualityDebatesDataset:
+        """Constructs a ScratchpadQualityDebatesDataset"""
         train, val, test = QualityDebatesLoader.get_splits(file_path=full_dataset_filepath, deduplicate=deduplicate)
         return ScratchpadQualityDebatesDataset(
             train_data=train,

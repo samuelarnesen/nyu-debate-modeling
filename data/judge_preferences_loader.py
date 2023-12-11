@@ -11,6 +11,10 @@ import sys
 
 class JudgePreferencesDataset(RawDataset):
     def __init__(self, train_data: list[str, Any], val_data: list[str, Any], test_data: list[str, Any]):
+        """
+        A dataset of judge preferences from a previous best-of-n run. Each row is a pair of speeches with one
+        labelled as the chosen speech and the other as the rejected speech.
+        """
         super().__init__(DatasetType.JUDGE_PREFERENCES)
         self.data = {
             SplitType.TRAIN: self.__convert_batch_to_rows(train_data),
@@ -20,11 +24,13 @@ class JudgePreferencesDataset(RawDataset):
         self.idxs = {SplitType.TRAIN: 0, SplitType.VAL: 0, SplitType.TEST: 0}
 
     def get_data(self, split: SplitType = SplitType.TRAIN) -> list[JudgePreferenceDataRow]:
+        """Returns all the data for a given split"""
         if split not in self.data:
             raise ValueError(f"Split type {split} is not recognized. Only TRAIN, VAL, and TEST are recognized")
         return self.data[split]
 
     def get_batch(self, split: SplitType = SplitType.TRAIN, batch_size: int = 1) -> list[JudgePreferenceDataRow]:
+        """Returns a subset of the data for a given split"""
         if batch_size < 1:
             raise ValueError(f"Batch size must be >= 1. Inputted batch size was {batch_size}")
         data_to_return = self.data[split][self.idxs[split] : min(self.idxs[split] + batch_size, len(self.data[split]))]
@@ -32,6 +38,7 @@ class JudgePreferencesDataset(RawDataset):
         return data_to_return
 
     def get_example(self, split: SplitType = SplitType.TRAIN, idx: int = 0) -> JudgePreferenceDataRow:
+        """Returns an individual row in the dataset"""
         return self.data[split][idx % len(self.data[split])]
 
     def __convert_batch_to_rows(self, train_data: list[tuple[str, str, str]]):
@@ -44,6 +51,17 @@ class JudgePreferencesDataset(RawDataset):
 class JudgePreferencesLoader(RawDataLoader):
     @classmethod
     def load(cls, full_dataset_filepath: str, **kwargs) -> JudgePreferencesDataset:
+        """
+        Constructs a JudgePreferencesDataset.
+
+        Params:
+            full_dataset_filepath: This is the *prefix* of the files with all the Best-of-N generations.
+                If the Best-of-N generations are all saved as "directory/some_file_0_0.txt", the
+                full_dataset_filepath would be "directory/some_file".
+
+        Returns:
+            A JudgePreferencesDataset where each row has a chosen and a rejected speech.
+        """
         train_data = []
         input_texts = InputUtils.read_file_texts(base_path=full_dataset_filepath, group_by_batch=True)
         for batch in input_texts:

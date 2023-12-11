@@ -80,15 +80,19 @@ class RawDataset(ABC):
         self.dataset_type = dataset_type
 
     def get_data(self, split: SplitType = SplitType.TRAIN) -> list[tuple[str, Any]]:
+        """Fetches all the data for a given split of the data"""
         pass
 
     def get_batch(self, split: SplitType = SplitType.TRAIN, batch_size: int = 1) -> list[tuple[str, Any]]:
+        """Gets a subset of the data"""
         pass
 
     def get_example(self, split: SplitType = SplitType.TRAIN, idx: int = 0) -> DataRow:
+        """Returns an individual row at the specified index"""
         pass
 
     def get_dataset_type(self):
+        """Gets the name of the dataset"""
         return self.dataset_type
 
 
@@ -101,4 +105,5 @@ class RawDataLoader(ABC):
         validation_filepath: Optional[str] = None,
         test_filepath: Optional[str] = None,
     ) -> RawDataset:
+        """Constructs a dataset"""
         pass
