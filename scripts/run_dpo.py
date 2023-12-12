@@ -1,4 +1,4 @@
-from script_utils import ScriptUtils
+from script_utils import ScriptUtils, TrainType
 
 ScriptUtils.setup_script()
 
@@ -7,7 +7,7 @@ from train import DirectPreferenceTrainer, TrainUtils
 from utils import SaveUtils
 
 args = ScriptUtils.get_args()
-script_config = ScriptUtils.get_model_run_script_config(args)
+script_config = ScriptUtils.get_training_run_script_config(args, train_type=TrainType.DPO)
 
 config = TrainUtils.parse_config(config_name=script_config.config_name, config_filepath=script_config.config_filepath)
 judge_preferences_dataset = JudgePreferencesLoader.load(full_dataset_filepath=script_config.full_dataset_filepath)

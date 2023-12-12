@@ -31,6 +31,7 @@ class PromptTag(Enum):
     BEST_OF_N_JUDGE_OVERVIEW_FOR_DEBATER_A = 19
     BEST_OF_N_JUDGE_OVERVIEW_FOR_DEBATER_B = 20
     PREVIOUS_DEBATER_SCRATCHPAD = 21
+    PRE_PREVIOUS_SPEECH = 22
 
 
 class RoleType(Enum):
@@ -121,7 +122,9 @@ class PromptParser:
         )
 
     @classmethod
-    def convert_data_row_to_default_prompt_config(cls, row: DataRow, position: int) -> PromptConfig:
+    def convert_data_row_to_default_prompt_config(
+        cls, row: DataRow, position: int, use_title_as_background_text: bool = False
+    ) -> PromptConfig:
         return PromptConfig(
             name=constants.DEFAULT_DEBATER_A_NAME if position == 0 else constants.DEFAULT_DEBATER_B_NAME,
             opponent_name=constants.DEFAULT_DEBATER_B_NAME if position == 0 else constants.DEFAULT_DEBATER_A_NAME,
@@ -129,7 +132,7 @@ class PromptParser:
             position=row.positions[position],
             opponent_position=row.positions[(position - 1) * -1],
             topic=row.question,
-            background_text=row.background_text,
+            background_text=row.background_text if not use_title_as_background_text else row.story_title,
         )
 
 

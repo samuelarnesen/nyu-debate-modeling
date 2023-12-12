@@ -77,7 +77,7 @@ class Debater(Agent):
         """Generates new text using the pre-existing transcript as input. If it has access to a
         scratchpad, it will use that but keep those results hidden"""
         if self.use_scratchpad:
-            batch_reasoning = self.generate(max_new_tokens=300)
+            batch_reasoning = self.generate(max_new_tokens=150)
             for i, reasoning in enumerate(batch_reasoning):
                 super().receive_message(speaker=self.name, content=reasoning, idx=i)
                 self.logger.debug(reasoning)
@@ -221,7 +221,11 @@ class DebaterUtils:
             .add(prompt_tag=PromptTag.PREVIOUS_DEBATER_SCRATCHPAD, last_only_prompt_tag=PromptTag.DEBATER_SCRATCHPAD)
             .add_user_inputted_speech(expected_speaker=name)
         )
-        own_speech = SpeechFormat(name).add(prompt_tag=PromptTag.PRE_SPEECH).add_user_inputted_speech(expected_speaker=name)
+        own_speech = (
+            SpeechFormat(name)
+            .add(prompt_tag=PromptTag.PRE_PREVIOUS_SPEECH, last_only_prompt_tag=PromptTag.PRE_SPEECH)
+            .add_user_inputted_speech(expected_speaker=name)
+        )
         if use_scratchpad:
             own_speech = scratchpad.add_format(speech_format=own_speech)
 

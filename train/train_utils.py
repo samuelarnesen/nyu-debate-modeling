@@ -24,7 +24,8 @@ class PromptConfig(BaseModel):
     dynamic_prompts_file_path: Optional[str]
     dynamic_prompt_name: Optional[str]
     annotations_file_path: Optional[str]
-    use_scratchpad: Optional[bool] = False
+    use_scratchpad: bool = False
+    is_memorized: bool = False
 
 
 class LoggingAndSavingConfig(BaseModel):
@@ -62,10 +63,11 @@ class TrainingConfig(BaseModel):
     prompt_config: PromptConfig
     logging_and_saving_config: Optional[LoggingAndSavingConfig]
     training_hyperparameters: Optional[TrainingHyperParameterConfig]
-    target: Optional[str | TrainingTarget]
+    target: Optional[str | TrainingTarget] = None
     dataset: Optional[DatasetConfig]
-    deepspeed: Optional[str] = False
-    opening_speeches_only: Optional[bool] = False
+    opening_speeches_only: bool = False
+    requires_token: bool = False
+    max_length: bool = constants.MAX_LENGTH
 
 
 class TrainUtils:
@@ -130,9 +132,10 @@ class TrainUtils:
                 device_map=device_map,
                 trust_remote_code=True,
                 use_flash_attention_2=True,
+                token=os.getenv("META_ACCESS_TOKEN") if config.requires_token else None,
             )
 
-            model.config.max_position_embeddings = constants.MAX_LENGTH
+            model.config.max_position_embeddings = config.max_length
             model.config.transformers_version = "4.34.0"
             model.generation_config.transformers_version = "4.34.0"
 
@@ -159,7 +162,11 @@ class TrainUtils:
 
     @classmethod
     def get_tokenizer(cls, config: TrainingConfig) -> AutoTokenizer:
-        tokenizer = AutoTokenizer.from_pretrained(config.model_name)  # change this
+        tokenizer = AutoTokenizer.from_pretrained(
+            config.model_name,
+            additional_special_tokens=[constants.QUOTE_TAG, constants.UNQUOTE_TAG],
+            token=os.getenv("META_ACCESS_TOKEN") if config.requires_token else None,
+        )
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = "right"
         return tokenizer

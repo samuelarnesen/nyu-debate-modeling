@@ -8,7 +8,7 @@ Note: Given the current state of this project, this README will just give an ove
 1. Pull down this package using `git clone`
 2. Install the dependencies using `pip install -r requirements.txt`
 3. Run the setup script `bash bash_scripts/setup.sh`
-4. If you want to use the OpenAI models, create a `.env` with your `OPENAI_API_KEY` and `OPENAI_ORGANIZATION`.
+4. If you want to use the OpenAI models, create a `.env` with your `OPENAI_API_KEY` and `OPENAI_ORGANIZATION`. Similarly, if you want to use a model that requires access to one of Meta's models (e.g. Llama 2), add `META_ACCESS_KEY` to your `.env` file as well.
 
 **Note: This code has dependencies on the transcripts from the human debate project and (optionally) on an annotated version of that dataset, along with a classifier model that was trained on those annotations. Since those aren't all publicly released yet, they are not present in the repo.**
 

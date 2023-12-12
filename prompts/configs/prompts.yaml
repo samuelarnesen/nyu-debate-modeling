@@ -118,6 +118,11 @@ Base Prompt:
     content: 
       - |
         This is what <OPPONENT_NAME> said during their speech.
+  pre_previous_speech:
+    role: user
+    content:
+      - |
+        This is what you, <NAME>, said during your previous speech.
   pre_debater_a_speech_judge:
     role: user
     content: 

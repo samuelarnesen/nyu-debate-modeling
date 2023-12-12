@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
+from enum import Enum
 import argparse
 import logging
 import os
@@ -19,8 +20,14 @@ class ModelRunScriptConfig(BaseModel):
     config_name: str
 
 
+class TrainType(Enum):
+    SFT = 0
+    DPO = 1
+    PPO = 2
+    PRETRAIN = 3
+
+
 class ScriptUtils:
-    # Add the parent directory to sys.path
     @classmethod
     def setup_script(cls):
         sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -88,19 +95,21 @@ class ScriptUtils:
         )
 
     @classmethod
-    def get_config_filepath(cls, args) -> str:
-        if args.train_type.lower() == "sft":
+    def get_config_filepath(cls, train_type: TrainType) -> str:
+        if train_type == TrainType.SFT:
             return "train/configs/sft_config.yaml"
-        elif args.train_type.lower() == "dpo":
+        elif train_type == TrainType.DPO:
             return "train/configs/dpo_config.yaml"
-        elif args.train_type.lower() == "ppo":
+        elif train_type == TrainType.PPO:
             return "train/configs/ppo_config.yaml"
+        elif train_type == TrainType.PRETRAIN:
+            return "train/configs/pretrain_config.yaml"
         else:
-            raise Exception(f"Train type {args.train_type} is not recognized")
+            raise Exception(f"Train type {train_type} is not recognized")
 
     @classmethod
-    def get_model_run_script_config(cls, args) -> ModelRunScriptConfig:
-        config_filepath = ScriptUtils.get_config_filepath(args)
+    def get_training_run_script_config(cls, args, train_type: TrainType) -> ModelRunScriptConfig:
+        config_filepath = ScriptUtils.get_config_filepath(train_type=train_type)
         full_dataset_filepath = args.dataset or "../../debate-data/debates-readable.jsonl"
         config_name = args.configuration or "Default - Local"
         if not args.local:

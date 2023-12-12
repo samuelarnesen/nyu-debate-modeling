@@ -73,6 +73,7 @@ class QualityLoader(RawDataLoader):
         **kwargs,
     ) -> QualityDataset:
         """Constructs a QualityDataset"""
+
         def __load_individual_file(filepath: str) -> list[str, Any]:
             entries = []
             if filepath:

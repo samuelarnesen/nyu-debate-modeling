@@ -1,4 +1,4 @@
-from script_utils import ScriptUtils
+from script_utils import ScriptUtils, TrainType
 
 ScriptUtils.setup_script()
 
@@ -7,7 +7,7 @@ from train import PPOTrainerWrapper, TrainUtils
 from utils import SaveUtils
 
 args = ScriptUtils.get_args()
-script_config = ScriptUtils.get_model_run_script_config(args)
+script_config = ScriptUtils.get_training_run_script_config(args, train_type=TrainType.PPO)
 
 config = TrainUtils.parse_config(config_name=script_config.config_name, config_filepath=script_config.config_filepath)
 dataset = TrainUtils.create_dataset(config=config)

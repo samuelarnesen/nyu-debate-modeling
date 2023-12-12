@@ -16,7 +16,7 @@ class ScratchpadQualityDebatesDataset(QualityDebatesDataset):
 
     def __init__(self, train_data: list[str, Any], val_data: list[str, Any], test_data: list[str, Any]):
         """Dataset where each row has a question, position, debate transcript (from the human debates) and an
-        automatically generated scratchpad continuation for each speech that lists out the quotes used""" 
+        automatically generated scratchpad continuation for each speech that lists out the quotes used"""
         super().__init__(
             train_data=train_data,
             val_data=val_data,

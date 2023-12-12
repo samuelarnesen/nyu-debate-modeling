@@ -17,6 +17,7 @@ class RowConverter:
         speech: SpeechData,
         dataset: AnnotatedQualityDebatesDataset,
         index: int,
+        use_title_as_background_text: bool = False,
     ) -> Prompt:
         return DynamicPromptParser.convert_to_dynamic_prompt(
             dynamic_prompt_file_path=config.prompt_config.dynamic_prompts_file_path,
@@ -41,7 +42,9 @@ class RowConverter:
     def generate_prompt_from_speech(
         cls, row: DataRow, speech: SpeechData, config: TrainingConfig, dataset: RawDataset, index: int
     ) -> Prompt:
-        prompt_config = PromptParser.convert_data_row_to_default_prompt_config(row=row, position=speech.position)
+        prompt_config = PromptParser.convert_data_row_to_default_prompt_config(
+            row=row, position=speech.position, use_title_as_background_text=config.prompt_config.is_memorized
+        )
         prompt = PromptParser.parse(
             prompts_file_path=config.prompt_config.prompts_file_path,
             prompt_config=prompt_config,
