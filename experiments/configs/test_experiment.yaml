@@ -265,7 +265,7 @@ Dynamic_Override_Test:
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
     annotations_file_path:  /Users/samarnesen/nyu/debate-data/annotated-data-set.p
     split_type: train
-Operational_Test:
+Labelled_Scratchpad_Test:
   topic_config:
     topic_type: from_dataset
   word_limit: 500
@@ -279,10 +279,10 @@ Operational_Test:
   agents:
     debaters:
       - model_type: random
-        alias: dpo
+        alias: debater-1
         use_scratchpad: true
       - model_type: random
-        alias: sft
+        alias: debater-2
         use_scratchpad: true
     judge:
       model_type: random
@@ -291,7 +291,28 @@ Operational_Test:
     dataset_type: scratchpad_quality_debates
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
     split_type: train
-  offline:
+Operational_Test:
+  topic_config:
+    topic_type: from_dataset
+  word_limit: 500
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  prompt_config:
+    file_path: ./prompts/configs/prompts.yaml
+    default_prompt_name: Base Prompt
+  agents:
     debaters:
-      - offline-debater-1
-    file_path: /Users/samarnesen/nyu/debate-data/transcripts/2023-12-01_12:08:23.713059
+      - model_type: random
+        alias: debater-1
+      - model_type: random
+        alias: debater-2
+    judge:
+      model_type: random
+      alias: random-judge
+  dataset:
+    dataset_type: quality
+    train_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.train
+    val_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev
+    test_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test
+    split_type: train

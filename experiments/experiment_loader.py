@@ -36,9 +36,10 @@ class AgentConfig(BaseModel):
     model_type: str
     model_file_path: Optional[str]
     alias: str
-    use_scratchpad: Optional[bool]
+    use_scratchpad: bool = False
     override_prompt: Optional[str]
-    greedy: Optional[bool]
+    greedy: bool = True
+    is_memorized: bool = False
 
 
 class AgentsConfig(BaseModel):
@@ -86,7 +87,7 @@ class ExperimentConfig(BaseModel):
     word_limit: int
     batch_size: int
     num_speeches: int
-    flip: Optional[bool]
+    flip: bool = False
     prompt_config: PromptLoadingConfig
     agents: AgentsConfig
     dataset: DatasetConfig
@@ -99,6 +100,8 @@ class ExperimentConfig(BaseModel):
 class ExperimentLoader:
     @classmethod
     def merge_debate_rounds(cls, debate_rounds: list[DebateRound]) -> DebateRound:
+        """Combines the listed debate rounds into one (batched) debate round"""
+
         def validate() -> None:
             for debate_round in debate_rounds:
                 if (
@@ -158,7 +161,26 @@ class ExperimentLoader:
         debater_idxs: tuple[int, int],
         count: int,
         model_cache: Optional[dict[str, Model]] = None,
-    ) -> list[DebateRound]:
+    ) -> tuple[list[DebateRound], dict[str, Model]]:
+        """
+        Creates a set of debate round for the specific debaters listed in debater_idxs.
+
+        Params:
+            experiment: the configuration for the set of debate rounds
+            dataset: the dataset from which one draws the questions and positions
+            split_type: whether the quesitons/positions should be sampled from the train, val, or test sets
+            debater_idxs: which pair of debaters from the experiment config should we be creating debate rounds for
+            count: the number of rounds to create
+            model_cache: a dictionary mapping a model alias (string) to a model. This is useful so that we do not
+                instantiate the same model multiple times if this function is called multiple times in a larger
+                tournament (it is not needed if you only invoke the function on one pair of models).
+
+        Returns:
+            batched_rounds: a list of debate rounds based on the inputted configuration
+            model_cache: a cached set of the models used in these debate rounds (useful if you invoke this
+                function again).
+        """
+
         # create logger
         logger = LoggerUtils.get_default_logger(__name__)
 
@@ -180,7 +202,7 @@ class ExperimentLoader:
                 file_path=debater_one_model_path,
                 is_debater=True,
                 alias=experiment.agents.debaters[debater_idxs[0]].alias,
-                greedy=experiment.agents.debaters[debater_idxs[0]].greedy or True,
+                greedy=experiment.agents.debaters[debater_idxs[0]].greedy,
             )
             if f"{debater_one_model_type}_{debater_one_model_path}" not in model_cache
             else model_cache[f"{debater_one_model_type}_{debater_one_model_path}"].copy(
@@ -201,7 +223,7 @@ class ExperimentLoader:
             else model_cache[f"{debater_two_model_type}_{debater_two_model_path}"].copy(
                 alias=experiment.agents.debaters[debater_idxs[1]].alias,
                 is_debater=True,
-                greedy=experiment.agents.debaters[debater_idxs[1]].greedy or True,
+                greedy=experiment.agents.debaters[debater_idxs[1]].greedy,
             )
         )
         model_cache[f"{debater_two_model_type}_{debater_two_model_path}"] = debater_two_model
@@ -230,6 +252,7 @@ class ExperimentLoader:
                 position = example.positions[0]
                 opponent_position = example.positions[1]
                 background_text = example.background_text
+                title = example.story_title
                 correct_index = example.correct_index
                 speeches = example.speeches
             elif topic_config_type == TopicConfigType.HARD_CODED:
@@ -237,6 +260,7 @@ class ExperimentLoader:
                 position = experiment.topic_config.positions[0]
                 opponent_position = experiment.topic_config.positions[1]
                 background_text = constants.DEFAULT_BACKGROUND_TEXT
+                title = ""
                 correct_index = None
                 speeches = []
             else:
@@ -249,10 +273,18 @@ class ExperimentLoader:
                 position=position,
                 opponent_position=opponent_position,
                 topic=topic,
-                background_text=background_text,
+                background_text=background_text if not experiment.agents.debaters[debater_idxs[0]].is_memorized else title,
             )
 
-            config_b = PromptParser.generate_opponent_config(config_a)
+            config_b = PromptConfig(
+                name=constants.DEFAULT_DEBATER_B_NAME,
+                opponent_name=constants.DEFAULT_DEBATER_A_NAME,
+                word_limit=experiment.word_limit,
+                position=opponent_position,
+                opponent_position=position,
+                topic=topic,
+                background_text=background_text if not experiment.agents.debaters[debater_idxs[1]].is_memorized else title,
+            )
 
             prompt_a = PromptParser.parse(
                 prompts_file_path=experiment.prompt_config.file_path,
@@ -497,6 +529,7 @@ class ExperimentLoader:
 
     @classmethod
     def get_debater_combinations(cls, experiment: ExperimentConfig):
+        """Returns all the combinations of debaters that would need to debate each other in a round robin tournament"""
         all_idxs = [i for i in range(len(experiment.agents.debaters))]
         if len(all_idxs) < 2:
             raise Exception("At least 2 debaters must be defined")
@@ -507,6 +540,18 @@ class ExperimentLoader:
     def generate_debate_rounds(
         cls, experiment_file_path: str, name: str, count: int = 1
     ) -> tuple[list[DebateRound], ExperimentConfig]:
+        """
+        Generates a list of debate rounds with the given configuration
+
+        Params:
+            experiment_file_path: path to the file of the experiment config
+            name: the name of the specific config within the broader config file
+            count: the number of debate rounds to create
+
+        Returns:
+            all_rounds: a list of (batched) debate rounds constructed using the config
+            experiment: the configuration used to create the debate rounds
+        """
         # create experiment config
         with open(experiment_file_path) as f:
             loaded_yaml = yaml.safe_load(f)

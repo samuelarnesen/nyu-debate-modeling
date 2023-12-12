@@ -69,6 +69,12 @@ class Annotator:
     DEFAULT_CONFIG = ClassificationConfig(top_k=3, min_threshold=0.2, special_quotes_handling=True, combine_commentary=False)
 
     def __init__(self, model_path: str):
+        """
+        Wraps a trained classifier that assigns stylistic labels to each sentence.
+
+        Params:
+            model_path: Path to the pickled classifier model
+        """
         self.base = SentenceTransformer("all-MiniLM-L6-v2")
         self.linear = torch.load(model_path)
         self.nlp = spacy.load("en_core_web_sm")
@@ -76,6 +82,8 @@ class Annotator:
         self.results = {}
 
     def classify(self, paragraph: str, config: ClassificationConfig = DEFAULT_CONFIG) -> ParagraphClassification:
+        """Classifies each sentence in the paragraph"""
+
         def clean_string(original: str, removals: list[str] = []):
             removals = removals + [
                 constants.INVALID_QUOTE_TAG,
@@ -176,6 +184,7 @@ class Annotator:
     def classify_debate_round(
         self, summary: DebateRoundSummary, config: ClassificationConfig = DEFAULT_CONFIG
     ) -> dict[str, list[ParagraphClassification]]:
+        """Classifies each speech in the debate round"""
         speaker_to_classification = {}
         for speech in filter(
             lambda x: x.speaker in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME],
@@ -197,6 +206,28 @@ class Annotator:
     def get_results(
         self, percentile: float = 0.8
     ) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, float]], dict[str, dict[str, float]]]:
+        """
+        Gets the average amounts of each label in the debate speeches collected so far.
+        This is useful to tracking charts and metrics
+
+        Params:
+            percentile: This function returns the average amount of each tag, the "upper" amount of each tag
+                (aka the amount of that tag at the inputted percentile), and the "lower" amount (aka the
+                amount of that tag at the inverse of the inputted percentile). This is useful for characterizing
+                the distribution of each label.
+
+        Returns:
+            average_speaker_results: a dictionary with a distinct key for each model alias. The values are another
+                dictionary with each style tag having a key and the values being the amount found in the average
+                speech by that model
+            lower_speaker_results: a dictionary with a distinct key for each model alias. The values are another
+                dictionary with each style tag having a key and the values being the amount found in the speech
+                by that model that has the (1-percentile)^th most of that tag. For example, if the inputted
+                percentile is 0.8, then the entry for 'refutation' will be the amount of refutation found
+                in the speech at the 20th percentile for most refutation.
+            upper_speaker_results: this is the same as lower_speaker_results except that it returns values at
+                the inputted percentile.
+        """
         average_speaker_results = {}
         lower_speaker_results = {}
         upper_speaker_results = {}

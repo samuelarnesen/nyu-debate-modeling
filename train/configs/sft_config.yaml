@@ -1,12 +1,14 @@
 Default - Local:
-    model_name: TestModel
+    model_name: meta-llama/Llama-2-13b-hf
     target: debater
-    opening_speeches_only: True
+    max_length: 4096
+    requires_token: True
+    opening_speeches_only: False
     training_hyperparameters:
-        num_train_epochs: 2
+        num_train_epochs: 4
         per_device_train_batch_size: 4
         gradient_accumulation_steps: 4
-        optim: paged_adamw_32bit
+        optim: paged_adamw_8bit
         learning_rate: 2e-4
         max_grad_norm: 0.3
         warmup_ratio: 0.03
@@ -14,17 +16,14 @@ Default - Local:
         peft_type: lora
     logging_and_saving_config:
         logging_steps: 10
-        output_dir: /Users/samarnesen/nyu/scratch/not/a/real/folder
-        merge_output_dir: /Users/samarnesen/nyu/scratch/not/a/real/folder
+        output_dir: /vast/spa9663/models/trained_models/Llama-2-Memorized-4/
     prompt_config:
         prompts_file_path: /Users/samarnesen/nyu/debate/nyu-debate-modeling/prompts/configs/prompts.yaml
         prompt_name: Base Prompt
-        dynamic_prompts_file_path: /Users/samarnesen/nyu/debate/nyu-debate-modeling/prompts/configs/dynamic_prompts.yaml
-        dynamic_prompt_name: Default Dynamic Prompt
-        annotations_file_path: /Users/samarnesen/nyu/debate-data/annotated-data-set.p
+        is_memorized: True
     dataset:
         dataset_type: quality_debates
-        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
+        full_dataset_file_path: /Users/samarnesen/nyu/debate-data/debates-readable.jsonl
         split_type: train
 Train - 13B - Alpaca:
     model_name: Yukang/LongAlpaca-13B
@@ -174,6 +173,7 @@ Train - Memorized - 13B:
     prompt_config:
         prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
         prompt_name: Base Prompt
+        is_memorized: True
     dataset:
         dataset_type: quality_debates
         full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl

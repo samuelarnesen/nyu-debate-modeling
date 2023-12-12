@@ -36,9 +36,7 @@ class LlamaModel(Model):
         self.logger = LoggerUtils.get_default_logger(__name__)
         if file_path:
             self.is_debater = is_debater
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                file_path, additional_special_tokens=[constants.QUOTE_TAG, constants.UNQUOTE_TAG]
-            )
+            self.tokenizer = AutoTokenizer.from_pretrained(file_path)
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
             bnb_config = BitsAndBytesConfig(
@@ -81,7 +79,7 @@ class LlamaModel(Model):
             self.generation_config = None
 
         if self.model:
-            self.model.config.max_position_embeddings = constants.MAX_LENGTH
+            # self.model.config.max_position_embeddings = constants.MAX_LENGTH
             self.model.config.transformers_version = "4.34.0"
             self.model.generation_config.transformers_version = "4.34.0"
 

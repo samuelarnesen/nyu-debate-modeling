@@ -39,6 +39,14 @@ class ResultsCollector:
     def __init__(
         self, experiment: Optional[ExperimentConfig], save_file_path_prefix: Optional[str] = None, should_save: bool = True
     ):
+        """
+        Collects metrics after a series of debate rounds are run.
+
+        Params:
+            experiment: the config used to generate the debate rounds
+            save_file_path_prefix: the directory and experiment name where the stats are to be saved
+            should_save: whether or not to actually save the metrics
+        """
         self.logger = LoggerUtils.get_default_logger(__name__)
         self.quotes_collector = QuotesCollector(experiment=experiment) if experiment else None
         self.annotator = (
@@ -52,6 +60,7 @@ class ResultsCollector:
         self.summaries = []
 
     def reset(self) -> None:
+        """removes all the records of previous debate rounds"""
         self.summaries = []
 
     def __save(self, name: str):
@@ -59,6 +68,7 @@ class ResultsCollector:
             plt.savefig(f"{self.save_file_path_prefix}{name}.png")
 
     def record_result(self, summaries: DebateRoundSummary | list[DebateRoundSummary]) -> None:
+        """Adds metrics from that debate round to local store"""
         summaries = summaries if type(summaries) == list else [summaries]
         for summary in summaries:
             self.summaries.append(summary)
@@ -348,6 +358,15 @@ class ResultsCollector:
         return {"average": average, "lower": lower, "upper": upper}
 
     def graph_results(self) -> None:
+        """
+        Graphs and displays the collected metrics.
+        Currently supports:
+            1. Raw Bradley-Terry Scores
+            2. Win rates
+            3. Judge accuracy and tendencies
+            4. Quote statistics
+            5. Stylistic info
+        """
         bt_results = self.__graph_bradley_terry()
         self.logger.info(bt_results)
 

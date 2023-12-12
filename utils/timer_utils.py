@@ -5,6 +5,8 @@ import time
 
 
 def timer(custom_name: str = None):
+    """Decorator to time a function"""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):

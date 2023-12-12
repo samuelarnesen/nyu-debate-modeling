@@ -12,6 +12,8 @@ from trl import DataCollatorForCompletionOnlyLM, SFTTrainer
 import pandas as pd
 import torch
 
+from typing import Optional
+
 try:
     from utils.flash_attn_utils import replace_attn_with_flash_attn, upcast_layer_for_flash_attention
 
@@ -22,8 +24,11 @@ except ImportError as e:
 
 
 class SupervisedTrainer:
+    """Class for training a model using Supervised Fine Tuning"""
+
     @classmethod
     def format_instruction(cls, llama_dictionary: dict[str, list[str]]) -> str:
+        """Converts a dataset row into a prompt string"""
         instructions = []
         for instruction_val, input_val, extra_suffix in zip(
             llama_dictionary.get("instruction"), llama_dictionary.get("input"), llama_dictionary.get("extra_suffix")
@@ -37,8 +42,10 @@ class SupervisedTrainer:
 
     @classmethod
     def convert_dataset(cls, raw_dataset: RawDataset, config: TrainingConfig, target: TrainingTarget) -> Dataset:
+        """Converts a dataset (abstraction used in this codebase) into a Dataset object (abstraction
+        used by huggingface's trainer objects)"""
         llama_input_lists = [
-            RowConverter.convert_row(row=row, config=config, target=target, dataset=raw_dataset, index=i)
+            RowConverter.convert_row(row=row, config=config, target=target, dataset=raw_dataset)
             for i, row in enumerate(raw_dataset.get_data(split=SplitType.TRAIN))
         ]
         llama_inputs = [item for llama_input_list in llama_input_lists for item in llama_input_list]
@@ -50,11 +57,25 @@ class SupervisedTrainer:
     def get_trainer(
         cls,
         config: TrainingConfig,
-        raw_dataset: RawDataset,
+        raw_dataset: Optional[RawDataset] = None,
         is_local: bool = False,
     ) -> SFTTrainer:
+        """
+        Generates a Trainer object.
+
+        Params:
+            config: configuration specifying the prompt setup and hyperparameters for the training run.
+            raw_dataset: dataset to use for training
+            is_local: whether this is being run on a cpu
+
+        Returns:
+            sft_trainer: One can call dpo_trainer.train() to then run the training loop.
+        """
         if FLASH_ATTENTION_AVAILABLE:
             replace_attn_with_flash_attn()
+
+        if not raw_dataset:
+            raw_dataset = TrainUtils.create_dataset(config=config)
 
         tokenizer = TrainUtils.get_tokenizer(config=config)
         model = TrainUtils.load_model(config=config, is_local=is_local)
@@ -92,7 +113,7 @@ class SupervisedTrainer:
         peft_config = TrainUtils.get_peft_config(config)
         model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
         if FLASH_ATTENTION_AVAILABLE:
-            model = upcast_layer_for_flash_attention(model, torch.bfloat16)
+            model = upcast_layer_for_flash_attention(model, torch.bfloat16).to("cuda")
 
         trainer = SFTTrainer(
             model=model,
@@ -101,8 +122,7 @@ class SupervisedTrainer:
             tokenizer=tokenizer,
             data_collator=collator,
             formatting_func=SupervisedTrainer.format_instruction,
-            max_seq_length=16384,
-            neftune_noise_alpha=5,
+            max_seq_length=config.max_length,
             callbacks=[LoggingCallback],
             args=training_args,
         )

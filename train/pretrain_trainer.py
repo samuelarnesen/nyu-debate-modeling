@@ -21,13 +21,19 @@ except ImportError as e:
 
 
 class PretrainTrainer:
+    """Class for pretraining a model using a causal language modeling objective"""
+
     MAX_LENGTH = 4096
+    CONTENT_FIELD = "content"
 
     @classmethod
     def convert_dataset(cls, raw_dataset: RawDataset, tokenizer: AutoTokenizer) -> Dataset:
+        """Converts a dataset (abstraction used in this codebase) into a Dataset object (abstraction
+        used by huggingface's trainer objects)"""
+
         def tokenize(example: str):
             outputs = tokenizer(
-                example["content"],
+                example[PretrainTrainer.CONTENT_FIELD],
                 truncation=True,
                 max_length=PretrainTrainer.MAX_LENGTH,
                 return_overflowing_tokens=True,
@@ -41,7 +47,10 @@ class PretrainTrainer:
 
         dataset = Dataset.from_pandas(
             pd.DataFrame(
-                data=[{"content": example.background_text} for example in raw_dataset.get_data(split=SplitType.TRAIN)]
+                data=[
+                    {PretrainTrainer.CONTENT_FIELD: example.background_text}
+                    for example in raw_dataset.get_data(split=SplitType.TRAIN)
+                ]
             )
         ).shuffle()
 
@@ -51,6 +60,17 @@ class PretrainTrainer:
     def get_trainer(
         cls, config: TrainingConfig, raw_dataset: Optional[RawDataset] = None, is_local: bool = False
     ) -> Trainer:
+        """
+        Generates a Trainer object.
+
+        Params:
+            config: configuration specifying the prompt setup and hyperparameters for the training run.
+            raw_dataset: dataset to use for training
+            is_local: whether this is being run on a cpu
+
+        Returns:
+            trainer: One can call trainer.train() to then run the training loop.
+        """
         logger = LoggerUtils.get_default_logger(__name__)
         if not raw_dataset:
             raw_dataset = TrainUtils.create_dataset(config=config)

@@ -27,7 +27,7 @@ Pretrain - 13B:
     model_name: meta-llama/Llama-2-13b-hf
     requires_token: True
     training_hyperparameters:
-        num_train_epochs: 2
+        num_train_epochs: 4
         per_device_train_batch_size: 4
         gradient_accumulation_steps: 4
         optim: paged_adamw_32bit

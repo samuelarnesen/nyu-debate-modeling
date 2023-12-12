@@ -67,12 +67,22 @@ class TrainingConfig(BaseModel):
     dataset: Optional[DatasetConfig]
     opening_speeches_only: bool = False
     requires_token: bool = False
-    max_length: bool = constants.MAX_LENGTH
+    max_length: int = constants.MAX_LENGTH
 
 
 class TrainUtils:
     @classmethod
     def create_dataset(cls, config: TrainingConfig, deduplicate: bool = False) -> RawDataset:
+        """
+        Constructs a dataset that will later be converted into a training dataset.
+
+        Params:
+            config: the configuration containing the prompt text and training hyperparameters
+            deduplicate: whether only one example from each prompt should be used
+
+        Returns:
+            dataset: a dataset object that can later be used as a training dataset
+        """
         dataset_config = config.dataset
         dataset_type = DatasetType[dataset_config.dataset_type.upper()]
         loader_cls = LoaderUtils.get_loader_type(dataset_type)
@@ -87,12 +97,14 @@ class TrainUtils:
 
     @classmethod
     def parse_config(cls, config_name: str, config_filepath: str) -> TrainingConfig:
+        """Loads a yaml file and converts it into a training configuration"""
         with open(config_filepath) as f:
             loaded_yaml = yaml.safe_load(f)
         return TrainingConfig(**loaded_yaml[config_name])
 
     @classmethod
     def get_peft_config(cls, config: TrainingConfig) -> Optional[PeftConfig]:
+        """Gets the configuration from parameter efficient fine tuning"""
         if not config.training_hyperparameters.peft_type.upper():
             return None
         peft_type = PeftType[config.training_hyperparameters.peft_type.upper()]
@@ -114,7 +126,22 @@ class TrainUtils:
             )
 
     @classmethod
-    def load_model(cls, config: TrainingConfig, is_local: bool = False, requires_value_head: bool = False):
+    def load_model(
+        cls, config: TrainingConfig, is_local: bool = False, requires_value_head: bool = False
+    ) -> AutoModelForCausalLM:
+        """
+        Loads a model using the specified configuration.
+
+        Params:
+            config: the configuration covering the training hyperparameters
+            is_local: whether it's being run on a cpu
+            requires_value_head: whether we need to wrap the model with a layer that generates scalar values.
+                (Only used for PPO training for now)
+
+        Returns:
+            model: a model loaded from huggingface
+        """
+
         local_rank = int(os.environ.get("LOCAL_RANK", "0"))
         device_map = {"": local_rank}
         if not is_local:
@@ -162,9 +189,9 @@ class TrainUtils:
 
     @classmethod
     def get_tokenizer(cls, config: TrainingConfig) -> AutoTokenizer:
+        """Gets the tokenizer associated with the specified model"""
         tokenizer = AutoTokenizer.from_pretrained(
             config.model_name,
-            additional_special_tokens=[constants.QUOTE_TAG, constants.UNQUOTE_TAG],
             token=os.getenv("META_ACCESS_TOKEN") if config.requires_token else None,
         )
         tokenizer.pad_token = tokenizer.eos_token
