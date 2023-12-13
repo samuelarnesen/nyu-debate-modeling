@@ -9,7 +9,7 @@ import torch
 import yaml
 
 from enum import Enum
-from typing import Optional, Union
+from typing import Optional, Type, Union
 import os
 
 
@@ -60,6 +60,7 @@ class DatasetConfig(BaseModel):
 class TrainingConfig(BaseModel):
     model_name: str
     reference_model_name: Optional[str]
+    llm_type: str = "llama"
     prompt_config: PromptConfig
     logging_and_saving_config: Optional[LoggingAndSavingConfig]
     training_hyperparameters: Optional[TrainingHyperParameterConfig]

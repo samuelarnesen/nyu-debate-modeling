@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
 import argparse
@@ -12,6 +12,7 @@ parser.add_argument("--requires_token", action="store_true", default=False)
 args = parser.parse_args()
 
 load_dotenv()
+
 base_model = AutoModelForCausalLM.from_pretrained(
     args.model_name,
     return_dict=True,
@@ -21,3 +22,6 @@ base_model = AutoModelForCausalLM.from_pretrained(
 )
 
 base_model.save_pretrained(args.save_name)
+
+base_tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+base_tokenizer.save_pretrained(args.save_name)

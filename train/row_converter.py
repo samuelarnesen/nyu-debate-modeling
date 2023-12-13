@@ -1,4 +1,4 @@
-from agents import Debater, DebaterUtils, Judge, JudgeUtils, LlamaInput, LlamaModel, Transcript
+from agents import Debater, DebaterUtils, Judge, JudgeUtils, LLMInput, LLMType, Transcript
 from data import AnnotatedQualityDebatesDataset, DataRow, DatasetType, RawDataset, SpeakerType, SpeechData, SplitType
 from prompts import DynamicPromptParser, Prompt, PromptParser, PromptTag
 from train.train_utils import TrainingConfig, TrainingTarget
@@ -107,7 +107,7 @@ class RowConverter:
         is_debater: bool,
         dataset: RawDataset,
         use_dummy: bool = False,
-    ) -> list[LlamaInput]:
+    ) -> list[LLMInput]:
         """
         Returns a list of inputs that can be used as rows in an actual training dataset.
 
@@ -122,10 +122,11 @@ class RowConverter:
             use_dummy: whether to use a dummy speech instead of the text of a real speech (for dynamic prompting only)
 
         Returns:
-            llama_inputs: a list of inputs of type LlamaInput that can be easily converted into a dataset that
+            llm_inputs: a list of inputs of type LLMInput that can be easily converted into a dataset that
                 the Trainer objects can process.
         """
-        llama_inputs = []
+        llm_class = LLMType[config.llm_type].get_llm_class()
+        llm_inputs = []
 
         only_judge_has_spoken = True
         previous_speaker_type = SpeakerType.JUDGE
@@ -141,7 +142,7 @@ class RowConverter:
                 rounds += 1
 
             if config.opening_speeches_only and rounds > (1 if is_debater else 2):
-                return llama_inputs
+                return llm_inputs
 
             if skipping_func(speech):
                 speeches_so_far.append(speech)
@@ -175,27 +176,27 @@ class RowConverter:
                     )
 
             if config.prompt_config.use_scratchpad:
-                llama_inputs.append(
-                    LlamaModel.generate_llama_input_from_model_inputs(
+                llm_inputs.append(
+                    llm_class.generate_llm_input_from_model_inputs(
                         input_list=transcript.to_model_input(), extra_suffix=speech.scratchpad
                     ).dict()
                 )
                 transcript.add_speech(speaker=name, content=speech.scratchpad if not use_dummy else (dummy_text + "\n"))
 
-            llama_inputs.append(
-                LlamaModel.generate_llama_input_from_model_inputs(
+            llm_inputs.append(
+                llm_class.generate_llm_input_from_model_inputs(
                     input_list=transcript.to_model_input(), extra_suffix=speech.text
                 ).dict()
             )
 
             previous_speaker_type = speech.speaker_type
             speeches_so_far.append(speech)
-        return llama_inputs
+        return llm_inputs
 
     @classmethod
     def convert_all_speeches_for_debater(
         cls, row: DataRow, config: TrainingConfig, dataset: RawDataset, use_dummy: bool = False
-    ) -> list[LlamaInput]:
+    ) -> list[LLMInput]:
         """Returns a list of inputs that can be used as rows in an actual training dataset that can be
         used to train a debater. See convert_transcript() for more details"""
         Const

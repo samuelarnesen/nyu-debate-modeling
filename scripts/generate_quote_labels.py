@@ -143,9 +143,3 @@ if __name__ == "__main__":
     print(results)
 
     # TODO: match the results with the quotes and save the results somewhere
-
-
-
-
-
-        

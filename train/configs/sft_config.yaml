@@ -50,6 +50,32 @@ Train - 13B - Alpaca:
         dataset_type: quality_debates
         full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
         split_type: train
+Train - Mixtral:
+    model_name: /vast/spa9663/models/base_models/mixtral-8x7b
+    llm_type: mistral
+    target: debater
+    opening_speeches_only: False
+    training_hyperparameters:
+        num_train_epochs: 4
+        per_device_train_batch_size: 4
+        gradient_accumulation_steps: 4
+        optim: paged_adamw_32bit
+        learning_rate: 2e-4
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+    logging_and_saving_config:
+        logging_steps: 10
+        output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b
+        merge_output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-merged
+    prompt_config:
+        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
+        prompt_name: Base Prompt
+    dataset:
+        dataset_type: quality_debates
+        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
+        split_type: train
 Train - 13B - Alpaca - Annotated:
     model_name: Yukang/LongAlpaca-13B
     target: debater

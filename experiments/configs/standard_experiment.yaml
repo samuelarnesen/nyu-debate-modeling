@@ -66,13 +66,13 @@
         model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
         alias: "merged-4"
         greedy: True
-        scratchpad_word_limit: 100
+        scratchpad_word_limit: 200
         scratchpad_public: True
       - model_type: llama
         model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
         alias: "merged-4"
         greedy: True
-        scratchpad_word_limit: 100
+        scratchpad_word_limit: 200
         scratchpad_public: True
     judge:
       model_type: openai
@@ -106,6 +106,36 @@
         greedy: True
         scratchpad_word_limit: 100
         scratchpad_public: True
+    judge:
+      model_type: random
+      alias: "random-judge"
+  dataset:
+    dataset_type: quality
+    train_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.train
+    val_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.dev
+    test_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.test
+    split_type: train
+Mixtral - 8x7b:
+  topic_config:
+    topic_type: from_dataset
+  word_limit: 500
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  annotations_classifier_file_path: /home/spa9663/debate-data/classifier.p
+  prompt_config:
+    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
+    default_prompt_name: Base Prompt
+  agents:
+    debaters:
+      - model_type: mistral
+        model_file_path: /vast/spa9663/models/base_models/mixtral-8x7b
+        alias: "mistral-base"
+        greedy: True
+      - model_type: mistral
+        model_file_path: /vast/spa9663/models/base_models/mixtral-8x7b
+        alias: "mistral-base"
+        greedy: True
     judge:
       model_type: random
       alias: "random-judge"

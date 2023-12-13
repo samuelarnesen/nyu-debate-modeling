@@ -1,4 +1,4 @@
-from agents import LlamaInput, LlamaModel
+from agents import LLMInput, LLMType
 from data import DataRow, RawDataset, SplitType
 from train.row_converter import RowConverter
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
@@ -12,7 +12,7 @@ from trl import DataCollatorForCompletionOnlyLM, SFTTrainer
 import pandas as pd
 import torch
 
-from typing import Optional
+from typing import Optional, Type
 
 try:
     from utils.flash_attn_utils import replace_attn_with_flash_attn, upcast_layer_for_flash_attention
@@ -27,15 +27,16 @@ class SupervisedTrainer:
     """Class for training a model using Supervised Fine Tuning"""
 
     @classmethod
-    def format_instruction(cls, llama_dictionary: dict[str, list[str]]) -> str:
+    def format_instruction(cls, llm_dictionary: dict[str, list[str]], llm_type: LLMType) -> str:
         """Converts a dataset row into a prompt string"""
+        llm_class = LLMType.get_llm_class()
         instructions = []
         for instruction_val, input_val, extra_suffix in zip(
-            llama_dictionary.get("instruction"), llama_dictionary.get("input"), llama_dictionary.get("extra_suffix")
+            llm_dictionary.get("instruction"), llm_dictionary.get("input"), llm_dictionary.get("extra_suffix")
         ):
             instructions.append(
-                LlamaModel.generate_input_str(
-                    LlamaInput(instruction=instruction_val, input=input_val, extra_suffix=extra_suffix)
+                llm_class.generate_input_str(
+                    LLMInput(instruction=instruction_val, input=input_val, extra_suffix=extra_suffix)
                 )
             )
         return instructions
@@ -44,12 +45,12 @@ class SupervisedTrainer:
     def convert_dataset(cls, raw_dataset: RawDataset, config: TrainingConfig, target: TrainingTarget) -> Dataset:
         """Converts a dataset (abstraction used in this codebase) into a Dataset object (abstraction
         used by huggingface's trainer objects)"""
-        llama_input_lists = [
+        llm_input_lists = [
             RowConverter.convert_row(row=row, config=config, target=target, dataset=raw_dataset)
             for i, row in enumerate(raw_dataset.get_data(split=SplitType.TRAIN))
         ]
-        llama_inputs = [item for llama_input_list in llama_input_lists for item in llama_input_list]
-        df = pd.DataFrame(data=llama_inputs)
+        llm_inputs = [item for llm_input_list in llm_input_lists for item in llm_input_list]
+        df = pd.DataFrame(data=llm_inputs)
 
         return Dataset.from_pandas(df).shuffle()
 
@@ -115,13 +116,15 @@ class SupervisedTrainer:
         if FLASH_ATTENTION_AVAILABLE:
             model = upcast_layer_for_flash_attention(model, torch.bfloat16).to("cuda")
 
+        llm_type = LLMType[config.llm_type.upper()]
+
         trainer = SFTTrainer(
             model=model,
             train_dataset=train_dataset,
             peft_config=peft_config if not is_local else None,
             tokenizer=tokenizer,
             data_collator=collator,
-            formatting_func=SupervisedTrainer.format_instruction,
+            formatting_func=lambda x: SupervisedTrainer.format_instruction(x, llm_type),
             max_seq_length=config.max_length,
             callbacks=[LoggingCallback],
             args=training_args,

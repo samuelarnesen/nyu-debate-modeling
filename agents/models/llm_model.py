@@ -10,30 +10,46 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import numpy as np
 import torch
 
-from typing import Optional, Union
+from enum import Enum
+from typing import Optional, Union, Type
 import copy
 import re
 
 
-class LlamaInput(BaseModel):
+class LLMInput(BaseModel):
     instruction: str
     input: str
     extra_suffix: Optional[str]
 
 
-class LlamaModel(Model):
-    def __init__(self, alias: str, file_path: Optional[str] = None, is_debater: bool = True, greedy: bool = True):
+class LLModel(Model):
+    INSTRUCTION_PREFIX = ""
+    INSTRUCTION_SUFFIX = ""
+
+    def __init__(
+        self,
+        alias: str,
+        file_path: Optional[str] = None,
+        is_debater: bool = True,
+        greedy: bool = True,
+        instruction_prefix: str = "",
+        instruction_suffix: str = "",
+    ):
         """
-        A Llama model uses Llama2 to generate text.
+        An LLModel uses a large language model (currently Llama 2 or Mistral) to generate text.
 
         Args:
             alias: String that identifies the model for metrics and deduplication
             is_debater: Boolean indicating whether the model is a debater (true) or judge (false)
             greedy: Whether greedy decoding (true) or beam_search (false) should be used.
+            instruction_prefix: the prefix to use before the instructions that get passed to the model
+            instruction_suffix: the suffix to use after the instructions that get passed to the model
         """
         super().__init__(alias=alias, is_debater=is_debater)
         torch.cuda.empty_cache()
         self.logger = LoggerUtils.get_default_logger(__name__)
+        self.instruction_prefix = instruction_prefix
+        self.instruction_suffix = instruction_suffix
         if file_path:
             self.is_debater = is_debater
             self.tokenizer = AutoTokenizer.from_pretrained(file_path)
@@ -72,32 +88,19 @@ class LlamaModel(Model):
                 self.generation_config.top_p = None
                 self.generation_config.temperature = None
 
+            for module in self.model.modules():
+                self.logger.info(module)
+
         else:
             self.is_debater = False
             self.tokenizer = None
             self.model = None
             self.generation_config = None
 
-        if self.model:
-            # self.model.config.max_position_embeddings = constants.MAX_LENGTH
-            self.model.config.transformers_version = "4.34.0"
-            self.model.generation_config.transformers_version = "4.34.0"
-
     @classmethod
-    def generate_input_str(cls, llama_input: LlamaInput) -> str:
-        """Transforms a LlamaInput into a standardized format"""
-        return "{}{}\n\n{}\n\n {} {}".format(
-            constants.INSTRUCTION_PREFIX,
-            llama_input.instruction,
-            llama_input.input,
-            constants.INSTRUCTION_SUFFIX,
-            llama_input.extra_suffix,
-        )
-
-    @classmethod
-    def generate_llama_input_from_model_inputs(cls, input_list: list[ModelInput], extra_suffix: str = "") -> LlamaInput:
-        """Converts a ModelInput into the LlamaInput that's expected by the model"""
-        return LlamaInput(
+    def generate_llm_input_from_model_inputs(cls, input_list: list[ModelInput], extra_suffix: str = "") -> LLMInput:
+        """Converts a ModelInput into the LLMInput that's expected by the model"""
+        return LLMInput(
             instruction="\n".join(
                 model_input.content for model_input in filter(lambda x: x.role == RoleType.SYSTEM, input_list)
             ),
@@ -106,27 +109,43 @@ class LlamaModel(Model):
         )
 
     @classmethod
-    def generate_input_str_from_model_inputs(
-        cls,
-        input_list: list[ModelInput],
-        is_debater: bool = True,
-        alias: str = "",
-        speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
-    ) -> LlamaInput:
-        """Creates the string that can be passed into Llama for it to generate responses"""
+    def generate_input_str(cls, llm_input: LLMInput, instruction_prefix: str = "", instruction_suffix: str = "") -> str:
+        """Transforms a LLMInput into a standardized format"""
+        return "{} {}\n\n{} {}{}".format(
+            instruction_prefix,
+            llm_input.instruction,
+            llm_input.input,
+            instruction_suffix,
+            llm_input.extra_suffix,
+        )
 
-        def get_extra_suffix():
+    def tokenize(
+        self, inputs: list[list[ModelInput]], speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED
+    ) -> torch.Tensor:
+        """Converts a list of model inputs into a tensor that can be passed to a model"""
+
+        def get_extra_suffix(speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED):
             if speech_structure == SpeechStructure.DECISION:
                 return "\n\n" + constants.JUDGING_PREFIX
             elif speech_structure == SpeechStructure.PREFERENCE:
                 return "\n\n" + constants.PREFERENCE_PREFIX
             return ""
 
-        return LlamaModel.generate_input_str(
-            LlamaModel.generate_llama_input_from_model_inputs(input_list=input_list, extra_suffix=get_extra_suffix())
-        )
+        input_strs = []
+        for input_list in inputs:
+            input_strs.append(
+                LlamaModel.generate_input_str(
+                    llm_input=LLModel.generate_llm_input_from_model_inputs(
+                        input_list=input_list, extra_suffix=get_extra_suffix(speech_structure)
+                    ),
+                    instruction_prefix=self.instruction_prefix,
+                    instruction_suffix=self.instruction_suffix,
+                )
+            )
 
-    @timer("llama inference")
+        return self.tokenizer(input_strs, return_tensors="pt", padding=True)
+
+    @timer("llm inference")
     @torch.inference_mode()
     def predict(
         self,
@@ -175,12 +194,7 @@ class LlamaModel(Model):
 
         validate()
         self.model.eval()
-        input_strs = [
-            LlamaModel.generate_input_str_from_model_inputs(input_list, self.is_debater, self.alias, speech_structure)
-            for input_list in inputs
-        ]
-
-        inputs = self.tokenizer(input_strs, return_tensors="pt", padding=True).to("cuda")
+        inputs = self.tokenize(inputs=inputs, speech_structure=speech_structure).to("cuda")
         outputs = self.model.generate(**inputs, generation_config=create_new_generation_config())
         input_lengths = (inputs.input_ids != self.tokenizer.pad_token_id).sum(axis=1)
 
@@ -207,11 +221,72 @@ class LlamaModel(Model):
 
         return decoded_outputs
 
-    def copy(self, alias: str, is_debater: Optional[bool] = None, greedy: bool = False) -> LlamaModel:
+    def copy(self, alias: str, is_debater: Optional[bool] = None, greedy: bool = False) -> LLModel:
         """Generates a deepcopy of this model"""
-        copy = LlamaModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, greedy=greedy)
+        copy = LLModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, greedy=greedy)
         copy.is_debater = self.is_debater if is_debater == None else is_debater
         copy.tokenizer = self.tokenizer
         copy.model = self.model
         copy.generation_config = self.generation_config
         return copy
+
+
+class LlamaModel(LLModel):
+    INSTRUCTION_PREFIX = "instruction:"
+    INSTRUCTION_SUFFIX = "output:"
+
+    def __init__(
+        self,
+        alias: str,
+        file_path: Optional[str] = None,
+        is_debater: bool = True,
+        greedy: bool = True,
+    ):
+        super().__init__(
+            alias=alias,
+            file_path=file_path,
+            is_debater=is_debater,
+            greedy=greedy,
+            instruction_prefix="instruction:",
+            instruction_suffix="output:",
+        )
+
+        if self.model:
+            self.model.config.max_position_embeddings = constants.MAX_LENGTH
+
+
+class MistralModel(LLModel):
+    INSTRUCTION_PREFIX = "[INST]"
+    INSTRUCTION_SUFFIX = "[/INST]"
+
+    def __init__(
+        self,
+        alias: str,
+        file_path: Optional[str] = None,
+        is_debater: bool = True,
+        greedy: bool = True,
+    ):
+        super().__init__(
+            alias=alias,
+            file_path=file_path,
+            is_debater=is_debater,
+            greedy=greedy,
+            instruction_prefix="[INST]",
+            instruction_suffix="[/INST]",
+        )
+
+        if self.model:
+            self.model.config.sliding_window = constants.MAX_LENGTH
+
+
+class LLMType(Enum):
+    LLAMA = 0
+    MISTRAL = 1
+
+    def get_llm_class(self) -> Type[LLModel]:
+        if self == LLMType.LLAMA:
+            return LlamaModel
+        elif self == LLMType.MISTRAL:
+            return MistralModel
+        else:
+            raise Exception(f"Model type {self} not recognized")
