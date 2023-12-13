@@ -72,6 +72,7 @@ class OpenAIModel(Model):
         def model_input_to_openai_format(model_input: ModelInput | str) -> dict[str, str]:
             if isinstance(model_input, str):
                 return {"role": RoleType.USER.name.lower(), "content": model_input}
+            print(model_input)
             return {"role": model_input.role.name.lower(), "content": model_input.content}
 
         def add_addendum(messages: list[dict[str, str]], addendum: str) -> None:

@@ -186,6 +186,7 @@ class AnnotatedQualityDebatesLoader(RawDataLoader):
         cls,
         full_dataset_filepath: str,
         annotations_file_path: str = "",
+        deduplicate: bool = False,
         **kwargs,
     ) -> AnnotatedQualityDebatesDataset:
         """Constructs an AnnotatedQualityDebatesDataset"""

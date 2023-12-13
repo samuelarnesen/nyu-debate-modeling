@@ -36,10 +36,13 @@ class AgentConfig(BaseModel):
     model_type: str
     model_file_path: Optional[str]
     alias: str
-    use_scratchpad: bool = False
-    override_prompt: Optional[str]
+    override_prompt: Optional[str] = None
     greedy: bool = True
     is_memorized: bool = False
+    is_human: bool = False
+    offline_file_path: Optional[str] = None
+    scratchpad_word_limit: Optional[int] = None
+    scratchpad_public: bool = False
 
 
 class AgentsConfig(BaseModel):
@@ -68,15 +71,6 @@ class TopicConfig(BaseModel):
     positions: Optional[tuple[str, str]]
 
 
-class OfflineConfig(BaseModel):
-    debaters: list[str]
-    file_path: str
-
-
-class HumanConfig(BaseModel):
-    debaters: list[str]
-
-
 class BoNConfig(BaseModel):
     count: int
     prompts: Optional[list[str]]
@@ -91,9 +85,7 @@ class ExperimentConfig(BaseModel):
     prompt_config: PromptLoadingConfig
     agents: AgentsConfig
     dataset: DatasetConfig
-    offline: Optional[OfflineConfig]
     best_of_n: Optional[BoNConfig]
-    human: Optional[HumanConfig]
     annotations_classifier_file_path: Optional[str]
 
 
@@ -129,9 +121,9 @@ class ExperimentLoader:
             for metadata in debate_round.metadata:
                 metadata_list.append(metadata)
 
-        first_debater = debate_rounds[0].first_debater.copy()
-        second_debater = debate_rounds[0].second_debater.copy()
-        judge = debate_rounds[0].judge.copy()
+        first_debater = debate_rounds[0].first_debater.copy(prompts=first_debater_prompts)
+        second_debater = debate_rounds[0].second_debater.copy(prompts=second_debater_prompts)
+        judge = debate_rounds[0].judge.copy(prompts=judge_prompts)
 
         return DebateRound(first_debater=first_debater, second_debater=second_debater, judge=judge, metadata=metadata_list)
 
@@ -326,8 +318,6 @@ class ExperimentLoader:
                     prompt=prompt_a,
                     prompt_config=config_a,
                     dataset=dataset,
-                    index=i,
-                    split=split_type,
                     row=example,
                     dynamic_prompt_name=experiment.prompt_config.dynamic_prompt_name,
                 )
@@ -337,8 +327,6 @@ class ExperimentLoader:
                     prompt=prompt_b,
                     prompt_config=config_b,
                     dataset=dataset,
-                    index=i,
-                    split=split_type,
                     row=example,
                     dynamic_prompt_name=experiment.prompt_config.dynamic_prompt_name,
                 )
@@ -348,7 +336,8 @@ class ExperimentLoader:
                 prompt=prompt_a,
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
-                use_scratchpad=experiment.agents.debaters[debater_idxs[0]].use_scratchpad,
+                scratchpad_word_limit=experiment.agents.debaters[debater_idxs[0]].scratchpad_word_limit,
+                scratchpad_public=experiment.agents.debaters[debater_idxs[0]].scratchpad_public,
             )
 
             debater_b = Debater(
@@ -356,7 +345,8 @@ class ExperimentLoader:
                 prompt=prompt_b,
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
-                use_scratchpad=experiment.agents.debaters[debater_idxs[1]].use_scratchpad,
+                scratchpad_word_limit=experiment.agents.debaters[debater_idxs[1]].scratchpad_word_limit,
+                scratchpad_public=experiment.agents.debaters[debater_idxs[1]].scratchpad_public,
             )
 
             judge = Judge(
@@ -385,7 +375,8 @@ class ExperimentLoader:
                 prompt=flipped_prompt_a,
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
-                use_scratchpad=experiment.agents.debaters[debater_idxs[1]].use_scratchpad,
+                scratchpad_word_limit=experiment.agents.debaters[debater_idxs[1]].scratchpad_word_limit,
+                scratchpad_public=experiment.agents.debaters[debater_idxs[1]].scratchpad_public,
             )
 
             flipped_debater_b = Debater(
@@ -393,7 +384,8 @@ class ExperimentLoader:
                 prompt=flipped_prompt_b,
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
-                use_scratchpad=experiment.agents.debaters[debater_idxs[0]].use_scratchpad,
+                scratchpad_word_limit=experiment.agents.debaters[debater_idxs[0]].scratchpad_word_limit,
+                scratchpad_public=experiment.agents.debaters[debater_idxs[0]].scratchpad_public,
             )
 
             flipped_round = DebateRound(
@@ -454,48 +446,47 @@ class ExperimentLoader:
                     )
                 )
 
-            if experiment.offline:
-                if debate_round.first_debater.model.alias in experiment.offline.debaters:
-                    debate_round.set_first_debater(
-                        OfflineDebater(
-                            debater=debate_round.first_debater,
-                            file_path=experiment.offline.file_path,
-                            first_debater_prompt=prompt_a,
-                            round_idx=(i * 2) if experiment.flip else i,
-                        )
+            if experiment.agents.debaters[debater_idxs[0]].offline_file_path:
+                debate_round.set_first_debater(
+                    OfflineDebater(
+                        debater=debate_round.first_debater,
+                        file_path=experiment.agents.debaters[debater_idxs[0]].offline_file_path,
+                        first_debater_prompt=prompt_a,
+                        round_idx=(i * 2) if experiment.flip else i,
                     )
-                    flipped_round.set_second_debater(
-                        OfflineDebater(
-                            debater=flipped_round.second_debater,
-                            file_path=experiment.offline.file_path,
-                            first_debater_prompt=prompt_a,
-                            round_idx=((i * 2) + 1) if experiment.flip else i,
-                        )
+                )
+                flipped_round.set_second_debater(
+                    OfflineDebater(
+                        debater=flipped_round.second_debater,
+                        file_path=experiment.agents.debaters[debater_idxs[0]].offline_file_path,
+                        first_debater_prompt=prompt_a,
+                        round_idx=((i * 2) + 1) if experiment.flip else i,
                     )
-                if debate_round.second_debater.model.alias in experiment.offline.debaters:
-                    debate_round.set_second_debater(
-                        OfflineDebater(
-                            debater=debate_round.second_debater,
-                            file_path=experiment.offline.file_path,
-                            first_debater_prompt=prompt_a,
-                            round_idx=(i * 2) if experiment.flip else i,
-                        )
+                )
+            if experiment.agents.debaters[debater_idxs[1]].offline_file_path:
+                debate_round.set_second_debater(
+                    OfflineDebater(
+                        debater=debate_round.second_debater,
+                        file_path=experiment.agents.debaters[debater_idxs[0]].offline_file_path,
+                        first_debater_prompt=prompt_a,
+                        round_idx=(i * 2) if experiment.flip else i,
                     )
-                    flipped_round.set_first_debater(
-                        OfflineDebater(
-                            debater=flipped_round.first_debater,
-                            file_path=experiment.offline.file_path,
-                            first_debater_prompt=prompt_a,
-                            round_idx=((i * 2) + 1) if experiment.flip else i,
-                        )
+                )
+                flipped_round.set_first_debater(
+                    OfflineDebater(
+                        debater=flipped_round.first_debater,
+                        file_path=experiment.agents.debaters[debater_idxs[1]].offline_file_path,
+                        first_debater_prompt=prompt_a,
+                        round_idx=((i * 2) + 1) if experiment.flip else i,
                     )
-            if experiment.human:
-                if debate_round.first_debater.model.alias in experiment.human.debaters:
-                    debate_round.set_first_debater(HumanDebater(debater=debate_round.first_debater, speeches=speeches))
-                    flipped_round.set_first_debater(HumanDebater(debater=flipped_round.first_debater, speeches=speeches))
-                if debate_round.second_debater.model.alias in experiment.human.debaters:
-                    debate_round.set_second_debater(HumanDebater(debater=debate_round.second_debater, speeches=speeches))
-                    flipped_round.set_second_debater(HumanDebater(debater=flipped_round.second_debater, speeches=speeches))
+                )
+
+            if experiment.agents.debaters[debater_idxs[0]].is_human:
+                debate_round.set_first_debater(HumanDebater(debater=debate_round.first_debater, speeches=speeches))
+                flipped_round.set_first_debater(HumanDebater(debater=flipped_round.first_debater, speeches=speeches))
+            if experiment.agents.debaters[debater_idxs[1]].is_human:
+                debate_round.set_second_debater(HumanDebater(debater=debate_round.second_debater, speeches=speeches))
+                flipped_round.set_second_debater(HumanDebater(debater=flipped_round.second_debater, speeches=speeches))
 
             rounds.append(debate_round)
             if experiment.flip:

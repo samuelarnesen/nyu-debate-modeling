@@ -63,15 +63,17 @@
   agents:
     debaters:
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-Memorized-4
-        alias: "memorized-4"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+        alias: "merged-4"
         greedy: True
-        use_scratchpad: True
+        scratchpad_word_limit: 100
+        scratchpad_public: True
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-Memorized-4
-        alias: "memorized-4"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+        alias: "merged-4"
         greedy: True
-        use_scratchpad: False
+        scratchpad_word_limit: 100
+        scratchpad_public: True
     judge:
       model_type: openai
       alias: "openai-judge"
@@ -93,20 +95,20 @@
   agents:
     debaters:
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-Memorized-4
-        alias: "4-memorized"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted/
+        alias: "scratchpad-4"
         greedy: True
-        use_scratchpad: False
-        is_memorized: True
+        scratchpad_word_limit: 100
+        scratchpad_public: True
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-Memorized-4
-        alias: "4-memorized"
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted/
+        alias: "scratchpad-4"
         greedy: True
-        use_scratchpad: False
-        is_memorized: True
+        scratchpad_word_limit: 100
+        scratchpad_public: True
     judge:
-      model_type: openai
-      alias: "openai-judge"
+      model_type: random
+      alias: "random-judge"
   dataset:
     dataset_type: quality
     train_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.train

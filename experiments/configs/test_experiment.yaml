@@ -111,8 +111,10 @@ Offline_Test:
     debaters:
       - model_type: random
         alias: offline-debater-1
+        offline_file_path: /Users/samarnesen/nyu/debate-data/transcripts/2023-11-28_11:09:25.726737
       - model_type: random
         alias: offline-debater-1
+        offline_file_path: /Users/samarnesen/nyu/debate-data/transcripts/2023-11-28_11:09:25.726737
     judge:
       model_type: random
       alias: random-judge
@@ -122,10 +124,6 @@ Offline_Test:
     val_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev
     test_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test
     split_type: train
-  offline:
-    debaters:
-      - offline-debater-1
-    file_path: /Users/samarnesen/nyu/debate-data/transcripts/2023-11-28_11:09:25.726737
 BoN_Test:
   topic_config:
     topic_type: from_dataset
@@ -198,17 +196,16 @@ Human_Test:
     debaters:
       - model_type: random
         alias: 'human-debater'
+        is_human: True
       - model_type: random
         alias: 'human-debater'
+        is_human: True
     judge:
       model_type: random
       alias: random-judge
   dataset:
     dataset_type: quality_debates
     full_dataset_file_path: ../../debate-data/debates-readable.jsonl
-  human:
-    debaters:
-      - 'human-debater'
 Dynamic_Test:
   topic_config:
     topic_type: from_dataset
@@ -280,10 +277,12 @@ Labelled_Scratchpad_Test:
     debaters:
       - model_type: random
         alias: debater-1
-        use_scratchpad: true
+        scratchpad_word_limit: 100
+        scratchpad_public: False
       - model_type: random
         alias: debater-2
-        use_scratchpad: true
+        scratchpad_word_limit: 100
+        scratchpad_public: False
     judge:
       model_type: random
       alias: random-judge
@@ -295,8 +294,8 @@ Operational_Test:
   topic_config:
     topic_type: from_dataset
   word_limit: 500
-  batch_size: 1
-  num_speeches: 2
+  batch_size: 8
+  num_speeches: 1
   flip: False
   prompt_config:
     file_path: ./prompts/configs/prompts.yaml
@@ -305,6 +304,8 @@ Operational_Test:
     debaters:
       - model_type: random
         alias: debater-1
+        scratchpad_word_limit: 100
+        scratchpad_public: True
       - model_type: random
         alias: debater-2
     judge:

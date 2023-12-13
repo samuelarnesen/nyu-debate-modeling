@@ -6,8 +6,6 @@ from .experiment_loader import (
     DatasetConfig,
     ExperimentConfig,
     ExperimentLoader,
-    HumanConfig,
-    OfflineConfig,
     PromptLoadingConfig,
     TopicConfigType,
     TopicConfig,

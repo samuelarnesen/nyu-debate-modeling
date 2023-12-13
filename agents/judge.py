@@ -100,11 +100,11 @@ class Judge(Agent):
         """Converts a text response to a list of booleans indicating if Debater_A won"""
         return [constants.DEFAULT_DEBATER_A_NAME in response for response in responses]
 
-    def copy(self, transcripts: Optional[list[Transcript]] = None) -> Judge:
+    def copy(self, transcripts: Optional[list[Transcript]] = None, prompts: Optional[list[Prompt] | Prompt] = None) -> Judge:
         """Deep copies everything except the underlying model"""
         judge = Judge(
             name=self.name,
-            prompt=[copy.deepcopy(prompt) for prompt in self.prompts],
+            prompt=prompts if prompts else [copy.deepcopy(prompt) for prompt in self.prompts],
             model=self.model,
             num_speeches=self.num_speeches,
             speech_format=self.speech_format,
