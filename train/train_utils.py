@@ -1,3 +1,4 @@
+from agents import LLMType
 from data import DatasetType, LoaderUtils, RawDataset
 import utils.constants as constants
 
@@ -109,6 +110,7 @@ class TrainUtils:
         if not config.training_hyperparameters.peft_type.upper():
             return None
         peft_type = PeftType[config.training_hyperparameters.peft_type.upper()]
+        llm_class = TrainUtils.get_llm_class(config=config)
         if peft_type == PeftType.LORA:
             return LoraConfig(
                 lora_alpha=16,
@@ -116,6 +118,7 @@ class TrainUtils:
                 r=64,
                 bias="none",
                 task_type=TaskType.CAUSAL_LM,
+                target_modules=llm_class.TARGET_MODULES
             )
         elif peft_type == PeftType.PROMPT_TUNING:
             return PromptTuningConfig(
@@ -198,3 +201,8 @@ class TrainUtils:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = "right"
         return tokenizer
+
+    @classmethod
+    def get_llm_class(cls, config: TrainingConfig):
+        return LLMType[config.llm_type.upper()].get_llm_class()
+

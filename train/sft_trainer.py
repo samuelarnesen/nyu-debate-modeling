@@ -1,4 +1,4 @@
-from agents import LLMInput, LLMType
+from agents import LLMInput, LLModel, LLMType
 from data import DataRow, RawDataset, SplitType
 from train.row_converter import RowConverter
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
@@ -27,16 +27,17 @@ class SupervisedTrainer:
     """Class for training a model using Supervised Fine Tuning"""
 
     @classmethod
-    def format_instruction(cls, llm_dictionary: dict[str, list[str]], llm_type: LLMType) -> str:
+    def format_instruction(cls, llm_dictionary: dict[str, list[str]], llm_class: Type[LLModel]) -> str:
         """Converts a dataset row into a prompt string"""
-        llm_class = LLMType.get_llm_class()
         instructions = []
         for instruction_val, input_val, extra_suffix in zip(
             llm_dictionary.get("instruction"), llm_dictionary.get("input"), llm_dictionary.get("extra_suffix")
         ):
             instructions.append(
                 llm_class.generate_input_str(
-                    LLMInput(instruction=instruction_val, input=input_val, extra_suffix=extra_suffix)
+                    LLMInput(instruction=instruction_val, input=input_val, extra_suffix=extra_suffix),
+                    llm_class.INSTRUCTION_PREFIX,
+                    llm_class.INSTRUCTION_SUFFIX
                 )
             )
         return instructions
@@ -99,8 +100,10 @@ class SupervisedTrainer:
             use_cpu=is_local,
         )
 
+        llm_class = TrainUtils.get_llm_class(config=config)
+
         collator = DataCollatorForCompletionOnlyLM(
-            response_template=tokenizer.encode("\n " + constants.INSTRUCTION_SUFFIX, add_special_tokens=False)[2:],
+            response_template=tokenizer.encode("\n " + llm_class.INSTRUCTION_SUFFIX, add_special_tokens=False)[2:],
             tokenizer=tokenizer,
         )
 
@@ -116,15 +119,13 @@ class SupervisedTrainer:
         if FLASH_ATTENTION_AVAILABLE:
             model = upcast_layer_for_flash_attention(model, torch.bfloat16).to("cuda")
 
-        llm_type = LLMType[config.llm_type.upper()]
-
         trainer = SFTTrainer(
             model=model,
             train_dataset=train_dataset,
             peft_config=peft_config if not is_local else None,
             tokenizer=tokenizer,
             data_collator=collator,
-            formatting_func=lambda x: SupervisedTrainer.format_instruction(x, llm_type),
+            formatting_func=lambda x: SupervisedTrainer.format_instruction(x, llm_class),
             max_seq_length=config.max_length,
             callbacks=[LoggingCallback],
             args=training_args,

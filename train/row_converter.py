@@ -125,7 +125,7 @@ class RowConverter:
             llm_inputs: a list of inputs of type LLMInput that can be easily converted into a dataset that
                 the Trainer objects can process.
         """
-        llm_class = LLMType[config.llm_type].get_llm_class()
+        llm_class = LLMType[config.llm_type.upper()].get_llm_class()
         llm_inputs = []
 
         only_judge_has_spoken = True
@@ -199,7 +199,6 @@ class RowConverter:
     ) -> list[LLMInput]:
         """Returns a list of inputs that can be used as rows in an actual training dataset that can be
         used to train a debater. See convert_transcript() for more details"""
-        Const
         return RowConverter.convert_transcript(
             row=row,
             config=config,

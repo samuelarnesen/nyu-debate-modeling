@@ -25,6 +25,7 @@ class LLMInput(BaseModel):
 class LLModel(Model):
     INSTRUCTION_PREFIX = ""
     INSTRUCTION_SUFFIX = ""
+    TARGET_MODULES = []
 
     def __init__(
         self,
@@ -116,7 +117,7 @@ class LLModel(Model):
             llm_input.instruction,
             llm_input.input,
             instruction_suffix,
-            llm_input.extra_suffix,
+            (" " + llm_input.extra_suffix) if llm_input.extra_suffix else "",
         )
 
     def tokenize(
@@ -234,6 +235,7 @@ class LLModel(Model):
 class LlamaModel(LLModel):
     INSTRUCTION_PREFIX = "instruction:"
     INSTRUCTION_SUFFIX = "output:"
+    TARGET_MODULES = ["k_proj", "v_proj", "down_proj"]
 
     def __init__(
         self,
@@ -258,6 +260,7 @@ class LlamaModel(LLModel):
 class MistralModel(LLModel):
     INSTRUCTION_PREFIX = "[INST]"
     INSTRUCTION_SUFFIX = "[/INST]"
+    TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj"]
 
     def __init__(
         self,

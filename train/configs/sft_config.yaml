@@ -55,6 +55,7 @@ Train - Mixtral:
     llm_type: mistral
     target: debater
     opening_speeches_only: False
+    max_length: 32986
     training_hyperparameters:
         num_train_epochs: 4
         per_device_train_batch_size: 4
@@ -72,6 +73,7 @@ Train - Mixtral:
     prompt_config:
         prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
         prompt_name: Base Prompt
+        is_memorized: False
     dataset:
         dataset_type: quality_debates
         full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
