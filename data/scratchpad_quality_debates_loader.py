@@ -6,6 +6,8 @@ import utils.constants as constants
 from tqdm import tqdm
 
 from typing import Any, Optional
+import os
+import pickle
 import re
 
 
@@ -56,6 +58,7 @@ class ScratchpadQualityDebatesDataset(QualityDebatesDataset):
 
 
 class ScratchpadQualityDebatesLoader(RawDataLoader):
+    DEFAULT_PICKLE_PATH = os.environ[constants.SRC_ROOT] + "data/datasets/scratchpad-quality-debates/scratchpad-quality-debates.p"
     @classmethod
     def load(
         cls,
@@ -64,6 +67,9 @@ class ScratchpadQualityDebatesLoader(RawDataLoader):
         **kwargs,
     ) -> ScratchpadQualityDebatesDataset:
         """Constructs a ScratchpadQualityDebatesDataset"""
+        if os.path.exists(ScratchpadQualityDebatesLoader.DEFAULT_PICKLE_PATH):
+            with open(ScratchpadQualityDebatesLoader.DEFAULT_PICKLE_PATH, "rb") as f:
+                return pickle.load(f)
         full_dataset_filepath = full_dataset_filepath or QualityDebatesLoader.DEFAULT_FILE_PATH
         train, val, test = QualityDebatesLoader.get_splits(file_path=full_dataset_filepath, deduplicate=deduplicate)
         return ScratchpadQualityDebatesDataset(

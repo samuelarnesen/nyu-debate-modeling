@@ -151,13 +151,15 @@ def process_model_output(output: str, a_quote_list: list[str], b_quote_list: lis
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--test", action="store_true", default=False)
-    parser.add_argument("--timestamp", type=str, default="")
-    args = parser.parse_args()
 
     root = os.environ[constants.SRC_ROOT]
     batch_size = 8
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--test", action="store_true", default=False)
+    parser.add_argument("--timestamp", type=str, default="")
+    parser.add_argument("--save", action="store_true", default=False)
+    args = parser.parse_args()
 
     model = OpenAIModel(alias="relevance-judge", is_debater=False) if not args.test else FakeOpenAIModel()
     input_texts = InputUtils.read_file_texts(base_path=f"{root}outputs/transcripts/{args.timestamp}", group_by_batch=False)
@@ -220,10 +222,12 @@ if __name__ == "__main__":
 
             current_batch = []
 
+    
     pickle_path = f"{root}data/datasets/quote-relevance/quote-relevance.p"
 
-    with open(pickle_path, "wb") as f:
-        pickle.dump(results, f)
+    if args.save or not args.test:
+        with open(pickle_path, "wb") as f:
+            pickle.dump(results, f)
 
     dataset = QuoteRelevanceLoader.load()
 

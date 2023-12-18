@@ -6,6 +6,7 @@ import json
 import itertools
 import os
 import random
+import statistics
 
 
 class QualityDataset(RawDataset):
@@ -26,7 +27,7 @@ class QualityDataset(RawDataset):
             test_data: list of testing data loaded from quality jsonl file
             override_type: if this is being used as a parent class, this is the dataset type of the child
             allow_multiple_positions_per_question: many quality questions have more than two answers. By default,
-                we will randomly select two of those options. If this parameter is set to true, we will create
+                we will select the best distractor If this parameter is set to true, we will create
                 a separate row for every single combination of positions
         """
         super().__init__(override_type or DatasetType.QUALITY)
@@ -70,15 +71,25 @@ class QualityDataset(RawDataset):
         question = entry["questions"][question_idx]
         if "gold_label" not in question or "difficult" not in question or question["difficult"] == 0:
             return None
-        correct_answer = int(question["gold_label"]) - 1
-        incorrect_answers = [i for i in filter(lambda x: x != correct_answer, range(len(question["options"])))]
 
-        possible_position_pairs = [(correct_answer, incorrect_answer, True) for incorrect_answer in incorrect_answers] + [
-            (incorrect_answer, correct_answer, False) for incorrect_answer in incorrect_answers
-        ]
+        correct_answer = int(question["gold_label"]) - 1
+
+        if self.allow_multiple_positions_per_question:
+            incorrect_answers = [i for i in filter(lambda x: x != correct_answer, range(len(question["options"])))]
+            possible_position_pairs = [
+                (correct_answer, incorrect_answer, True) for incorrect_answer in incorrect_answers
+            ] + [(incorrect_answer, correct_answer, False) for incorrect_answer in incorrect_answers]
+        else:
+            best_wrong_guesses = [
+                val["untimed_best_distractor"]
+                if (val["untimed_answer"] == question["gold_label"])
+                else val["untimed_answer"]
+                for val in question["validation"]
+            ]
+            incorrect_answer = statistics.mode(best_wrong_guesses) - 1
+            possible_position_pairs = [(correct_answer, incorrect_answer, True), (incorrect_answer, correct_answer, False)]
+
         random.shuffle(possible_position_pairs)
-        if not self.allow_multiple_positions_per_question:
-            possible_position_pairs = [possible_position_pairs[0]]
 
         rows = []
         for first, second, first_correct in possible_position_pairs:
@@ -119,6 +130,10 @@ class QualityLoader(RawDataLoader):
                         entries.append(json.loads(line))
             return entries
 
+        train_filepath = train_filepath or QualityLoader.DEFAULT_TRAIN_PATH
+        val_filepath = val_filepath or QualityLoader.DEFAULT_VAL_PATH
+        test_filepath = test_filepath or QualityLoader.DEFAULT_TEST_PATH
+
         train_split = __load_individual_file(train_filepath)
         val_split = __load_individual_file(val_filepath)
         test_split = __load_individual_file(test_filepath)
@@ -134,9 +149,7 @@ class QualityLoader(RawDataLoader):
         **kwargs,
     ) -> QualityDataset:
         """Constructs a QualityDataset"""
-        train_filepath = train_filepath or QualityLoader.DEFAULT_TRAIN_PATH
-        val_filepath = val_filepath or QualityLoader.DEFAULT_VAL_PATH
-        test_filepath = test_filepath or QualityLoader.DEFAULT_TEST_PATH
+
         train_split, val_split, test_split = QualityLoader.get_splits(
             train_filepath=train_filepath, val_filepath=val_filepath, test_filepath=test_filepath
         )
