@@ -37,7 +37,7 @@ class SupervisedTrainer:
                 llm_class.generate_input_str(
                     LLMInput(instruction=instruction_val, input=input_val, extra_suffix=extra_suffix),
                     llm_class.INSTRUCTION_PREFIX,
-                    llm_class.INSTRUCTION_SUFFIX
+                    llm_class.INSTRUCTION_SUFFIX,
                 )
             )
         return instructions
@@ -50,9 +50,11 @@ class SupervisedTrainer:
             RowConverter.convert_row(row=row, config=config, target=target, dataset=raw_dataset)
             for i, row in enumerate(raw_dataset.get_data(split=SplitType.TRAIN))
         ]
-        llm_inputs = [item for llm_input_list in llm_input_lists for item in llm_input_list]
-        df = pd.DataFrame(data=llm_inputs)
+        llm_inputs = [
+            item for llm_input_list in llm_input_lists for item in filter(lambda x: x["extra_suffix"], llm_input_list)
+        ]
 
+        df = pd.DataFrame(data=llm_inputs)
         return Dataset.from_pandas(df).shuffle()
 
     @classmethod

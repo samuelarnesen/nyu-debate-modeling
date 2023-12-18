@@ -72,7 +72,6 @@ class OpenAIModel(Model):
         def model_input_to_openai_format(model_input: ModelInput | str) -> dict[str, str]:
             if isinstance(model_input, str):
                 return {"role": RoleType.USER.name.lower(), "content": model_input}
-            print(model_input)
             return {"role": model_input.role.name.lower(), "content": model_input.content}
 
         def add_addendum(messages: list[dict[str, str]], addendum: str) -> None:
@@ -114,8 +113,6 @@ class OpenAIModel(Model):
 
             message = completion.choices[0].message["content"]
 
-            self.logger.info(f"Received message")
-
             if speech_structure == SpeechStructure.DECISION:
                 message = extract_response_from_structured_speech(
                     message=message,
@@ -135,4 +132,4 @@ class OpenAIModel(Model):
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> HumanModel:
         """Generates a deepcopy of this model"""
-        return HumanModel(alias=alias, is_debater=is_debater)
+        return self(alias=alias, is_debater=is_debater)

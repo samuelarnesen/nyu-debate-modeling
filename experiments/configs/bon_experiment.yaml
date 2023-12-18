@@ -1,15 +1,10 @@
 13B Experiment - Train:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
   best_of_n:
     count: 2
-  prompt_config:
-    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: llama
@@ -23,22 +18,14 @@
       alias: "random"
   dataset:
     dataset_type: quality
-    train_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.train
-    val_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.dev
-    test_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.test
     split_type: train
 13B Experiment - Train - DPO:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
   best_of_n:
     count: 2
-  prompt_config:
-    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: llama
@@ -52,22 +39,14 @@
       alias: "openai-judge"
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
     split_type: train
 13B Experiment - Val:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
   best_of_n:
     count: 2
-    prompts:
-      - Base Prompt
-  prompt_config:
-    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: llama
@@ -81,5 +60,4 @@
       alias: "openai-judge"
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
     split_type: val

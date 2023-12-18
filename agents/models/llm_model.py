@@ -89,9 +89,6 @@ class LLModel(Model):
                 self.generation_config.top_p = None
                 self.generation_config.temperature = None
 
-            for module in self.model.modules():
-                self.logger.info(module)
-
         else:
             self.is_debater = False
             self.tokenizer = None
@@ -256,6 +253,15 @@ class LlamaModel(LLModel):
         if self.model:
             self.model.config.max_position_embeddings = constants.MAX_LENGTH
 
+    def copy(self, alias: str, is_debater: Optional[bool] = None, greedy: bool = False) -> LLModel:
+        """Generates a deepcopy of this model"""
+        copy = LlamaModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, greedy=greedy)
+        copy.is_debater = self.is_debater if is_debater == None else is_debater
+        copy.tokenizer = self.tokenizer
+        copy.model = self.model
+        copy.generation_config = self.generation_config
+        return copy
+
 
 class MistralModel(LLModel):
     INSTRUCTION_PREFIX = "[INST]"
@@ -280,6 +286,15 @@ class MistralModel(LLModel):
 
         if self.model:
             self.model.config.sliding_window = constants.MAX_LENGTH
+
+    def copy(self, alias: str, is_debater: Optional[bool] = None, greedy: bool = False) -> LLModel:
+        """Generates a deepcopy of this model"""
+        copy = MistralModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, greedy=greedy)
+        copy.is_debater = self.is_debater if is_debater == None else is_debater
+        copy.tokenizer = self.tokenizer
+        copy.model = self.model
+        copy.generation_config = self.generation_config
+        return copy
 
 
 class LLMType(Enum):

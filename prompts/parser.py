@@ -6,6 +6,7 @@ import yaml
 
 from enum import Enum
 from typing import Any, Optional
+import os
 import random
 import re
 
@@ -85,20 +86,28 @@ class PromptConfig(BaseModel):
 
 
 class PromptParser:
+    DEFAULT_PROMPT_FILE_PATH = os.environ[constants.SRC_ROOT] + "prompts/configs/prompts.yaml"
+
     @classmethod
-    def parse(cls, prompts_file_path: str, prompt_config: PromptConfig, name: str) -> Prompt:
+    def parse(
+        cls,
+        prompt_config: PromptConfig,
+        prompts_file_path: Optional[str] = None,
+        name: str = "Basic Prompt",
+    ) -> Prompt:
         """
         Constructs a Prompt object that can then be used by a Debater or Judge to generate text.
 
         Params:
-            prompts_file_path: path to where the prompt messages are listed
             prompt_config: configuration containing the values to fill in the prompt with
                 (e.g. names of the debaters, topic to be debated, background text)
+            prompts_file_path: path to where the prompt messages are listed
             name: the specific prompt name to use (aka which messages to select from the prompt file)
 
         Returns:
             prompt: a prompt object containing a list of messages that the agents use to run a debate round
         """
+        prompts_file_path = prompts_file_path or PromptParser.DEFAULT_PROMPT_FILE_PATH
         with open(prompts_file_path) as f:
             loaded_yaml = yaml.safe_load(f)
 
@@ -151,6 +160,8 @@ class PromptParser:
 
 
 class DynamicPromptParser:
+    DEFAULT_DYNAMIC_PROMPT_FILE_PATH = os.environ["SRC_ROOT"] + "/prompts/configs/dynamic_prompts.yaml"
+
     @classmethod
     def get_dynamic_prompt(
         cls,
@@ -228,12 +239,12 @@ class DynamicPromptParser:
     @classmethod
     def convert_to_dynamic_prompt(
         cls,
-        dynamic_prompt_file_path: str,
         prompt: Prompt,
         prompt_config: PromptConfig,
         dataset: AnnotatedQualityDebatesDataset,
         row: DataRow,
-        dynamic_prompt_name: str,
+        dynamic_prompt_file_path: Optional[str] = None,
+        dynamic_prompt_name: str = "Default Dynamic Prompt",
     ) -> Prompt:
         """
         Constructs a dynamic prompt based on the inputted prompt. See DynamicPromptParser.get_dynamic_prompt()
@@ -252,6 +263,7 @@ class DynamicPromptParser:
             prompt: A prompt object that can be used like any other prompt to generate speeches for a debater.
 
         """
+        dynamic_prompt_file_path = dynamic_prompt_file_path or DynamicPromptParser.DEFAULT_DYNAMIC_PROMPT_FILE_PATH
         with open(dynamic_prompt_file_path) as f:
             dynamic_loaded_yaml = yaml.safe_load(f)
 

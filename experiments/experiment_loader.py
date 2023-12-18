@@ -11,7 +11,7 @@ from agents import (
     OfflineDebater,
     QuestionMetadata,
 )
-from data import DatasetType, LoaderUtils, RawDataLoader, RawDataset, SplitType
+from data import DatasetConfig, DatasetType, LoaderUtils, RawDataLoader, RawDataset, SplitType
 from prompts import DynamicPromptParser, Prompt, PromptConfig, PromptParser
 from utils import LoggerUtils
 import utils.constants as constants
@@ -25,11 +25,23 @@ from typing import Optional
 import itertools
 
 
+class HardcodedTopicConfig(BaseModel):
+    topic: str
+    positions: tuple[str, str]
+
+
+class DynamicPromptsLoadingConfig(BaseModel):
+    dynamic_prompts_file_path: Optional[str] = None
+    dynamic_prompt_name: Optional[str] = None
+
+
 class PromptLoadingConfig(BaseModel):
-    file_path: str
-    default_prompt_name: str
-    dynamic_prompts_file_path: Optional[str]
-    dynamic_prompt_name: Optional[str]
+    file_path: Optional[str] = None
+    default_prompt_name: str = "Base Prompt"
+    use_dynamic_prompt: bool = False
+    dynamic_prompts_config: DynamicPromptsLoadingConfig = DynamicPromptsLoadingConfig()
+    use_hardcoded_topics: bool = False
+    hardcoded_topic_config: Optional[HardcodedTopicConfig] = None
 
 
 class AgentConfig(BaseModel):
@@ -50,39 +62,17 @@ class AgentsConfig(BaseModel):
     judge: AgentConfig
 
 
-class DatasetConfig(BaseModel):
-    dataset_type: str
-    full_dataset_file_path: Optional[str]
-    train_file_path: Optional[str]
-    val_file_path: Optional[str]
-    test_file_path: Optional[str]
-    annotations_file_path: Optional[str]
-    split_type: Optional[str]
-
-
-class TopicConfigType(Enum):
-    HARD_CODED = 1
-    FROM_DATASET = 2
-
-
-class TopicConfig(BaseModel):
-    topic_type: str
-    topic: Optional[str]
-    positions: Optional[tuple[str, str]]
-
-
 class BoNConfig(BaseModel):
     count: int
     prompts: Optional[list[str]]
 
 
 class ExperimentConfig(BaseModel):
-    topic_config: TopicConfig
     word_limit: int
     batch_size: int
     num_speeches: int
     flip: bool = False
-    prompt_config: PromptLoadingConfig
+    prompt_config: PromptLoadingConfig = PromptLoadingConfig()
     agents: AgentsConfig
     dataset: DatasetConfig
     best_of_n: Optional[BoNConfig]
@@ -137,7 +127,7 @@ class ExperimentLoader:
             train_filepath=dataset_config.train_file_path,
             val_filepath=dataset_config.val_file_path,
             test_filepath=dataset_config.test_file_path,
-            annotations_file_path=dataset_config.annotations_file_path,
+            supplemental_file_paths=dataset_config.supplemental_file_paths,
         )
 
     @classmethod
@@ -236,9 +226,16 @@ class ExperimentLoader:
 
         # create debate rounds
         rounds = []
-        topic_config_type = TopicConfigType[experiment.topic_config.topic_type.upper()]
         for i in range(count):
-            if topic_config_type == TopicConfigType.FROM_DATASET:
+            if experiment.prompt_config.use_hardcoded_topics:
+                topic = experiment.prompt_config.hardcoded_topic_config.topic
+                position = experiment.prompt_config.hardcoded_topic_config.positions[0]
+                opponent_position = experiment.prompt_config.hardcoded_topic_config.positions[1]
+                background_text = constants.DEFAULT_BACKGROUND_TEXT
+                title = ""
+                correct_index = None
+                speeches = []
+            else:
                 example = dataset.get_example(idx=i, split=split_type)
                 topic = example.question
                 position = example.positions[0]
@@ -247,16 +244,6 @@ class ExperimentLoader:
                 title = example.story_title
                 correct_index = example.correct_index
                 speeches = example.speeches
-            elif topic_config_type == TopicConfigType.HARD_CODED:
-                topic = experiment.topic_config.topic
-                position = experiment.topic_config.positions[0]
-                opponent_position = experiment.topic_config.positions[1]
-                background_text = constants.DEFAULT_BACKGROUND_TEXT
-                title = ""
-                correct_index = None
-                speeches = []
-            else:
-                raise Exception(f"Topic config type {topic_config_type} is not recognized")
 
             config_a = PromptConfig(
                 name=constants.DEFAULT_DEBATER_A_NAME,
@@ -279,55 +266,55 @@ class ExperimentLoader:
             )
 
             prompt_a = PromptParser.parse(
-                prompts_file_path=experiment.prompt_config.file_path,
                 prompt_config=config_a,
+                prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.agents.debaters[debater_idxs[0]].override_prompt
                 or experiment.prompt_config.default_prompt_name,
             )
 
             flipped_prompt_a = PromptParser.parse(
-                prompts_file_path=experiment.prompt_config.file_path,
                 prompt_config=config_a,
+                prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.agents.debaters[debater_idxs[1]].override_prompt
                 or experiment.prompt_config.default_prompt_name,
             )
 
             prompt_b = PromptParser.parse(
-                prompts_file_path=experiment.prompt_config.file_path,
                 prompt_config=config_b,
+                prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.agents.debaters[debater_idxs[1]].override_prompt
                 or experiment.prompt_config.default_prompt_name,
             )
 
             flipped_prompt_b = PromptParser.parse(
-                prompts_file_path=experiment.prompt_config.file_path,
                 prompt_config=config_a,
+                prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.agents.debaters[debater_idxs[0]].override_prompt
                 or experiment.prompt_config.default_prompt_name,
             )
 
             prompt_judge = PromptParser.parse(
-                prompts_file_path=experiment.prompt_config.file_path,
                 prompt_config=config_a,
+                prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.prompt_config.default_prompt_name,
             )
 
-            if experiment.prompt_config.dynamic_prompts_file_path and experiment.prompt_config.dynamic_prompt_name:
+            if experiment.prompt_config.use_dynamic_prompt:
                 prompt_a = DynamicPromptParser.convert_to_dynamic_prompt(
-                    dynamic_prompt_file_path=experiment.prompt_config.dynamic_prompts_file_path,
                     prompt=prompt_a,
                     prompt_config=config_a,
                     dataset=dataset,
                     row=example,
+                    dynamic_prompt_file_path=experiment.prompt_config.dynamic_prompts_file_path,
                     dynamic_prompt_name=experiment.prompt_config.dynamic_prompt_name,
                 )
 
                 prompt_b = DynamicPromptParser.convert_to_dynamic_prompt(
-                    dynamic_prompt_file_path=experiment.prompt_config.dynamic_prompts_file_path,
                     prompt=prompt_b,
                     prompt_config=config_b,
                     dataset=dataset,
                     row=example,
+                    dynamic_prompt_file_path=experiment.prompt_config.dynamic_prompts_file_path,
                     dynamic_prompt_name=experiment.prompt_config.dynamic_prompt_name,
                 )
 
@@ -521,10 +508,9 @@ class ExperimentLoader:
     @classmethod
     def get_debater_combinations(cls, experiment: ExperimentConfig):
         """Returns all the combinations of debaters that would need to debate each other in a round robin tournament"""
-        all_idxs = [i for i in range(len(experiment.agents.debaters))]
-        if len(all_idxs) < 2:
-            raise Exception("At least 2 debaters must be defined")
-
+        if not experiment.agents or not experiment.agents.debaters or len(experiment.agents.debaters) < 1:
+            raise Exception("At least 1 debater must be defined")
+        all_idxs = [i for i in range(len(experiment.agents.debaters))] if len(experiment.agents.debaters) > 1 else [0, 0]
         return [elem for elem in itertools.combinations(all_idxs, r=2)]
 
     @classmethod
@@ -546,6 +532,7 @@ class ExperimentLoader:
         # create experiment config
         with open(experiment_file_path) as f:
             loaded_yaml = yaml.safe_load(f)
+        name = name or [key for key in loaded_yaml][0]
         experiment = ExperimentConfig(**loaded_yaml[name])
 
         # create dataset

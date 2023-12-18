@@ -1,0 +1,50 @@
+MyExperiment: # The name of your experiment
+  word_limit: 500 # Number of words that can be 
+  batch_size: 1 # Number of rounds to be processed simultaneously
+  num_speeches: 1 # Number of speeches that each debater will give per round
+  flip: True # Whether each debater will debate each side of the debate
+  prompt_config: # Specifies which set of prompts to use -- if not specified, the defaults will be used
+    file_path: /path/to/source/code/prompts/configs/prompts.yaml # Path to prompts file
+    default_prompt_name: Base Prompt # Name of the specific set of prompts to use
+    use_dynamic_prompt: False # Whether one wants to use a "dynamic" prompt (where the prompt changes depending on attributes of the question -- only works with quality_debates dataset)
+    dynamic_prompts_config: # Configuration for the dynamic prompts (not needed if use_dynamic_prompts is false or if default is preferred)
+      dynamic_prompts_file_path: /path/to/source/code/prompts/configs/dynamic_prompts.yaml # Path to dynamic prompts file 
+      dynamic_prompt_name: Default Dynamic Prompt # Name of the specific set of dynamic prompts to use
+    use_hardcoded_topics: False # Whether one wants to hard code the topics to debate
+    hardcoded_topic_config: # Specifies the configuration if one wants to hardcode prompts (not needed if use_hardcoded_topics is false)
+      topic: # The question the debaters will be debating
+      positions: # a tuple of the sides the debaters will take
+  agents: # The configuration for the debaters and judges that will be participating in the debate round
+    debaters: # The configuration for the debaters. You must specify at least 1. If only 1 is specified, the model will debate itself. If more than 2 are specified, then a round robin will be performed.
+    - model_type: llama # The type of model that is to be used. See the README for a comprehensive list of options
+      model_file_path: /path/to/llama/directory # The path to the model weights. Not needed if the model doesn't have weights
+      alias: model-name # A name to identify the model. If this name is duplicated, then stats for those debaters will be aggregated
+      scratchpad_word_limit: 100 # Number of words that the debater can use a scratchpad for (0 or None disables scratchpad usage)
+      scratchpad_public: False # Whether the scratchpad generations are exposed to the other participants
+    - model_type: deterministic # The type of model for the second debater 
+      alias: model-name-2 # Alias for the second debater
+      override_prompt: override-prompt-name # the name of the prompt to use for this debater only
+      greedy: True # the decoding strategy (True -> nucleus sampling [default], False -> beam search)
+      is_memorized: False # whether the model has been trained to memorize the stories (in which case the stories will not be passed in). Defaults false
+      is_human: False # Whether the model being used should be converted into a human debate model (which uses the real transcripts)
+    - model_type: random # the type of the third debater
+      alias: random-model # the name of the third debater
+      offline_file_path: offline-data-prefix # either the timestamp of the offline debate run (if the transcript is in the default output folder) or the full path to all the offline debates (Only needed if one is recreating a previously-run debate)
+    judge:
+      model_type: llama # The model type for the judge
+      model_file_path: /path/to/model/weights # The path to the model weights. Not needed if the model doesn't have weights
+      alias: judge-alias # Name of the judging model
+  dataset: # Configuration for the dataset to be used
+    dataset_type: quality_debates # the name of the dataset 
+    full_dataset_file_path: null # path to a file that stores the entire dataset. Not needed if the dataset is pre-split or if defaults are used
+    train_file_path: null # path to a file that stores the training dataset. Not needed if the dataset is not pre-split or if defaults are used
+    val_file_path: null # path to a file that stores the training dataset. Not needed if the dataset is not pre-split or if defaults are used
+    test_file_path: null # path to a file that stores the training dataset. Not needed if the dataset is not pre-split or if defaults are used
+    supplemental_file_paths: null # set of additional kwargs that are specific to individual dataset
+    split_type: train # the split of the data to actually use
+  best_of_n: # Configuration for best-of-n generations. Only needed if BoN is desired.
+    count: 2 # how many speeches to generate for the best-of-n calculations
+    prompts: # Additional prompts to use for each of the best of n generations. If the number of prompts does not match the count, we will repeat from the beginning. Optional if defaults are used.
+      - Example Prompt 1 # first override prompt name
+      - Example Prompt 2 # second override prompt name
+  annotations_classifier_file_path: /path/to/annotator/model.p # path to annotations model. Uses default if unspecified.

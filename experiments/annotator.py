@@ -10,6 +10,7 @@ import torch
 
 from typing import Optional
 import copy
+import os
 import re
 
 
@@ -67,8 +68,9 @@ class Annotator:
     ]
 
     DEFAULT_CONFIG = ClassificationConfig(top_k=3, min_threshold=0.2, special_quotes_handling=True, combine_commentary=False)
+    DEFAULT_MODEL_PATH = os.environ[constants.SRC_ROOT] + "data/datasets/annotated-quality-debates/classifier.p"
 
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: Optional[str]):
         """
         Wraps a trained classifier that assigns stylistic labels to each sentence.
 
@@ -76,7 +78,7 @@ class Annotator:
             model_path: Path to the pickled classifier model
         """
         self.base = SentenceTransformer("all-MiniLM-L6-v2")
-        self.linear = torch.load(model_path)
+        self.linear = torch.load(model_path or Annotator.DEFAULT_MODEL_PATH)
         self.nlp = spacy.load("en_core_web_sm")
         self.softmax = nn.Softmax(dim=0)
         self.results = {}

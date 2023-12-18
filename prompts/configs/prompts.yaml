@@ -196,7 +196,7 @@ Base Prompt:
     role: user
     content:
       - |
-        This is the outline you generated to help you with your speech. It contains a list of quotes that you can feel free to use in your upcoming speech:
+        This is the outline you generated to help you with your next speech. It contained a list of quotes that you felt might be relevant.
 
   best_of_n_judge_overview_for_debater_a:
     role: user

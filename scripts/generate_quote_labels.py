@@ -3,11 +3,19 @@ from script_utils import ScriptUtils
 ScriptUtils.setup_script()
 
 from agents import OpenAIModel, ModelInput
+from data import QuoteRelevanceLoader, QuoteRelevanceDataset, QuoteRelevanceProcessedBatchItem, QuoteRelevanceTopicInfo
 from prompts import RoleType
 from utils import InputUtils
+import utils.constants as constants
 
+from pydantic import BaseModel
+from tqdm import tqdm
+
+import argparse
+import pickle
+import random
 import re
-import sys
+import os
 
 DEFAULT_INSTRUCTIONS = """
 You will be presented with a topic that is going to be debated by two debaters as part of an educational exercise. 
@@ -58,6 +66,24 @@ Now provide us the expected feedback:
 """
 
 
+class QuoteRelevanceBatchItem(BaseModel):
+    a_quote_list: list[str]
+    b_quote_list: list[str]
+    model_input: ModelInput
+    question_info: QuoteRelevanceTopicInfo
+
+
+class FakeOpenAIModel:
+    def predict(self, a_quote_list: list[str], b_quote_list: list[str]):
+        a_scores = [random.randint(0, 10) for quote in a_quote_list]
+        a_text = "\n".join([f"{i + 1}. {score}" for i, score in enumerate(a_scores)])
+
+        b_scores = [random.randint(0, 10) for quote in b_quote_list]
+        b_text = "\n".join([f"{i + 1}. {score}" for i, score in enumerate(b_scores)])
+
+        return f"{constants.DEFAULT_DEBATER_A_NAME}:\n{a_text}\n\n{constants.DEFAULT_DEBATER_B_NAME}:\n{b_text}"
+
+
 def get_scratchpads(text: str):
     a_match = re.search(r"This is what Debater_A said during their speech\.(.*?)#####", text, flags=re.DOTALL)
     b_match = re.search(r"This is what Debater_B said during their speech\.(.*?)#####", text, flags=re.DOTALL)
@@ -103,16 +129,44 @@ def process_scratchpad(scratchpad_text: str):
     return re.findall(r"<quote>(.*?)</quote>", scratchpad_text)
 
 
-if __name__ == "__main__":
-    batch_size = 16
-    model = OpenAIModel(alias="relevance-judge", is_debater=False)
-    input_texts = InputUtils.read_file_texts(
-        base_path="/Users/samarnesen/nyu/debate-data/transcripts/2023-12-12_17:09:09.590983", group_by_batch=False
+def process_model_output(output: str, a_quote_list: list[str], b_quote_list: list[str]):
+    debater_a_match = re.search(
+        f"{constants.DEFAULT_DEBATER_A_NAME}:(.*?){constants.DEFAULT_DEBATER_A_NAME}:", output, flags=re.DOTALL
     )
+    debater_a_text = debater_a_match.group(1) if debater_a_match else ""
+    debater_b_match = re.search(f"{constants.DEFAULT_DEBATER_B_NAME}:(.*)", output, flags=re.DOTALL)
+    debater_b_text = debater_b_match.group(1) if debater_b_match else ""
+
+    a_quote_map = {}
+    debater_a_score_lines = re.findall(r"\d.\s*\d+", debater_a_text, flags=re.DOTALL)
+    for i, (quote, score_line) in enumerate(zip(a_quote_list, debater_a_score_lines)):
+        a_quote_map[quote] = int(re.search(r"\d.\s*(\d+)", score_line, flags=re.DOTALL).group(1))
+
+    b_quote_map = {}
+    debater_b_score_lines = re.findall(r"\d.\s*\d+", debater_b_text, flags=re.DOTALL)
+    for i, (quote, score_line) in enumerate(zip(b_quote_list, debater_b_score_lines)):
+        b_quote_map[quote] = int(re.search(r"\d.\s*(\d+)", score_line, flags=re.DOTALL).group(1))
+
+    return a_quote_map, b_quote_map
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--test", action="store_true", default=False)
+    parser.add_argument("--timestamp", type=str, default="")
+    args = parser.parse_args()
+
+    root = os.environ[constants.SRC_ROOT]
+    batch_size = 8
+
+    model = OpenAIModel(alias="relevance-judge", is_debater=False) if not args.test else FakeOpenAIModel()
+    input_texts = InputUtils.read_file_texts(base_path=f"{root}outputs/transcripts/{args.timestamp}", group_by_batch=False)
 
     results = []
     current_batch = []
-    for i, text in enumerate(input_texts):
+    total_score = 0
+    total_quotes = 0
+    for i, text in tqdm(enumerate(input_texts)):
         a, b = get_scratchpads(text)
         if not a or not b:
             continue
@@ -121,25 +175,57 @@ if __name__ == "__main__":
         if not question or not first_position or not second_position:
             continue
 
-        a_quotes = "\n".join([f"{i + 1}. {text}" for i, text in enumerate(process_scratchpad(a))])
-        b_quotes = "\n".join([f"{i + 1}. {text}" for i, text in enumerate(process_scratchpad(b))])
+        a_quote_list = set(process_scratchpad(a))
+        b_quote_list = set(process_scratchpad(b))
+        a_quotes = "\n".join([f"{i + 1}. {text}" for i, text in enumerate(a_quote_list)])
+        b_quotes = "\n".join([f"{i + 1}. {text}" for i, text in enumerate(b_quote_list)])
 
         instructions = (
             DEFAULT_INSTRUCTIONS.replace("<QUESTION>", question)
-            .replace("<DEBATER_A_POSITION", first_position)
+            .replace("<DEBATER_A_POSITION>", first_position)
             .replace("<DEBATER_B_POSITION>", second_position)
-            .replace("<DEBATER_A_QUOTES>", a_quotes if a_quotes else "None provided")
-            .replace("<DEBATER_B_QUOTES>", b_quotes if b_quotes else "None provided")
+            .replace("<DEBATER_A_QUOTES>", a_quotes if a_quotes else "")
+            .replace("<DEBATER_B_QUOTES>", b_quotes if b_quotes else "")
         )
 
-        current_batch.append([ModelInput(role=RoleType.USER, content=instructions)])
-        if len(current_batch) == batch_size:
-            results.append(model.predict(inputs=current_batch))
+        current_batch.append(
+            QuoteRelevanceBatchItem(
+                a_quote_list=a_quote_list,
+                b_quote_list=b_quote_list,
+                model_input=ModelInput(role=RoleType.USER, content=instructions),
+                question_info=QuoteRelevanceTopicInfo(
+                    question=question, a_position=first_position, b_position=second_position
+                ),
+            )
+        )
+        if len(current_batch) == batch_size or i == len(input_texts) - 1:
+            model_inputs = [[item.model_input] for item in current_batch]
+            predictions = (
+                model.predict(model_inputs)
+                if not args.test
+                else [model.predict(item.a_quote_list, item.b_quote_list) for item in current_batch]
+            )
+
+            for prediction, item in zip(predictions, current_batch):
+                a_quote_map, b_quote_map = process_model_output(
+                    output=prediction, a_quote_list=item.a_quote_list, b_quote_list=item.b_quote_list
+                )
+                results.append(
+                    QuoteRelevanceProcessedBatchItem(
+                        a_quote_map=a_quote_map, b_quote_map=b_quote_map, question_info=item.question_info
+                    )
+                )
+                total_score += sum(a_quote_map.values()) + sum(b_quote_map.values())
+                total_quotes += len(a_quote_map.values()) + len(b_quote_map.values())
+
             current_batch = []
 
-    if current_batch:
-        results.append(model.predict(inputs=current_batch))
+    pickle_path = f"{root}data/datasets/quote-relevance/quote-relevance.p"
 
-    print(results)
+    with open(pickle_path, "wb") as f:
+        pickle.dump(results, f)
 
-    # TODO: match the results with the quotes and save the results somewhere
+    dataset = QuoteRelevanceLoader.load()
+
+    average_score = total_score / total_quotes
+    print(f"Average score is {average_score}")

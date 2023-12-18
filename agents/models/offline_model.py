@@ -11,6 +11,8 @@ import random
 
 
 class OfflineModel(Model):
+    DEFAULT_FILE_PATH_PREFIX = os.environ[constants.SRC_ROOT] + "outputs/"
+
     def __init__(self, alias: str, is_debater: bool, file_path: str, prompt: Prompt, **kwargs):
         """
         An offline model returns the text that was previously generated during an earlier run. This is useful if you
@@ -76,6 +78,7 @@ class OfflineModel(Model):
         return OfflineModel(alias=alias, is_debater=is_debater, prompt=self.prompt)
 
     def __load(self, file_path: str, prompt: Prompt):
+        file_path = file_path if "/" in file_path else "/".join([OfflineModel.DEFAULT_FILE_PATH_PREFIX, file_path])
         file_texts = InputUtils.read_file_texts(base_path=file_path)
         debate_rounds = [self.__extract_speeches(text=text, prompt=prompt) for text in file_texts]
         debater_to_speech_map = []

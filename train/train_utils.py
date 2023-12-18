@@ -1,5 +1,5 @@
 from agents import LLMType
-from data import DatasetType, LoaderUtils, RawDataset
+from data import DatasetConfig, DatasetType, LoaderUtils, RawDataset
 import utils.constants as constants
 
 from peft import LoraConfig, PeftConfig, PeftType, PromptTuningInit, PromptTuningConfig, TaskType
@@ -24,7 +24,6 @@ class PromptConfig(BaseModel):
     prompt_name: str
     dynamic_prompts_file_path: Optional[str]
     dynamic_prompt_name: Optional[str]
-    annotations_file_path: Optional[str]
     use_scratchpad: bool = False
     is_memorized: bool = False
 
@@ -46,16 +45,6 @@ class TrainingHyperParameterConfig(BaseModel):
     lr_scheduler_type: str
     peft_type: PeftType | str
     steps: Optional[int]
-
-
-class DatasetConfig(BaseModel):
-    dataset_type: str
-    full_dataset_file_path: Optional[str]
-    train_file_path: Optional[str]
-    val_file_path: Optional[str]
-    test_file_path: Optional[str]
-    annotations_file_path: Optional[str]
-    split_type: Optional[str]
 
 
 class TrainingConfig(BaseModel):
@@ -93,15 +82,16 @@ class TrainUtils:
             train_filepath=dataset_config.train_file_path,
             val_filepath=dataset_config.val_file_path,
             test_filepath=dataset_config.test_file_path,
-            annotations_file_path=dataset_config.annotations_file_path,
+            supplemental_file_paths=dataset_config.supplemental_file_paths,
             deduplicate=deduplicate,
         )
 
     @classmethod
-    def parse_config(cls, config_name: str, config_filepath: str) -> TrainingConfig:
+    def parse_config(cls, config_name: Optional[str], config_filepath: str) -> TrainingConfig:
         """Loads a yaml file and converts it into a training configuration"""
         with open(config_filepath) as f:
             loaded_yaml = yaml.safe_load(f)
+        config_name = config_name or [key for key in config_name][0]
         return TrainingConfig(**loaded_yaml[config_name])
 
     @classmethod
@@ -118,7 +108,7 @@ class TrainUtils:
                 r=64,
                 bias="none",
                 task_type=TaskType.CAUSAL_LM,
-                target_modules=llm_class.TARGET_MODULES
+                target_modules=llm_class.TARGET_MODULES,
             )
         elif peft_type == PeftType.PROMPT_TUNING:
             return PromptTuningConfig(
@@ -205,4 +195,3 @@ class TrainUtils:
     @classmethod
     def get_llm_class(cls, config: TrainingConfig):
         return LLMType[config.llm_type.upper()].get_llm_class()
-

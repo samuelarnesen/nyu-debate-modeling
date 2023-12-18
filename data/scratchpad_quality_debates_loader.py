@@ -59,11 +59,12 @@ class ScratchpadQualityDebatesLoader(RawDataLoader):
     @classmethod
     def load(
         cls,
-        full_dataset_filepath: str,
+        full_dataset_filepath: Optional[str] = None,
         deduplicate: bool = False,
         **kwargs,
     ) -> ScratchpadQualityDebatesDataset:
         """Constructs a ScratchpadQualityDebatesDataset"""
+        full_dataset_filepath = full_dataset_filepath or QualityDebatesLoader.DEFAULT_FILE_PATH
         train, val, test = QualityDebatesLoader.get_splits(file_path=full_dataset_filepath, deduplicate=deduplicate)
         return ScratchpadQualityDebatesDataset(
             train_data=train,

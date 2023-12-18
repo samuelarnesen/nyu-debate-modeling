@@ -11,6 +11,7 @@ from data.dataset import (
     SplitType,
 )
 from data.quality_debates_loader import QualityDebatesDataset, QualityDebatesLoader
+import utils.constants as constants
 
 from pydantic import BaseModel
 
@@ -19,6 +20,7 @@ from enum import Enum
 from typing import Optional, Union
 import copy
 import pickle
+import os
 import re
 import sys
 
@@ -181,15 +183,25 @@ class AnnotatedQualityDebatesDataset(RawDataset):
 
 
 class AnnotatedQualityDebatesLoader(RawDataLoader):
+    DEFAULT_ANNOTATIONS_FILE_PATH = (
+        os.environ[constants.SRC_ROOT] + "data/datasets/annotated-quality-debates/annotated-data-set.p"
+    )
+
     @classmethod
     def load(
         cls,
-        full_dataset_filepath: str,
-        annotations_file_path: str = "",
+        full_dataset_filepath: Optional[str] = None,
         deduplicate: bool = False,
+        supplemental_file_paths: Optional[dict[str, str]] = None,
         **kwargs,
     ) -> AnnotatedQualityDebatesDataset:
         """Constructs an AnnotatedQualityDebatesDataset"""
+        annotations_file_path = (
+            supplemental_file_paths.get("annotations_file_path", AnnotatedQualityDebatesLoader.DEFAULT_ANNOTATIONS_FILE_PATH)
+            if supplemental_file_paths
+            else AnnotatedQualityDebatesLoader.DEFAULT_ANNOTATIONS_FILE_PATH
+        )
+
         quality_debates_dataset = QualityDebatesLoader.load(
             full_dataset_filepath=full_dataset_filepath, deduplicate=deduplicate
         )

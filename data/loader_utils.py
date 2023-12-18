@@ -4,6 +4,7 @@ from data.judge_preferences_loader import JudgePreferencesLoader
 from data.scratchpad_quality_debates_loader import ScratchpadQualityDebatesLoader
 from data.quality_loader import QualityLoader
 from data.quality_debates_loader import QualityDebatesLoader
+from data.quote_relevance_loader import QuoteRelevanceLoader
 
 from enum import Enum
 from typing import Type
@@ -23,4 +24,7 @@ class LoaderUtils:
             return AnnotatedQualityDebatesLoader
         elif dataset_type == DatasetType.SCRATCHPAD_QUALITY_DEBATES:
             return ScratchpadQualityDebatesLoader
+        elif dataset_type == DatasetType.QUOTE_RELEVANCE:
+            return QuoteRelevanceLoader
+
         raise Exception(f"Loader {dataset_type} not found")

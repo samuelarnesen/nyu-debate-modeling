@@ -1,7 +1,9 @@
 from data.dataset import DataRow, DatasetType, RawDataLoader, RawDataset, SpeakerType, SpeechData, SplitType
+import utils.constants as constants
 
 from typing import Any, Optional
 import json
+import os
 import re
 
 
@@ -11,7 +13,7 @@ class QualityDebatesDataset(RawDataset):
         train_data: list[str, Any],
         val_data: list[str, Any],
         test_data: list[str, Any],
-        override_type: DatasetType = None,
+        override_type: Optional[DatasetType] = None,
     ):
         """
         Builds a dataset of all the questions and speeches from the human debate experiments. Each row
@@ -89,6 +91,8 @@ class QualityDebatesDataset(RawDataset):
 
 
 class QualityDebatesLoader(RawDataLoader):
+    DEFAULT_FILE_PATH = os.environ[constants.SRC_ROOT] + "data/datasets/quality-debates/debates-readable.jsonl"
+
     @classmethod
     def get_splits(cls, file_path: str, deduplicate: bool = False) -> tuple[list[dict]]:
         """
@@ -151,11 +155,12 @@ class QualityDebatesLoader(RawDataLoader):
     @classmethod
     def load(
         cls,
-        full_dataset_filepath: str,
+        full_dataset_filepath: Optional[str] = None,
         deduplicate: bool = False,
         **kwargs,
     ) -> QualityDebatesDataset:
         """Constructs a QualityDebatesDataset"""
+        full_dataset_filepath = full_dataset_filepath or QualityDebatesLoader.DEFAULT_FILE_PATH
         train, val, test = QualityDebatesLoader.get_splits(file_path=full_dataset_filepath, deduplicate=deduplicate)
         return QualityDebatesDataset(
             train_data=train,

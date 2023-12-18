@@ -1,18 +1,15 @@
 Hardcoded_Test:
-  topic: Who is the best basketball player of all time?
   word_limit: 500
   batch_size: 8
   num_speeches: 1
   flip: True
-  topic_config:
-    topic_type: hard_coded
-    topic: Who is the best basketball player of all time?
-    positions:
-      - Michael Jordan
-      - LeBron James
   prompt_config:
-    file_path: ./prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
+    use_hardcoded_topics: True
+    hardcoded_topic_config:
+      topic: Who is the best basketball player of all time?
+      positions:
+        - Michael Jordan
+        - LeBron James
   agents:
     debaters:
       - model_type: random
@@ -24,20 +21,12 @@ Hardcoded_Test:
       alias: random-judge
   dataset:
     dataset_type: quality
-    train_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.train
-    val_file_path: ./Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev
-    test_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test
     split_type: val
 Simple_Test:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: False
-  prompt_config:
-    file_path: ./prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: random
@@ -49,18 +38,12 @@ Simple_Test:
       alias: deterministic-judge
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
     split_type: val
 Batched_Test:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
   batch_size: 8
   num_speeches: 3
   flip: False
-  prompt_config:
-    file_path: ./prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: random
@@ -72,18 +55,12 @@ Batched_Test:
       alias: random-judge
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
     split_type: val
 Single_Test:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 3
   flip: True
-  prompt_config:
-    file_path: ./prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: random
@@ -95,45 +72,30 @@ Single_Test:
       alias: random-judge
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
 Offline_Test:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: False
-  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
-  prompt_config:
-    file_path: ./prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: random
         alias: offline-debater-1
-        offline_file_path: /Users/samarnesen/nyu/debate-data/transcripts/2023-11-28_11:09:25.726737
+        offline_file_path: 2023-11-28_11:09:25.726737
       - model_type: random
         alias: offline-debater-1
-        offline_file_path: /Users/samarnesen/nyu/debate-data/transcripts/2023-11-28_11:09:25.726737
+        offline_file_path: 2023-11-28_11:09:25.726737
     judge:
       model_type: random
       alias: random-judge
   dataset:
     dataset_type: quality
-    train_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.train
-    val_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev
-    test_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test
     split_type: train
 BoN_Test:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: False
-  prompt_config:
-    file_path: ./prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: random
@@ -145,22 +107,16 @@ BoN_Test:
       alias: random-judge
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
   best_of_n:
     count: 2
     prompts:
       - Thoughtful Prompt
       - Aggressive Prompt
 Quality_Test:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: False
-  prompt_config:
-    file_path: ./prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: random
@@ -172,9 +128,6 @@ Quality_Test:
       alias: random-judge
   dataset:
     dataset_type: quality
-    train_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.train
-    val_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev
-    test_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test
     split_type: train
   best_of_n:
     count: 2
@@ -182,43 +135,28 @@ Quality_Test:
       - Thoughtful Prompt
       - Aggressive Prompt
 Human_Test:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
-  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
-  prompt_config:
-    file_path: ./prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: random
-        alias: 'human-debater'
+        alias: human-debater
         is_human: True
       - model_type: random
-        alias: 'human-debater'
+        alias: human-debater
         is_human: True
     judge:
       model_type: random
       alias: random-judge
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
 Dynamic_Test:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
-  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
-  prompt_config:
-    file_path: ./prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
-    dynamic_prompts_file_path: ./prompts/configs/dynamic_prompts.yaml
-    dynamic_prompt_name: Default Dynamic Prompt
   agents:
     debaters:
       - model_type: random
@@ -230,20 +168,12 @@ Dynamic_Test:
       alias: random-judge
   dataset:
     dataset_type: annotated_quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
-    annotations_file_path:  /Users/samarnesen/nyu/debate-data/annotated-data-set.p
     split_type: train
 Dynamic_Override_Test:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
-  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
-  prompt_config:
-    file_path: ./prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: random
@@ -259,20 +189,12 @@ Dynamic_Override_Test:
       alias: random-judge
   dataset:
     dataset_type: annotated_quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
-    annotations_file_path:  /Users/samarnesen/nyu/debate-data/annotated-data-set.p
     split_type: train
 Labelled_Scratchpad_Test:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: False
-  annotations_classifier_file_path: /Users/samarnesen/nyu/scratch/classifier.p
-  prompt_config:
-    file_path: ./prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: random
@@ -288,24 +210,16 @@ Labelled_Scratchpad_Test:
       alias: random-judge
   dataset:
     dataset_type: scratchpad_quality_debates
-    full_dataset_file_path: ../../debate-data/debates-readable.jsonl
     split_type: train
 Operational_Test:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
-  batch_size: 8
+  batch_size: 1
   num_speeches: 1
   flip: False
-  prompt_config:
-    file_path: ./prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: random
         alias: debater-1
-        scratchpad_word_limit: 100
-        scratchpad_public: True
       - model_type: random
         alias: debater-2
     judge:
@@ -313,7 +227,4 @@ Operational_Test:
       alias: random-judge
   dataset:
     dataset_type: quality
-    train_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.train
-    val_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.dev
-    test_file_path: /Users/samarnesen/nyu/debate-data/quality/data/v1.0.1/QuALITY.v1.0.1.htmlstripped.test
     split_type: train

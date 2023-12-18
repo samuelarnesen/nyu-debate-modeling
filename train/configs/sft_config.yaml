@@ -18,13 +18,9 @@ Default - Local:
         logging_steps: 10
         output_dir: /vast/spa9663/models/trained_models/Llama-2-Memorized-4/
     prompt_config:
-        prompts_file_path: /Users/samarnesen/nyu/debate/nyu-debate-modeling/prompts/configs/prompts.yaml
-        prompt_name: Base Prompt
-        is_memorized: True
+        use_scratchpad: True
     dataset:
-        dataset_type: quality_debates
-        full_dataset_file_path: /Users/samarnesen/nyu/debate-data/debates-readable.jsonl
-        split_type: train
+        dataset_type: quote_relevance
 Train - 13B - Alpaca:
     model_name: Yukang/LongAlpaca-13B
     target: debater
@@ -43,13 +39,8 @@ Train - 13B - Alpaca:
         logging_steps: 10
         output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Neft-4/
         merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Neft-4/
-    prompt_config:
-        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-        prompt_name: Base Prompt
     dataset:
         dataset_type: quality_debates
-        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-        split_type: train
 Train - Mixtral:
     model_name: /vast/spa9663/models/base_models/mixtral-8x7b
     llm_type: mistral
@@ -70,126 +61,19 @@ Train - Mixtral:
         logging_steps: 10
         output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b
         merge_output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-merged
-    prompt_config:
-        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-        prompt_name: Base Prompt
-        is_memorized: False
     dataset:
         dataset_type: quality_debates
-        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-        split_type: train
-Train - 13B - Alpaca - Annotated:
-    model_name: Yukang/LongAlpaca-13B
-    target: debater
-    opening_speeches_only: True
-    training_hyperparameters:
-        num_train_epochs: 8
-        per_device_train_batch_size: 4
-        gradient_accumulation_steps: 4
-        optim: paged_adamw_32bit
-        learning_rate: 2e-4
-        max_grad_norm: 0.3
-        warmup_ratio: 0.03
-        lr_scheduler_type: constant
-        peft_type: lora
-    logging_and_saving_config:
-        logging_steps: 10
-        output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted/
-        merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted/
-    prompt_config:
-        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-        prompt_name: Base Prompt
-        dynamic_prompts_file_path: /home/spa9663/debate/prompts/configs/dynamic_prompts.yaml
-        dynamic_prompt_name: Default Dynamic Prompt
-        annotations_file_path: /home/spa9663/debate-data/annotated-data-set.p
-    dataset:
-        dataset_type: quality_debates
-        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-        split_type: train
-Train - 13B - Alpaca - Prompt Tuning:
-    model_name: Yukang/LongAlpaca-13B
-    target: debater
-    training_hyperparameters:
-        num_train_epochs: 1
-        per_device_train_batch_size: 4
-        gradient_accumulation_steps: 4
-        optim: paged_adamw_32bit
-        learning_rate: 2e-4
-        max_grad_norm: 0.3
-        warmup_ratio: 0.03
-        lr_scheduler_type: constant
-        peft_type: prompt_tuning
-    logging_and_saving_config:
-        logging_steps: 10
-        output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-PT/
-        merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-PT/
-    prompt_config:
-        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-        prompt_name: Base Prompt
-    dataset:
-        dataset_type: quality_debates
-        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-        split_type: train
-Train - 70B:
-    model_name: Yukang/LongAlpaca-70B
-    target: debater
-    training_hyperparameters:
-        num_train_epochs: 1
-        per_device_train_batch_size: 4
-        gradient_accumulation_steps: 4
-        optim: paged_adamw_8bit
-        learning_rate: 2e-4
-        max_grad_norm: 0.3
-        warmup_ratio: 0.03
-        lr_scheduler_type: constant
-        peft_type: lora
-    logging_and_saving_config:
-        logging_steps: 10
-        output_dir: /vast/spa9663/models/trained_models/Llama-2-70B/
-    prompt_config:
-        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-        prompt_name: Base Prompt
-    dataset:
-        dataset_type: quality_debates
-        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-        split_type: train
-Train - 13B - Alpaca - Scratchpad:
-    model_name: Yukang/LongAlpaca-13B
+Quote Relevance - Mixtral:
+    model_name: /vast/spa9663/models/base_models/mixtral-8x7b
+    llm_type: mistral
     target: debater
     opening_speeches_only: False
-    training_hyperparameters:
-        num_train_epochs: 8
-        per_device_train_batch_size: 4
-        gradient_accumulation_steps: 4
-        optim: paged_adamw_32bit
-        learning_rate: 2e-4
-        max_grad_norm: 0.3
-        warmup_ratio: 0.03
-        lr_scheduler_type: constant
-        peft_type: lora
-    logging_and_saving_config:
-        logging_steps: 10
-        output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted/
-        merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted/
-    prompt_config:
-        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-        prompt_name: Base Prompt
-        use_scratchpad: True
-    dataset:
-        dataset_type: scratchpad_quality_debates
-        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-        split_type: train
-Train - Memorized - 13B:
-    model_name: /vast/spa9663/models/trained_models/Llama-2-Memorized
-    target: debater
-    max_length: 4096
-    requires_token: True
-    opening_speeches_only: False
+    max_length: 32986
     training_hyperparameters:
         num_train_epochs: 4
         per_device_train_batch_size: 4
         gradient_accumulation_steps: 4
-        optim: paged_adamw_8bit
+        optim: paged_adamw_32bit
         learning_rate: 2e-4
         max_grad_norm: 0.3
         warmup_ratio: 0.03
@@ -197,12 +81,9 @@ Train - Memorized - 13B:
         peft_type: lora
     logging_and_saving_config:
         logging_steps: 10
-        output_dir: /vast/spa9663/models/trained_models/Llama-2-Memorized-4/
+        output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-scratchpad
+        merge_output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-scratchpad-merged
     prompt_config:
-        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-        prompt_name: Base Prompt
-        is_memorized: True
+        use_scratchpad: True
     dataset:
-        dataset_type: quality_debates
-        full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-        split_type: train
+        dataset_type: quote_relevance

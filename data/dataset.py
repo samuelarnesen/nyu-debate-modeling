@@ -5,6 +5,16 @@ from typing import Any, Optional, Union
 from pydantic import BaseModel
 
 
+class DatasetConfig(BaseModel):
+    dataset_type: str
+    full_dataset_file_path: Optional[str] = None
+    train_file_path: Optional[str] = None
+    val_file_path: Optional[str] = None
+    test_file_path: Optional[str] = None
+    supplemental_file_paths: dict[str, str] = {}
+    split_type: str = "train"
+
+
 class SplitType(Enum):
     TRAIN = 1
     VAL = 2
@@ -17,6 +27,7 @@ class DatasetType(Enum):
     JUDGE_PREFERENCES = 3
     ANNOTATED_QUALITY_DEBATES = 4
     SCRATCHPAD_QUALITY_DEBATES = 5
+    QUOTE_RELEVANCE = 6
 
 
 class SpeakerType(Enum):
@@ -55,8 +66,9 @@ class SpeechData(BaseModel):
     text: str
     position: int
     speaker_type: SpeakerType
-    annotation: Optional[AnnotationData]
+    supplemental_file_paths: Optional[dict[str, str]]
     scratchpad: Optional[str]
+    annotation: Optional[AnnotationData]
 
 
 class DataRow(BaseModel):
@@ -104,6 +116,7 @@ class RawDataLoader(ABC):
         train_filepath: Optional[str] = None,
         validation_filepath: Optional[str] = None,
         test_filepath: Optional[str] = None,
+        supplemental_file_paths: Optional[str] = None,
     ) -> RawDataset:
         """Constructs a dataset"""
         pass

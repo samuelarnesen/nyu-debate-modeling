@@ -48,8 +48,8 @@ class RowConverter:
             row=row, position=speech.position, use_title_as_background_text=config.prompt_config.is_memorized
         )
         prompt = PromptParser.parse(
-            prompts_file_path=config.prompt_config.prompts_file_path,
             prompt_config=prompt_config,
+            prompts_file_path=config.prompt_config.prompts_file_path,
             name=config.prompt_config.prompt_name,
         )
 
@@ -107,6 +107,7 @@ class RowConverter:
         is_debater: bool,
         dataset: RawDataset,
         use_dummy: bool = False,
+        filter_empty_speeches: bool = True,
     ) -> list[LLMInput]:
         """
         Returns a list of inputs that can be used as rows in an actual training dataset.
@@ -183,11 +184,12 @@ class RowConverter:
                 )
                 transcript.add_speech(speaker=name, content=speech.scratchpad if not use_dummy else (dummy_text + "\n"))
 
-            llm_inputs.append(
-                llm_class.generate_llm_input_from_model_inputs(
-                    input_list=transcript.to_model_input(), extra_suffix=speech.text
-                ).dict()
+            llm_input = llm_class.generate_llm_input_from_model_inputs(
+                input_list=transcript.to_model_input(), extra_suffix=speech.text
             )
+
+            if (llm_input.extra_suffix and isinstance(llm_input.extra_suffix, str)) or not filter_empty_speeches:
+                llm_inputs.append(llm_input.dict())
 
             previous_speaker_type = speech.speaker_type
             speeches_so_far.append(speech)
