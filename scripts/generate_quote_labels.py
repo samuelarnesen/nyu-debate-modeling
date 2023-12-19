@@ -151,7 +151,6 @@ def process_model_output(output: str, a_quote_list: list[str], b_quote_list: lis
 
 
 if __name__ == "__main__":
-
     root = os.environ[constants.SRC_ROOT]
     batch_size = 8
 
@@ -222,7 +221,6 @@ if __name__ == "__main__":
 
             current_batch = []
 
-    
     pickle_path = f"{root}data/datasets/quote-relevance/quote-relevance.p"
 
     if args.save or not args.test:

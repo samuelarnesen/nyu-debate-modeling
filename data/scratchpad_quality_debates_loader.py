@@ -58,7 +58,10 @@ class ScratchpadQualityDebatesDataset(QualityDebatesDataset):
 
 
 class ScratchpadQualityDebatesLoader(RawDataLoader):
-    DEFAULT_PICKLE_PATH = os.environ[constants.SRC_ROOT] + "data/datasets/scratchpad-quality-debates/scratchpad-quality-debates.p"
+    DEFAULT_PICKLE_PATH = (
+        os.environ[constants.SRC_ROOT] + "data/datasets/scratchpad-quality-debates/scratchpad-quality-debates.p"
+    )
+
     @classmethod
     def load(
         cls,

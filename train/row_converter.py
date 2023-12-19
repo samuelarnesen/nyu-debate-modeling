@@ -34,9 +34,7 @@ class RowConverter:
         """Returns whether the config requires dynamic prompting.
         See PromptParser.get_dynamic_prompt() for a more detailed explanation"""
         return (
-            config.prompt_config.dynamic_prompts_file_path
-            and config.prompt_config.dynamic_prompt_name
-            and dataset.get_dataset_type() == DatasetType.ANNOTATED_QUALITY_DEBATES
+            config.prompt_config.use_dynamic_prompt and dataset.get_dataset_type() == DatasetType.ANNOTATED_QUALITY_DEBATES
         )
 
     @classmethod

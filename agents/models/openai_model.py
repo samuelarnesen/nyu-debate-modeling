@@ -9,6 +9,7 @@ import openai
 from typing import Union
 import logging
 import os
+import math
 import random
 import re
 
@@ -88,6 +89,21 @@ class OpenAIModel(Model):
                 self.logger.warn("The regex {} did not match the following message: {}".format(regex_str, message))
                 return default
 
+        def process_logprobs(completion: dict) -> tuple[float, float]:
+            debater_suffixes = ['A', 'B']
+            logprobs = completion.choices[0].logprobs.content
+            for entry in logprobs:
+                main = entry.token
+                if main in debater_suffixes:
+                    scores = {suffix: 0 for suffix in debater_suffixes}
+                    for option in filter(lambda x: x.token in debater_suffixes, entry.top_logprobs):
+                        scores[option.token] = math.exp(float(option.logprob))
+                    total_probs = sum(scores.values())
+                    renormalized_scores = {suffix: scores[suffix] / total_probs for suffix in scores}
+                    return renormalized_scores[debater_suffixes[0]], renormalized_scores[debater_suffixes[1]]
+            return 0.5, 0.5
+
+
         responses = []
         for model_input_list in inputs:
             messages = [model_input_to_openai_format(model_input) for model_input in model_input_list]
@@ -102,6 +118,7 @@ class OpenAIModel(Model):
                     model="gpt-4-1106-preview",
                     messages=messages,
                     max_tokens=max_new_tokens,
+                    logprobs=(speech_structure==SpeechStructure.DECISION)
                 )
             except Exception as e:
                 self.logger.warn(f"Received an error while calling OpenAI: {e}")
@@ -119,6 +136,8 @@ class OpenAIModel(Model):
                     regex_str=OpenAIModel.decision_regex,
                     default=constants.DEFAULT_DEBATER_A_NAME if random.random() < 0.5 else constants.DEFAULT_DEBATER_B_NAME,
                 )
+                a_odds, b_odds = process_logprobs(completion)
+                logger.debug(f"Debater A's odds: {a_odds}, Debater B's odds: {b_odds}, Winner: {message}")
             elif speech_structure == SpeechStructure.PREFERENCE:
                 message = extract_response_from_structured_speech(
                     message=message,

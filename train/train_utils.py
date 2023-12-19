@@ -20,10 +20,11 @@ class TrainingTarget(Enum):
 
 
 class PromptConfig(BaseModel):
-    prompts_file_path: str
-    prompt_name: str
-    dynamic_prompts_file_path: Optional[str]
-    dynamic_prompt_name: Optional[str]
+    prompts_file_path: Optional[str] = None
+    prompt_name: Optional[str] = None
+    use_dynamic_prompt: bool = False
+    dynamic_prompts_file_path: Optional[str] = None
+    dynamic_prompt_name: Optional[str] = None
     use_scratchpad: bool = False
     is_memorized: bool = False
 
@@ -51,7 +52,7 @@ class TrainingConfig(BaseModel):
     model_name: str
     reference_model_name: Optional[str]
     llm_type: str = "llama"
-    prompt_config: PromptConfig
+    prompt_config: PromptConfig = PromptConfig()
     logging_and_saving_config: Optional[LoggingAndSavingConfig]
     training_hyperparameters: Optional[TrainingHyperParameterConfig]
     target: Optional[str | TrainingTarget] = None

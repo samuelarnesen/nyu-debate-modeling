@@ -87,13 +87,14 @@ class PromptConfig(BaseModel):
 
 class PromptParser:
     DEFAULT_PROMPT_FILE_PATH = os.environ[constants.SRC_ROOT] + "prompts/configs/prompts.yaml"
+    DEFAULT_PROMPT_NAME = "Base Prompt"
 
     @classmethod
     def parse(
         cls,
         prompt_config: PromptConfig,
         prompts_file_path: Optional[str] = None,
-        name: str = "Basic Prompt",
+        name: str = "Base Prompt",
     ) -> Prompt:
         """
         Constructs a Prompt object that can then be used by a Debater or Judge to generate text.
@@ -111,6 +112,7 @@ class PromptParser:
         with open(prompts_file_path) as f:
             loaded_yaml = yaml.safe_load(f)
 
+        name = name or PromptParser.DEFAULT_PROMPT_NAME
         prompt = Prompt(name=name, messages=loaded_yaml[name])
         prompt.messages = {PromptTag[tag.upper()]: Message(**message) for tag, message in prompt.messages.items()}
 
