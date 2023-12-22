@@ -6,6 +6,14 @@ import torch
 class SaveUtils:
     @classmethod
     def save(cls, base_model_name: str, adapter_name: str, merge_name: str):
+        """
+        Loads a model and its adapter and saves it to the specified location.
+
+        Params:
+            base_model_name: the name (or file path) of the model to load
+            adapter_name: the name (or file path) of the trained adapter
+            merge_name: the file_path one wants to save the merged model to
+        """
         torch.cuda.empty_cache()
 
         base_model = AutoModelForCausalLM.from_pretrained(

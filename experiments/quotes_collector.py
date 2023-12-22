@@ -16,11 +16,14 @@ class QuoteStats(BaseModel):
 
 class QuotesCollector:
     def __init__(self, experiment: ExperimentConfig):
+        """Collects metrics about quotation usage from debate rounds"""
         self.logger = LoggerUtils.get_default_logger(__name__)
         self.dataset = ExperimentLoader.create_dataset(experiment)
         self.alias_to_results = {}
 
     def record_result(self, summary: DebateRoundSummary) -> None:
+        """Records metrics on the use of quotations in the inputted debate round and stores it"""
+
         def add_new_alias(alias):
             self.alias_to_results[alias] = {}
             self.alias_to_results[alias][constants.OVERALL] = QuoteStats(
@@ -101,5 +104,12 @@ class QuotesCollector:
                 if not correct or only_one_alias:
                     self.alias_to_results[alias][constants.INCORRECT].number_of_quotes += 1
 
-    def get_results(self):
+    def get_results(self) -> dict[str, dict[str, QuoteStats]]:
+        """
+        Returns the stored results
+
+        Returns:
+            alias_to_results: a dictionary that maps a model alias to another dictionary, where the keys are different
+                slices of the data (e.g 'overall', 'winner', 'correct') and the values are raw counts.
+        """
         return self.alias_to_results

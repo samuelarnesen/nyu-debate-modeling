@@ -1,4 +1,3 @@
-from agents import LlamaInput, LlamaModel
 from data import DataRow, RawDataset, SplitType
 from train.row_converter import RowConverter
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
@@ -25,8 +24,12 @@ except ImportError as e:
 
 
 class DirectPreferenceTrainer:
+    """Class for training a model using Direct Preference Optimization"""
+
     @classmethod
     def convert_dataset(cls, raw_dataset: RawDataset) -> Dataset:
+        """Converts a dataset (abstraction used in this codebase) into a Dataset object (abstraction
+        used by huggingface's trainer objects)"""
         rows = [row.dict() for row in raw_dataset.get_data(split=SplitType.TRAIN)]
         df = pd.DataFrame(data=rows)
         return Dataset.from_pandas(df)
@@ -38,6 +41,18 @@ class DirectPreferenceTrainer:
         raw_dataset: RawDataset,
         is_local: bool = False,
     ) -> DPOTrainer:
+        """
+        Generates a Trainer object.
+
+        Params:
+            config: configuration specifying the prompt setup and hyperparameters for the training run.
+            raw_dataset: dataset to use for training
+            is_local: whether this is being run on a cpu
+
+        Returns:
+            dpo_trainer: One can call dpo_trainer.train() to then run the training loop.
+        """
+
         if FLASH_ATTENTION_AVAILABLE:
             replace_attn_with_flash_attn()
         tokenizer = TrainUtils.get_tokenizer(config=config)

@@ -1,4 +1,5 @@
-from data import DatasetType, LoaderUtils, RawDataset
+from agents import LLMType
+from data import DatasetConfig, DatasetType, LoaderUtils, RawDataset
 import utils.constants as constants
 
 from peft import LoraConfig, PeftConfig, PeftType, PromptTuningInit, PromptTuningConfig, TaskType
@@ -9,7 +10,7 @@ import torch
 import yaml
 
 from enum import Enum
-from typing import Optional, Union
+from typing import Optional, Type, Union
 import os
 
 
@@ -19,12 +20,13 @@ class TrainingTarget(Enum):
 
 
 class PromptConfig(BaseModel):
-    prompts_file_path: str
-    prompt_name: str
-    dynamic_prompts_file_path: Optional[str]
-    dynamic_prompt_name: Optional[str]
-    annotations_file_path: Optional[str]
-    use_scratchpad: Optional[bool] = False
+    prompts_file_path: Optional[str] = None
+    prompt_name: Optional[str] = None
+    use_dynamic_prompt: bool = False
+    dynamic_prompts_file_path: Optional[str] = None
+    dynamic_prompt_name: Optional[str] = None
+    use_scratchpad: bool = False
+    is_memorized: bool = False
 
 
 class LoggingAndSavingConfig(BaseModel):
@@ -46,31 +48,33 @@ class TrainingHyperParameterConfig(BaseModel):
     steps: Optional[int]
 
 
-class DatasetConfig(BaseModel):
-    dataset_type: str
-    full_dataset_file_path: Optional[str]
-    train_file_path: Optional[str]
-    val_file_path: Optional[str]
-    test_file_path: Optional[str]
-    annotations_file_path: Optional[str]
-    split_type: Optional[str]
-
-
 class TrainingConfig(BaseModel):
     model_name: str
     reference_model_name: Optional[str]
-    prompt_config: PromptConfig
+    llm_type: str = "llama"
+    prompt_config: PromptConfig = PromptConfig()
     logging_and_saving_config: Optional[LoggingAndSavingConfig]
     training_hyperparameters: Optional[TrainingHyperParameterConfig]
-    target: Optional[str | TrainingTarget]
+    target: Optional[str | TrainingTarget] = None
     dataset: Optional[DatasetConfig]
-    deepspeed: Optional[str] = False
-    opening_speeches_only: Optional[bool] = False
+    opening_speeches_only: bool = False
+    requires_token: bool = False
+    max_length: int = constants.MAX_LENGTH
 
 
 class TrainUtils:
     @classmethod
     def create_dataset(cls, config: TrainingConfig, deduplicate: bool = False) -> RawDataset:
+        """
+        Constructs a dataset that will later be converted into a training dataset.
+
+        Params:
+            config: the configuration containing the prompt text and training hyperparameters
+            deduplicate: whether only one example from each prompt should be used
+
+        Returns:
+            dataset: a dataset object that can later be used as a training dataset
+        """
         dataset_config = config.dataset
         dataset_type = DatasetType[dataset_config.dataset_type.upper()]
         loader_cls = LoaderUtils.get_loader_type(dataset_type)
@@ -79,21 +83,25 @@ class TrainUtils:
             train_filepath=dataset_config.train_file_path,
             val_filepath=dataset_config.val_file_path,
             test_filepath=dataset_config.test_file_path,
-            annotations_file_path=dataset_config.annotations_file_path,
+            supplemental_file_paths=dataset_config.supplemental_file_paths,
             deduplicate=deduplicate,
         )
 
     @classmethod
-    def parse_config(cls, config_name: str, config_filepath: str) -> TrainingConfig:
+    def parse_config(cls, config_name: Optional[str], config_filepath: str) -> TrainingConfig:
+        """Loads a yaml file and converts it into a training configuration"""
         with open(config_filepath) as f:
             loaded_yaml = yaml.safe_load(f)
+        config_name = config_name or [key for key in config_name][0]
         return TrainingConfig(**loaded_yaml[config_name])
 
     @classmethod
     def get_peft_config(cls, config: TrainingConfig) -> Optional[PeftConfig]:
+        """Gets the configuration from parameter efficient fine tuning"""
         if not config.training_hyperparameters.peft_type.upper():
             return None
         peft_type = PeftType[config.training_hyperparameters.peft_type.upper()]
+        llm_class = TrainUtils.get_llm_class(config=config)
         if peft_type == PeftType.LORA:
             return LoraConfig(
                 lora_alpha=16,
@@ -101,6 +109,7 @@ class TrainUtils:
                 r=64,
                 bias="none",
                 task_type=TaskType.CAUSAL_LM,
+                target_modules=llm_class.TARGET_MODULES,
             )
         elif peft_type == PeftType.PROMPT_TUNING:
             return PromptTuningConfig(
@@ -112,7 +121,22 @@ class TrainUtils:
             )
 
     @classmethod
-    def load_model(cls, config: TrainingConfig, is_local: bool = False, requires_value_head: bool = False):
+    def load_model(
+        cls, config: TrainingConfig, is_local: bool = False, requires_value_head: bool = False
+    ) -> AutoModelForCausalLM:
+        """
+        Loads a model using the specified configuration.
+
+        Params:
+            config: the configuration covering the training hyperparameters
+            is_local: whether it's being run on a cpu
+            requires_value_head: whether we need to wrap the model with a layer that generates scalar values.
+                (Only used for PPO training for now)
+
+        Returns:
+            model: a model loaded from huggingface
+        """
+
         local_rank = int(os.environ.get("LOCAL_RANK", "0"))
         device_map = {"": local_rank}
         if not is_local:
@@ -130,9 +154,10 @@ class TrainUtils:
                 device_map=device_map,
                 trust_remote_code=True,
                 use_flash_attention_2=True,
+                token=os.getenv("META_ACCESS_TOKEN") if config.requires_token else None,
             )
 
-            model.config.max_position_embeddings = constants.MAX_LENGTH
+            model.config.max_position_embeddings = config.max_length
             model.config.transformers_version = "4.34.0"
             model.generation_config.transformers_version = "4.34.0"
 
@@ -159,7 +184,15 @@ class TrainUtils:
 
     @classmethod
     def get_tokenizer(cls, config: TrainingConfig) -> AutoTokenizer:
-        tokenizer = AutoTokenizer.from_pretrained(config.model_name)  # change this
+        """Gets the tokenizer associated with the specified model"""
+        tokenizer = AutoTokenizer.from_pretrained(
+            config.model_name,
+            token=os.getenv("META_ACCESS_TOKEN") if config.requires_token else None,
+        )
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = "right"
         return tokenizer
+
+    @classmethod
+    def get_llm_class(cls, config: TrainingConfig):
+        return LLMType[config.llm_type.upper()].get_llm_class()

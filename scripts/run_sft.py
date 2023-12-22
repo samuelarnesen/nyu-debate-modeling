@@ -1,4 +1,4 @@
-from script_utils import ScriptUtils
+from script_utils import ScriptUtils, TrainType
 
 ScriptUtils.setup_script()
 
@@ -7,12 +7,11 @@ from train import SupervisedTrainer, TrainUtils
 from utils import SaveUtils
 
 args = ScriptUtils.get_args()
-script_config = ScriptUtils.get_model_run_script_config(args)
+script_config = ScriptUtils.get_training_run_script_config(args, train_type=TrainType.SFT)
 
 config = TrainUtils.parse_config(config_name=script_config.config_name, config_filepath=script_config.config_filepath)
-dataset = TrainUtils.create_dataset(config=config)
+trainer = SupervisedTrainer.get_trainer(config=config, is_local=args.local)
 
-trainer = SupervisedTrainer.get_trainer(config=config, raw_dataset=dataset, is_local=args.local)
 if not args.load_only:
     trainer.train()
 trainer.save_model()

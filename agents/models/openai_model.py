@@ -9,6 +9,7 @@ import openai
 from typing import Union
 import logging
 import os
+import math
 import random
 import re
 
@@ -31,6 +32,13 @@ class OpenAIModel(Model):
     preference_regex = ".*Overall Score: (\\d+(\\.\\d+)?)"
 
     def __init__(self, alias: str, is_debater: bool = True, **kwargs):
+        """
+        An OpenAIModel calls GPT4 to generate the appropriate text.
+
+        Args:
+            alias: String that identifies the model for metrics and deduplication
+            is_debater: Boolean indicating whether the model is a debater (true) or judge (false)
+        """
         super().__init__(alias=alias, is_debater=is_debater)
         self.__configure()
         self.logger = LoggerUtils.get_default_logger(__name__)
@@ -46,6 +54,22 @@ class OpenAIModel(Model):
         speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
         **kwargs,
     ) -> list[str]:
+        """
+        Generates a list of texts in response to the given input.
+
+        Args:
+            inputs: A list of list of model inputs. Each ModelInput corresponds roughly to one command,
+                a list of ModelInputs corresponds to a single debate (or entry in a batch), and so the
+                list of lists is basically a batch of debates.
+            max_new_tokens: The maximum total number of new tokens to generate.
+            speech_structure: the format that the answer is expected to be in. Option includes "open-ended"
+                (which is just free text), "preference" (which means a number is expected), and "decision"
+                (which means a boolean is expected)
+
+        Returns:
+            A list of text, with one string for each entry in the batch.
+        """
+
         def model_input_to_openai_format(model_input: ModelInput | str) -> dict[str, str]:
             if isinstance(model_input, str):
                 return {"role": RoleType.USER.name.lower(), "content": model_input}
@@ -65,6 +89,21 @@ class OpenAIModel(Model):
                 self.logger.warn("The regex {} did not match the following message: {}".format(regex_str, message))
                 return default
 
+        def process_logprobs(completion: dict) -> tuple[float, float]:
+            debater_suffixes = ['A', 'B']
+            logprobs = completion.choices[0].logprobs.content
+            for entry in logprobs:
+                main = entry.token
+                if main in debater_suffixes:
+                    scores = {suffix: 0 for suffix in debater_suffixes}
+                    for option in filter(lambda x: x.token in debater_suffixes, entry.top_logprobs):
+                        scores[option.token] = math.exp(float(option.logprob))
+                    total_probs = sum(scores.values())
+                    renormalized_scores = {suffix: scores[suffix] / total_probs for suffix in scores}
+                    return renormalized_scores[debater_suffixes[0]], renormalized_scores[debater_suffixes[1]]
+            return 0.5, 0.5
+
+
         responses = []
         for model_input_list in inputs:
             messages = [model_input_to_openai_format(model_input) for model_input in model_input_list]
@@ -79,6 +118,7 @@ class OpenAIModel(Model):
                     model="gpt-4-1106-preview",
                     messages=messages,
                     max_tokens=max_new_tokens,
+                    logprobs=(speech_structure==SpeechStructure.DECISION)
                 )
             except Exception as e:
                 self.logger.warn(f"Received an error while calling OpenAI: {e}")
@@ -90,14 +130,14 @@ class OpenAIModel(Model):
 
             message = completion.choices[0].message["content"]
 
-            self.logger.info(f"Received message")
-
             if speech_structure == SpeechStructure.DECISION:
                 message = extract_response_from_structured_speech(
                     message=message,
                     regex_str=OpenAIModel.decision_regex,
                     default=constants.DEFAULT_DEBATER_A_NAME if random.random() < 0.5 else constants.DEFAULT_DEBATER_B_NAME,
                 )
+                a_odds, b_odds = process_logprobs(completion)
+                logger.debug(f"Debater A's odds: {a_odds}, Debater B's odds: {b_odds}, Winner: {message}")
             elif speech_structure == SpeechStructure.PREFERENCE:
                 message = extract_response_from_structured_speech(
                     message=message,
@@ -108,3 +148,7 @@ class OpenAIModel(Model):
             responses.append(message)
 
         return responses
+
+    def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> HumanModel:
+        """Generates a deepcopy of this model"""
+        return self(alias=alias, is_debater=is_debater)

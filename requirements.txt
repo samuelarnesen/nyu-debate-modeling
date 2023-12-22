@@ -1,4 +1,4 @@
-datasets==2.14.5
+datasets
 einops==0.6.1
 matplotlib==3.7.1
 matplotlib-inline==0.1.6
@@ -17,5 +17,5 @@ sentencepiece==0.1.99
 scipy==1.10.1
 spacy
 torch==2.0.1
-transformers==4.34.0
+transformers
 trl==0.7.1

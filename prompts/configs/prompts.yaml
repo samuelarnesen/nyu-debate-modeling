@@ -118,6 +118,11 @@ Base Prompt:
     content: 
       - |
         This is what <OPPONENT_NAME> said during their speech.
+  pre_previous_speech:
+    role: user
+    content:
+      - |
+        This is what you, <NAME>, said during your previous speech.
   pre_debater_a_speech_judge:
     role: user
     content: 
@@ -187,6 +192,11 @@ Base Prompt:
           - You should number each quote.
 
         Now generate your outline:
+  previous_debater_scratchpad:
+    role: user
+    content:
+      - |
+        This is the outline you generated to help you with your next speech. It contained a list of quotes that you felt might be relevant.
 
   best_of_n_judge_overview_for_debater_a:
     role: user

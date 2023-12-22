@@ -9,6 +9,13 @@ import random
 
 class RandomModel(Model):
     def __init__(self, alias: str, is_debater: bool = False, **kwargs):
+        """
+        A random model responds with a random string in response to every input. Useful for testing.
+
+        Args:
+            alias: string that identifies the model for metrics and deduplication
+            is_debater: boolean indicating whether the model is a debater (true) or judge (false)
+        """
         super().__init__(alias=alias, is_debater=is_debater)
         self.alphabet = "abcdefghijklmnopqrstuvwxyz"
 
@@ -20,6 +27,30 @@ class RandomModel(Model):
         num_return_sequences: int = 1,
         **kwargs,
     ) -> list[str]:
+        """
+        Generates a list of texts in response to the given input.
+
+        Args:
+            inputs: A list of list of model inputs. Each ModelInput corresponds roughly to one command,
+                a list of ModelInputs corresponds to a single debate (or entry in a batch), and so the
+                list of lists is basically a batch of debates. Since the model will return a random
+                response no matter what, the content of the input does not matter.
+            max_new_tokens: The total number of new tokens to generate.
+            speech_structure: The format that the answer is expected to be in. Option includes "open-ended"
+                (which is just free text), "preference" (which means a number is expected), and "decision"
+                (which means a boolean is expected)
+            num_return_sequences: The number of responses that the model is expected to generate. If a batch
+                size of >1 is passed in, then this value will be overridden by the batch size (so you cannot
+                have both num_return_sequences > 1 and len(inputs) > 1)
+
+        Returns:
+            A list of text, with one string for each entry in the batch (or for as many sequences are specified
+            to be returned by num_return_sequences).
+
+        Raises:
+            Exception: Raises Exception if num_return_sequences > 1 and len(inputs) > 1
+        """
+
         def generate_random_text():
             return " ".join(
                 [
@@ -35,6 +66,11 @@ class RandomModel(Model):
         def generate_random_number():
             return str(random.random() * 10)
 
+        if len(inputs) > 1 and num_return_sequences > 1:
+            raise Exception(
+                f"Length of input ({len(inputs)}) and num_return_sequences ({num_return_sequences}) cannot both be greater than 1."
+            )
+
         if speech_structure == SpeechStructure.DECISION:
             return [generate_random_decision() for i in range(len(inputs))]
         elif speech_structure == SpeechStructure.PREFERENCE:
@@ -44,4 +80,5 @@ class RandomModel(Model):
         return [generate_random_text() for i in range(num_return_sequences)]
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> RandomModel:
+        """Generates a deepcopy of this model"""
         return RandomModel(alias=alias, is_debater=is_debater if is_debater is not None else False)

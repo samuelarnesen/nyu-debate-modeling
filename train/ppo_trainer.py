@@ -45,6 +45,7 @@ def logprobs_from_logits(logits, labels, gather=True):
     return logpy
 
 
+# Another function that's just here to get the monkeypatching to work
 def batched_forward_pass(
     self,
     model,
@@ -140,6 +141,16 @@ class PPOTrainerWrapper:
     MAX_GENERATION_LENGTH = 300
 
     def __init__(self, ppo_trainer: PPOTrainer, config: TrainingConfig):
+        """
+        Class for training a model using Proximate Policy Optimization. In order to keep the
+        interface the same as the one used by the DPOTrainer and SFTTrainer, we construct a
+        wrapper here so that one can just call the train() function to run the training loop.
+
+        Params:
+            ppo_trainer: a huggingface-object that handles the actual ppo algorithm
+            config: configuration specifying the prompt setup and hyperparameters for the training run.
+        """
+
         self.ppo_trainer = ppo_trainer
         self.reward_model = OpenAIModel(alias=PPOTrainerWrapper.DEFAULT_JUDGE_ALIAS, is_debater=False)
         self.config = config
@@ -156,7 +167,7 @@ class PPOTrainerWrapper:
         self.logger = LoggerUtils.get_default_logger(__name__)
 
     def train(self):
-        # NOTE: TODO: This only optimizes Debater_A
+        """Runs the training loop for 1 epoch"""
         self.ppo_trainer.model.eval()
         for i, row in tqdm(enumerate(self.ppo_trainer.dataset)):
             row_to_use = f"{row[PPOTrainerWrapper.QUERY_COLUMN]}\n {constants.INSTRUCTION_SUFFIX}"
@@ -214,13 +225,31 @@ class PPOTrainerWrapper:
                 responses=[response_tensors[:, -PPOTrainerWrapper.MAX_GENERATION_LENGTH :].squeeze()],
                 scores=reward_tensors,
             )
-            # self.ppo_trainer.log_stats(stats=stats, batch=batch, rewards=rewards_tensor)
+            self.ppo_trainer.log_stats(
+                stats=stats, batch={"query": query_tensors, "response": response_tensors}, rewards=rewards_tensor
+            )
+
+            opponent_reward_tensors = constants.MAX_SCORE - reward_tensors
+            stats = self.ppo_trainer.step(
+                queries=[opponent_query_tensors.input_ids[0, :].squeeze()],
+                responses=[opponent_response_tensors[:, -PPOTrainerWrapper.MAX_GENERATION_LENGTH :].squeeze()],
+                scores=opponent_reward_tensors,
+            )
+            self.ppo_trainer.log_stats(
+                stats=stats,
+                batch={"query": opponent_query_tensors, "response": opponent_response_tensors},
+                rewards=opponent_reward_tensors,
+            )
 
     def save_model(self):
+        """Saves the model to the specified location"""
         self.ppo_trainer.save_model(config.logging_and_saving_config.output_dir)
 
     @classmethod
     def convert_dataset(cls, raw_dataset: RawDataset, config: TrainingConfig) -> Dataset:
+        """Converts a dataset (abstraction used in this codebase) into a Dataset object (abstraction
+        used by huggingface's trainer objects)"""
+
         def construct_dataframe(inputs: list[dict[str, str]]):
             df = pd.DataFrame(data=inputs)
             df[PPOTrainerWrapper.QUERY_COLUMN] = (
@@ -236,8 +265,8 @@ class PPOTrainerWrapper:
             return df
 
         debater_input_lists = [
-            RowConverter.convert_row(row=row, config=config, target=TrainingTarget.DEBATER, dataset=raw_dataset, index=i)
-            for i, row in enumerate(raw_dataset.get_data(split=SplitType.TRAIN))
+            RowConverter.convert_row(row=row, config=config, target=TrainingTarget.DEBATER, dataset=raw_dataset)
+            for row in raw_dataset.get_data(split=SplitType.TRAIN)
         ]
         debater_inputs = [item for debater_input_list in debater_input_lists for item in debater_input_list]
         debater_a_inputs = [debater_inputs[i] for i in filter(lambda x: x % 2 == 0, range(len(debater_inputs)))]
@@ -245,9 +274,9 @@ class PPOTrainerWrapper:
 
         judge_input_lists = [
             RowConverter.convert_row(
-                row=row, config=config, target=TrainingTarget.JUDGE, dataset=raw_dataset, index=i, use_dummy=True
+                row=row, config=config, target=TrainingTarget.JUDGE, dataset=raw_dataset, use_dummy=True
             )
-            for i, row in enumerate(raw_dataset.get_data(split=SplitType.TRAIN))
+            for row in raw_dataset.get_data(split=SplitType.TRAIN)
         ]
         judge_inputs = [item for judge_input_list in judge_input_lists for item in judge_input_list]
 
@@ -262,6 +291,7 @@ class PPOTrainerWrapper:
 
     @classmethod
     def get_optimizer(cls, model):
+        """Gets the optimizer to use during the training run"""
         trainable_params = [p for p in model.parameters() if p.requires_grad]
         optimizer = bnb.optim.PagedAdamW(trainable_params, lr=10e-4, weight_decay=10e-3)
         manager = bnb.optim.GlobalOptimManager.get_instance()
@@ -279,8 +309,21 @@ class PPOTrainerWrapper:
         raw_dataset: RawDataset,
         is_local: bool = False,
     ) -> PPOTrainerWrapper:
+        """
+        Generates a PPOTrainerWrapper object that should have the same interface as trl's
+        SFTTrainer and DPOTrainer objects.
+
+        Params:
+            config: configuration specifying the prompt setup and hyperparameters for the training run.
+            raw_dataset: dataset to use for training
+            is_local: whether this is being run on a cpu
+
+        Returns:
+            ppo_trainer: One can call ppo_trainer.train() to then run the training loop.
+        """
+
         if FLASH_ATTENTION_AVAILABLE:
-            replace_attn_with_flash_attn()
+            replace_attn_with_flash_attn(disable_dropout=True)
 
         tokenizer = TrainUtils.get_tokenizer(config=config)
         model = TrainUtils.load_model(config=config, is_local=is_local, requires_value_head=True)

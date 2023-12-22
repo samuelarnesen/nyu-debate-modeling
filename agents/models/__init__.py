@@ -1,6 +1,6 @@
 from .deterministic_model import DeterministicModel
 from .human_model import HumanModel
-from .llama_model import LlamaModel, LlamaInput
+from .llm_model import LlamaModel, LLModel, LLMInput, LLMType, MistralModel
 from .model_utils import ModelType, ModelUtils
 from .model import Model, ModelInput, SpeechStructure
 from .offline_model import OfflineModel

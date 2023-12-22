@@ -10,6 +10,15 @@ from typing import Union, Optional
 
 class HumanModel(Model):
     def __init__(self, alias: str, is_debater: bool, debater_name: str, speeches: list[SpeechData], **kwargs):
+        """
+        A human model returns the text that the human debaters generated during the human debate experiments.
+
+        Args:
+            alias: String that identifies the model for metrics and deduplication
+            is_debater: Boolean indicating whether the model is a debater (true) or judge (false)
+            speeches: List of speeches delivered by the human debaters. These speeches **must be in the same order
+                as the subsequent debate rounds**
+        """
         super().__init__(alias=alias, is_debater=is_debater)
         position = 0 if debater_name == constants.DEFAULT_DEBATER_A_NAME else 1
         self.speeches = [
@@ -20,6 +29,22 @@ class HumanModel(Model):
         self.logger = LoggerUtils.get_default_logger(__name__)
 
     def predict(self, inputs: list[list[ModelInput]], **kwargs) -> str:
+        """
+        Generates a list of texts in response to the given input. This does not support batch processing.
+
+        Args:
+            Inputs: **This input is ignored**. This model returns a deterministic response so the content of the input
+                does not matter. It is maintained only to be consistent with the interface.
+
+        Returns:
+            A list of length 1 containing the text of the corresponding speech from the human debates.
+
+        Raises:
+            Exception: Raises an exception if the batch size is greater than 1.
+        """
+        if len(inputs) > 1:
+            raise Exception(f"The HumanModel does not support batch processing. Input was of length {len(inputs)}")
+
         speech = ""
         if self.speech_idx < len(self.speeches):
             speech = self.speeches[self.speech_idx].text
@@ -31,4 +56,5 @@ class HumanModel(Model):
         return [speech]
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> HumanModel:
+        """Generates a deepcopy of this model"""
         return HumanModel(alias=alias, is_debater=is_debater, debater_name=self.debater_name, speeches=self.speeches)

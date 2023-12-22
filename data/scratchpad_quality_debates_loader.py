@@ -6,16 +6,19 @@ import utils.constants as constants
 from tqdm import tqdm
 
 from typing import Any, Optional
+import os
+import pickle
 import re
 
 
 class ScratchpadQualityDebatesDataset(QualityDebatesDataset):
-    ELLIPSES = "..."
-    MINIMUM_QUOTE_LENGTH = 4
-    CONTEXT_SIZE = 10
+    MINIMUM_QUOTE_LENGTH = 1
+    CONTEXT_SIZE = 0
     DEFAULT_SCRATCHPAD_TEXT = "No quotes needed"
 
     def __init__(self, train_data: list[str, Any], val_data: list[str, Any], test_data: list[str, Any]):
+        """Dataset where each row has a question, position, debate transcript (from the human debates) and an
+        automatically generated scratchpad continuation for each speech that lists out the quotes used"""
         super().__init__(
             train_data=train_data,
             val_data=val_data,
@@ -32,9 +35,6 @@ class ScratchpadQualityDebatesDataset(QualityDebatesDataset):
 
     def _generate_scratchpad(self, speech: SpeechData, row: DataRow) -> Optional[str]:
         original_quotes = QuoteUtils.extract_quotes(speech.text)
-        if not original_quotes and "<quote>" in speech.text and "</quote>" in speech.text:
-            print(speech.text)
-            print("\n\n\n\n#====#\n\n\n\n")
         contexts = [
             QuoteUtils.extract_quote_context(
                 quote_text=quote,
@@ -48,7 +48,7 @@ class ScratchpadQualityDebatesDataset(QualityDebatesDataset):
         speech.scratchpad = (
             "\n\n".join(
                 [
-                    f"{(i + 1)}. {ScratchpadQualityDebatesDataset.ELLIPSES}{context}{ScratchpadQualityDebatesDataset.ELLIPSES}"
+                    f"{(i + 1)}. {constants.QUOTE_TAG}{context}{constants.UNQUOTE_TAG}"
                     for i, context in enumerate(filter(lambda x: x, contexts))
                 ]
             )
@@ -58,16 +58,22 @@ class ScratchpadQualityDebatesDataset(QualityDebatesDataset):
 
 
 class ScratchpadQualityDebatesLoader(RawDataLoader):
+    DEFAULT_PICKLE_PATH = (
+        os.environ[constants.SRC_ROOT] + "data/datasets/scratchpad-quality-debates/scratchpad-quality-debates.p"
+    )
+
     @classmethod
     def load(
         cls,
-        full_dataset_filepath: str,
-        train_filepath: Optional[str] = None,
-        val_filepath: Optional[str] = None,
-        test_filepath: Optional[str] = None,
+        full_dataset_filepath: Optional[str] = None,
         deduplicate: bool = False,
         **kwargs,
     ) -> ScratchpadQualityDebatesDataset:
+        """Constructs a ScratchpadQualityDebatesDataset"""
+        if os.path.exists(ScratchpadQualityDebatesLoader.DEFAULT_PICKLE_PATH):
+            with open(ScratchpadQualityDebatesLoader.DEFAULT_PICKLE_PATH, "rb") as f:
+                return pickle.load(f)
+        full_dataset_filepath = full_dataset_filepath or QualityDebatesLoader.DEFAULT_FILE_PATH
         train, val, test = QualityDebatesLoader.get_splits(file_path=full_dataset_filepath, deduplicate=deduplicate)
         return ScratchpadQualityDebatesDataset(
             train_data=train,

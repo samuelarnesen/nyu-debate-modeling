@@ -1,126 +1,79 @@
-13B Validation - Llama Judge:
-  topic_config:
-    topic_type: from_dataset
+13B Validation - Quality Debates:
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
-  prompt_config:
-    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
-    - model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
-      alias: "13b-32k-sft"
-    - model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
-      alias: "13b-32k-sft"
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+        alias: "merged-4"
+        greedy: True
+        scratchpad_word_limit: 200
+        scratchpad_public: True
+      - model_type: llama
+        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+        alias: "merged-4"
+        greedy: True
+        scratchpad_word_limit: 200
+        scratchpad_public: True
     judge:
-      model_type: llama
-      model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K
-      alias: "llama-judge"
+      model_type: openai
+      alias: "openai-judge"
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-13B Validation:
-  topic_config:
-    topic_type: from_dataset
+    split_type: val
+13B Validation - Normal Quality:
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
-  prompt_config:
-    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted/
-        alias: "heavy-quoter"
-        override_prompt: Quote Heavy
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted/
-        alias: "light-quoter"
-        override_prompt: Quote Light
+      - model_type: mistral
+        model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-scratchpad-merged
+        alias: "mixtral-4-1"
+        greedy: True
+        scratchpad_word_limit: 200
+        scratchpad_public: True
+      - model_type: mistral
+        model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-scratchpad-merged
+        alias: "mixtral-4-1"
+        greedy: True
+        scratchpad_word_limit: 200
+        scratchpad_public: True
     judge:
       model_type: random
       alias: "random-judge"
   dataset:
-    dataset_type: quality_debates
-    full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-    split_type: val
-13B Validation - OpenAI:
-  topic_config:
-    topic_type: from_dataset
+    dataset_type: quality
+    split_type: train
+Mixtral - 8x7b:
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
-  prompt_config:
-    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted
-        alias: "4-debater-scratchpad"
-        greedy: True
-        use_scratchpad: True
-      - model_type: llama
         model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
-        alias: "4-debater-none"
+        alias: llama-4
         greedy: True
-        use_scratchpad: False
+      - model_type: mistral
+        model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b/checkpoint-136
+        alias: mistral-4
+        greedy: True
     judge:
       model_type: openai
-      alias: "openai-judge"
-  dataset:
-    dataset_type: quality_debates
-    full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
-    split_type: val
-13B Validation - Normal Quality:
-  topic_config:
-    topic_type: from_dataset
-  word_limit: 500
-  batch_size: 1
-  num_speeches: 1
-  flip: True
-  annotations_classifier_file_path: /home/spa9663/debate-data/classifier.p
-  prompt_config:
-    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
-  agents:
-    debaters:
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Quoted
-        alias: "4-debater-scratchpad"
-        greedy: True
-        use_scratchpad: True
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
-        alias: "4-debater-none"
-        greedy: True
-        use_scratchpad: False
-    judge:
-      model_type: openai
-      alias: "openai-judge"
+      alias: openai-judge
   dataset:
     dataset_type: quality
-    train_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.train
-    val_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.dev
-    test_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.test
     split_type: val
 70B Check:
-  topic_config:
-    topic_type: from_dataset
   word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: False
-  prompt_config:
-    file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-    default_prompt_name: Base Prompt
   agents:
     debaters:
       - model_type: llama
@@ -134,5 +87,4 @@
       alias: "deterministic-judge"
   dataset:
     dataset_type: quality_debates
-    full_dataset_file_path: /home/spa9663/debate-data/debates-readable.jsonl
     split_type: train

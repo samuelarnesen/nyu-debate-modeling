@@ -44,6 +44,7 @@ class DebateRound:
         judge: Judge,
         metadata: QuestionMetadata | list[QuestionMetadata],
     ):
+        """An abstraction that coordinates the ordered generation of speeches by the debaters and the judge."""
         self.first_debater = first_debater
         self.second_debater = second_debater
         self.judge = judge
@@ -56,18 +57,27 @@ class DebateRound:
         self.logger = LoggerUtils.get_default_logger(__name__)
 
     def set_first_debater(self, debater: Debater):
+        """Changes the identity of the first debater in the debate."""
         self.first_debater = debater
         self.name_to_agent[self.first_debater.name] = debater
 
     def set_second_debater(self, debater: Debater):
+        """Changes the identity of the second debater in the debate."""
         self.second_debater = debater
         self.name_to_agent[self.second_debater.name] = debater
 
     def set_judge(self, judge: Judge):
+        """Changes the identity of the judge in the debate."""
         self.judge = judge
         self.name_to_agent[self.judge.name] = judge
 
     def run_round(self) -> list[str]:
+        """
+        Each debater generates speeches until the judge renders their decision.
+
+        Returns:
+            Returns a list of strings with the name of the agent that won each debate in the batch
+        """
         last_output = None
         next_speaker = self.judge.get_next_expected_speaker()
         while next_speaker:
@@ -90,6 +100,7 @@ class DebateRound:
     def record_winners(
         self, last_output: list[str], save_file_path_prefix: Optional[str] = None
     ) -> list[DebateRoundSummary]:
+        """Generates a full summary of the debate round including the winner, transcript, metadata, and aliases of all the participating models"""
         first_debater_win_list = []
         for i, debater_a_wins in enumerate(last_output):
             winner = constants.DEFAULT_DEBATER_A_NAME if debater_a_wins else constants.DEFAULT_DEBATER_B_NAME
@@ -115,15 +126,21 @@ class DebateRound:
         ]
 
     def __call__(self, save_file_path_prefix: Optional[str] = None) -> list[DebateRoundSummary]:
+        """Runs the round and generates a summary of the results"""
         last_output = self.run_round()
         return self.record_winners(last_output=last_output, save_file_path_prefix=save_file_path_prefix)
 
 
 class SplittableDebateRound:
+    """
+    This class is used to generate debate rounds that need to be replayed up to a specific point in the round.
+    This is useful if one wants to see who wins if a different speech was given somewhere far into the round"""
+
     @classmethod
     def run_split_round(
         cls, debate_round: DebateRound, splitting_rule: SplittingRule, save_file_path_prefix: Optional[str] = None
     ):
+        """Splits a round at the specified point and reruns it"""
         first_round_summary = debate_round(save_file_path_prefix=save_file_path_prefix)
 
         truncation_index = SplittableDebateRound.__get_truncation_index(

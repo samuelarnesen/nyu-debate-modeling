@@ -1,7 +1,9 @@
 from data.dataset import DataRow, DatasetType, RawDataLoader, RawDataset, SpeakerType, SpeechData, SplitType
+import utils.constants as constants
 
 from typing import Any, Optional
 import json
+import os
 import re
 
 
@@ -11,8 +13,20 @@ class QualityDebatesDataset(RawDataset):
         train_data: list[str, Any],
         val_data: list[str, Any],
         test_data: list[str, Any],
-        override_type: DatasetType = None,
+        override_type: Optional[DatasetType] = None,
     ):
+        """
+        Builds a dataset of all the questions and speeches from the human debate experiments. Each row
+        is a question along with the assigned sides and a list of speeches.
+
+        Params:
+            train_data: a list of json objects corresponding to transcripts in the training set.
+            val_data: a list of json objects corresponding to transcripts in the validation set.
+            test_data: a list of json objects corresponding to transcripts in the test set.
+            override_type: if a child class inherits from this dataset, this is the dataset_type to
+                pass to the parent RawDataset constructor.
+        """
+
         super().__init__(override_type or DatasetType.QUALITY_DEBATES)
         self.data = {
             SplitType.TRAIN: self.convert_batch_to_rows(train_data),
@@ -22,11 +36,13 @@ class QualityDebatesDataset(RawDataset):
         self.idxs = {SplitType.TRAIN: 0, SplitType.VAL: 0, SplitType.TEST: 0}
 
     def get_data(self, split: SplitType = SplitType.TRAIN) -> list[DataRow]:
+        """Returns all the data for a given split"""
         if split not in self.data:
             raise ValueError(f"Split type {split} is not recognized. Only TRAIN, VAL, and TEST are recognized")
         return self.data[split]
 
     def get_batch(self, split: SplitType = SplitType.TRAIN, batch_size: int = 1) -> list[DataRow]:
+        """Returns a subset of the data for a given split"""
         if batch_size < 1:
             raise ValueError(f"Batch size must be >= 1. Inputted batch size was {batch_size}")
         data_to_return = self.data[split][self.idxs[split] : min(self.idxs[split] + batch_size, len(self.data[split]))]
@@ -34,6 +50,7 @@ class QualityDebatesDataset(RawDataset):
         return data_to_return
 
     def get_example(self, split: SplitType = SplitType.TRAIN, idx: int = 0) -> DataRow:
+        """Returns an individual row in the dataset"""
         return self.data[split][idx % len(self.data[split])]
 
     def convert_batch_to_rows(self, batch: list[dict[str, Any]]):
@@ -74,8 +91,24 @@ class QualityDebatesDataset(RawDataset):
 
 
 class QualityDebatesLoader(RawDataLoader):
+    DEFAULT_FILE_PATH = os.environ[constants.SRC_ROOT] + "data/datasets/quality-debates/debates-readable.jsonl"
+
     @classmethod
-    def get_splits(cls, file_path: str, deduplicate: bool = False) -> list[dict]:
+    def get_splits(cls, file_path: str, deduplicate: bool = False) -> tuple[list[dict]]:
+        """
+        Filters the dataset and splits it into train, val, and test splits. Consultancy,
+        offline debates, and gpt4 debates are excluded.
+
+        Params:
+            file_path: the path to the debate transcripts.
+            deduplicate: whether we should return only one transcript for a given question.
+
+        Returns:
+            train_data: a list of json rows corresponding to the filtered training data
+            val_data: a list of json rows corresponding to the filtered validation data
+            test_data: a list of json rows corresponding to the filtered test data
+        """
+
         def __should_keep(row: dict[str, Any]) -> bool:
             roles = [turn["role"] for turn in row["turns"]]
             positions = set([turn.get("index") for turn in row["turns"]])
@@ -122,13 +155,12 @@ class QualityDebatesLoader(RawDataLoader):
     @classmethod
     def load(
         cls,
-        full_dataset_filepath: str,
-        train_filepath: Optional[str] = None,
-        val_filepath: Optional[str] = None,
-        test_filepath: Optional[str] = None,
+        full_dataset_filepath: Optional[str] = None,
         deduplicate: bool = False,
         **kwargs,
     ) -> QualityDebatesDataset:
+        """Constructs a QualityDebatesDataset"""
+        full_dataset_filepath = full_dataset_filepath or QualityDebatesLoader.DEFAULT_FILE_PATH
         train, val, test = QualityDebatesLoader.get_splits(file_path=full_dataset_filepath, deduplicate=deduplicate)
         return QualityDebatesDataset(
             train_data=train,
