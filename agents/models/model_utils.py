@@ -3,6 +3,7 @@ from agents.models.deterministic_model import DeterministicModel
 from agents.models.llm_model import LlamaModel, MistralModel
 from agents.models.openai_model import OpenAIModel
 from agents.models.random_model import RandomModel
+from agents.models.served_model import ServedModel
 
 from enum import Enum
 from typing import Optional
@@ -16,6 +17,7 @@ class ModelType(Enum):
     OFFLINE = 5
     HUMAN = 6
     MISTRAL = 7
+    SERVED = 8
 
 
 class ModelUtils:
@@ -27,6 +29,7 @@ class ModelUtils:
         file_path: Optional[str] = None,
         is_debater: bool = True,
         greedy: bool = False,
+        served: bool = False,
     ) -> Model:
         """
         Builds a model using the given inputs.
@@ -48,17 +51,28 @@ class ModelUtils:
                 directly. At the moment, neither the OfflineModel nor the HumanModel can be instantiated directly.
         """
         if model_type == ModelType.RANDOM:
-            return RandomModel(alias=alias, is_debater=is_debater)
+            model = RandomModel(alias=alias, is_debater=is_debater)
         elif model_type == ModelType.LLAMA:
-            return LlamaModel(alias=alias, file_path=file_path, is_debater=is_debater, greedy=greedy)
+            model = LlamaModel(alias=alias, file_path=file_path, is_debater=is_debater, greedy=greedy)
         elif model_type == ModelType.MISTRAL:
-            return MistralModel(alias=alias, file_path=file_path, is_debater=is_debater, greedy=greedy)
+            model = MistralModel(alias=alias, file_path=file_path, is_debater=is_debater, greedy=greedy)
         elif model_type == ModelType.DETERMINISTIC:
-            return DeterministicModel(alias=alias, is_debater=is_debater)
+            model = DeterministicModel(alias=alias, is_debater=is_debater)
         elif model_type == ModelType.OPENAI:
-            return OpenAIModel(alias=alias, is_debater=is_debater)
+            model = OpenAIModel(alias=alias, is_debater=is_debater)
         elif model_type == ModelType.OFFLINE:
             raise Exception("Offline model cannot be directly instantiated")
         elif model_type == ModelType.HUMAN:
             raise Exception("Human model cannot be directly instantiated")
-        raise Exception(f"Model {model_type} not found")
+        elif model_type == ModelType.SERVED:
+            raise Exception("Served model cannot be directly instantiated")
+        else:
+            raise Exception(f"Model {model_type} not found")
+
+        if served:
+            if model_type in [ModelType.LLAMA]:  # expand when more types allow serving
+                model = ServedModel(base_model=model)
+            else:
+                raise Exception(f"Model type {model_type} does not support serving")
+
+        return model

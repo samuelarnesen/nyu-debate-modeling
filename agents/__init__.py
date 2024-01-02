@@ -1,5 +1,6 @@
 from agents.models import (
     DeterministicModel,
+    GenerationParams,
     HumanModel,
     LlamaModel,
     LLModel,
@@ -13,6 +14,7 @@ from agents.models import (
     OfflineModel,
     OpenAIModel,
     RandomModel,
+    ServedModel,
     SpeechStructure,
 )
 from .agent import Agent

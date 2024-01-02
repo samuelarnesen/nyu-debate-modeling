@@ -10,6 +10,7 @@ from agents import (
     ModelUtils,
     OfflineDebater,
     QuestionMetadata,
+    ServedModel,
 )
 from data import DatasetConfig, DatasetType, LoaderUtils, RawDataLoader, RawDataset, SplitType
 from prompts import DynamicPromptParser, Prompt, PromptConfig, PromptParser
@@ -55,6 +56,7 @@ class AgentConfig(BaseModel):
     offline_file_path: Optional[str] = None
     scratchpad_word_limit: Optional[int] = None
     scratchpad_public: bool = False
+    served: bool = False
 
 
 class AgentsConfig(BaseModel):
@@ -181,10 +183,11 @@ class ExperimentLoader:
         debater_one_model = (
             ModelUtils.instantiate_model(
                 model_type=debater_one_model_type,
-                file_path=debater_one_model_path,
+                file_path=debater_one_model_path if not experiment.agents.debaters[debater_idxs[0]].served else None,
                 is_debater=True,
                 alias=experiment.agents.debaters[debater_idxs[0]].alias,
                 greedy=experiment.agents.debaters[debater_idxs[0]].greedy,
+                served=experiment.agents.debaters[debater_idxs[0]].served,
             )
             if f"{debater_one_model_type}_{debater_one_model_path}" not in model_cache
             else model_cache[f"{debater_one_model_type}_{debater_one_model_path}"].copy(
@@ -196,10 +199,11 @@ class ExperimentLoader:
         debater_two_model = (
             ModelUtils.instantiate_model(
                 model_type=debater_two_model_type,
-                file_path=debater_two_model_path,
+                file_path=debater_two_model_path if not experiment.agents.debaters[debater_idxs[1]].served else None,
                 is_debater=True,
                 alias=experiment.agents.debaters[debater_idxs[1]].alias,
                 greedy=experiment.agents.debaters[debater_idxs[1]].greedy,
+                served=experiment.agents.debaters[debater_idxs[1]].served,
             )
             if f"{debater_two_model_type}_{debater_two_model_path}" not in model_cache
             else model_cache[f"{debater_two_model_type}_{debater_two_model_path}"].copy(
@@ -470,10 +474,10 @@ class ExperimentLoader:
 
             if experiment.agents.debaters[debater_idxs[0]].is_human:
                 debate_round.set_first_debater(HumanDebater(debater=debate_round.first_debater, speeches=speeches))
-                flipped_round.set_first_debater(HumanDebater(debater=flipped_round.first_debater, speeches=speeches))
+                flipped_round.set_second_debater(HumanDebater(debater=flipped_round.second_debater, speeches=speeches))
             if experiment.agents.debaters[debater_idxs[1]].is_human:
                 debate_round.set_second_debater(HumanDebater(debater=debate_round.second_debater, speeches=speeches))
-                flipped_round.set_second_debater(HumanDebater(debater=flipped_round.second_debater, speeches=speeches))
+                flipped_round.set_first_debater(HumanDebater(debater=flipped_round.first_debater, speeches=speeches))
 
             rounds.append(debate_round)
             if experiment.flip:

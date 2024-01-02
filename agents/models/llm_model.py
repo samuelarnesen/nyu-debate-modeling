@@ -22,10 +22,19 @@ class LLMInput(BaseModel):
     extra_suffix: Optional[str]
 
 
+class GenerationParams(BaseModel):
+    max_new_tokens: int = 300
+    temperature: float = 0.5
+    top_p: float = 0.9
+    repetition_penalty: float = 1.2
+    do_sample: bool = True
+
+
 class LLModel(Model):
     INSTRUCTION_PREFIX = ""
     INSTRUCTION_SUFFIX = ""
     TARGET_MODULES = []
+    DEFAULT_GENERATION_PARAMS = GenerationParams()
 
     def __init__(
         self,
@@ -71,14 +80,14 @@ class LLModel(Model):
             )
 
             self.generation_config = GenerationConfig(
-                max_new_tokens=300,
-                temperature=0.5,
-                top_p=0.9,
+                max_new_tokens=LLModel.DEFAULT_GENERATION_PARAMS.max_new_tokens,
+                temperature=LLModel.DEFAULT_GENERATION_PARAMS.temperature,
+                top_p=LLModel.DEFAULT_GENERATION_PARAMS.top_p,
                 num_return_sequences=1,
                 output_scores=True,
                 return_dict_in_generate=True,
-                repetition_penalty=1.2,
-                do_sample=True,
+                repetition_penalty=LLModel.DEFAULT_GENERATION_PARAMS.repetition_penalty,
+                do_sample=LLModel.DEFAULT_GENERATION_PARAMS.do_sample,
                 use_cache=True,
                 pad_token_id=self.tokenizer.eos_token_id,
             )
@@ -117,10 +126,10 @@ class LLModel(Model):
             (" " + llm_input.extra_suffix) if llm_input.extra_suffix else "",
         )
 
-    def tokenize(
+    def generate_input_strs(
         self, inputs: list[list[ModelInput]], speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED
-    ) -> torch.Tensor:
-        """Converts a list of model inputs into a tensor that can be passed to a model"""
+    ) -> list[str]:
+        """Converts a list of model inputs into a list of strings that can be tokenized"""
 
         def get_extra_suffix(speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED):
             if speech_structure == SpeechStructure.DECISION:
@@ -132,7 +141,7 @@ class LLModel(Model):
         input_strs = []
         for input_list in inputs:
             input_strs.append(
-                LlamaModel.generate_input_str(
+                LLModel.generate_input_str(
                     llm_input=LLModel.generate_llm_input_from_model_inputs(
                         input_list=input_list, extra_suffix=get_extra_suffix(speech_structure)
                     ),
@@ -141,6 +150,13 @@ class LLModel(Model):
                 )
             )
 
+        return input_strs
+
+    def tokenize(
+        self, inputs: list[list[ModelInput]], speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED
+    ) -> torch.Tensor:
+        """Converts a list of model inputs into a tensor that can be passed to a model"""
+        input_strs = self.generate_input_strs(inputs=inputs, speech_structure=speech_structure)
         return self.tokenizer(input_strs, return_tensors="pt", padding=True)
 
     @timer("llm inference")

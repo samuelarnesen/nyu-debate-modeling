@@ -1,5 +1,5 @@
 .env
-__pycache__/
 .DS_Store
 datasets/
-agents/models/classifier.p
+outputs/*
+**/__pycache__/*
