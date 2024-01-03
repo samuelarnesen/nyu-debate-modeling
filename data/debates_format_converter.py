@@ -6,6 +6,10 @@ import json
 import pandas as pd
 
 
+john_dan_debate_source = "data/datasets/john_dan_debates.csv"
+output_gpt_only = "data/datasets/gpt_debates.jsonl"
+output_combined = "data/datasets/human_and_gpt4_debates.jsonl"
+
 if __name__ == "__main__":
 
     def create_turn(text):
@@ -21,8 +25,8 @@ if __name__ == "__main__":
         }
         return turn
 
-    df = pd.read_csv("data/datasets/john_dan_debates.csv")
-    with open("data/datasets/debates-readable.jsonl", "r") as human_f:
+    df = pd.read_csv(john_dan_debate_source)
+    with open("data/datasets/quality-debates/debates-readable.jsonl", "r") as human_f:
         lines = human_f.readlines()
         human_debates = [json.loads(line) for line in lines]
 
@@ -38,9 +42,13 @@ if __name__ == "__main__":
             correct_turn = create_turn(round["correct"])
             incorrect_turn = create_turn(round["incorrect"])
             if transcript["swap"]:
+                incorrect_turn["index"] = 0
+                correct_turn["index"] = 1
                 turns.append(incorrect_turn)
                 turns.append(correct_turn)
             else:
+                correct_turn["index"] = 0
+                incorrect_turn["index"] = 1
                 turns.append(correct_turn)
                 turns.append(incorrect_turn)
 
@@ -54,15 +62,16 @@ if __name__ == "__main__":
             "judge": "-1",
             "turns": turns,
             "isJudgeCorrect": False,
+            "correctAnswer": row["correct answer"]
         }
         gpt_debates.append(new_debate)
-
-    with open("data/datasets/gpt_debates.jsonl", "w") as f:
+    
+    with open(output_gpt_only, "w+") as f:
         for debate in gpt_debates:
             f.write(json.dumps(debate))
             f.write("\n")
 
-    with open("data/datasets/human_and_gpt4_debates.jsonl", "w") as f:
+    with open(output_combined, "w") as f:
         all_debates = human_debates + gpt_debates
         for debate in all_debates:
             f.write(json.dumps(debate))

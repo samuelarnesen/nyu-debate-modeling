@@ -35,6 +35,8 @@ class QualityDebatesDataset(RawDataset):
         }
         self.idxs = {SplitType.TRAIN: 0, SplitType.VAL: 0, SplitType.TEST: 0}
 
+        print(len(self.data[SplitType.TRAIN]))
+
     def get_data(self, split: SplitType = SplitType.TRAIN) -> list[DataRow]:
         """Returns all the data for a given split"""
         if split not in self.data:
@@ -57,6 +59,10 @@ class QualityDebatesDataset(RawDataset):
         return [self.__example_to_row(entry) for entry in batch]
 
     def __get_correct_answer(self, entry: dict[str, Any]) -> int:
+        # the GPT debates don't have judge probabilities but do have the correct answer marked
+        if "correctAnswer" in entry and "answers" in entry and entry["correctAnswer"] in entry["answers"]:
+            return entry["answers"].index(entry["correctAnswer"])
+
         judge_probs = entry["turns"][-1]["probabilities"]
         judge_correct = entry["isJudgeCorrect"]
         judge_probs = [
