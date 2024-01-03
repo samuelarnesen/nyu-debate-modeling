@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.models.model import Model, ModelInput, RoleType, SpeechStructure
+from agents.models.model import Model, ModelInput, ModelResponse, RoleType, SpeechStructure
 from utils import LoggerUtils
 import utils.constants as constants
 
@@ -53,7 +53,7 @@ class OpenAIModel(Model):
         max_new_tokens=450,
         speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
         **kwargs,
-    ) -> list[str]:
+    ) -> list[ModelResponse]:
         """
         Generates a list of texts in response to the given input.
 
@@ -67,7 +67,7 @@ class OpenAIModel(Model):
                 (which means a boolean is expected)
 
         Returns:
-            A list of text, with one string for each entry in the batch.
+            A list of model responses, with one string for each entry in the batch.
         """
 
         def model_input_to_openai_format(model_input: ModelInput | str) -> dict[str, str]:
@@ -137,14 +137,24 @@ class OpenAIModel(Model):
                 )
                 a_odds, b_odds = process_logprobs(completion)
                 self.logger.debug(f"Debater A's odds: {a_odds}, Debater B's odds: {b_odds}, Winner: {message}")
+                responses.append(
+                    ModelResponse(
+                        decision=message,
+                        probabilistic_decision={
+                            constants.DEFAULT_DEBATER_A_NAME: a_odds,
+                            constants.DEFAULT_DEBATER_B_NAME: b_odds,
+                        },
+                    )
+                )
             elif speech_structure == SpeechStructure.PREFERENCE:
                 message = extract_response_from_structured_speech(
                     message=message,
                     regex_str=OpenAIModel.preference_regex,
                     default=str(-1),
                 )
-
-            responses.append(message)
+                responses.append(ModelResponse(preference=float(message)))
+            else:
+                responses.append(ModelResponse(speech=message))
 
         return responses
 

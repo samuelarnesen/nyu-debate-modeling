@@ -1,6 +1,7 @@
 from agents.agent import Agent
 from agents.debater import Debater
 from agents.judge import Judge, JudgeType
+from agents.models import ModelResponse
 from agents.transcript import Transcript
 from prompts import Prompt, PromptConfig, PromptParser
 from utils import LoggerUtils, QuoteUtils
@@ -29,6 +30,9 @@ class DebateRoundSummary(BaseModel):
     second_debater_alias: str
     first_debater_wins: bool
     judge_alias: str
+    winning_debater_prob: float = 1.0
+    first_debater_win_prob: float = 0.5
+    second_debater_win_prob: float = 0.5
 
 
 class SplittingRule(Enum):
@@ -71,18 +75,21 @@ class DebateRound:
         self.judge = judge
         self.name_to_agent[self.judge.name] = judge
 
-    def run_round(self) -> list[str]:
+    def run_round(self) -> tuple[list[str], ModelResponse]:
         """
         Each debater generates speeches until the judge renders their decision.
 
         Returns:
-            Returns a list of strings with the name of the agent that won each debate in the batch
+            last_output: a list of strings with the name of the agent that won each debate in the batch
+            last_model_output: the model generation from the judge's decision. This is useful if the judge
+                also returns the probability that a given debater won.
         """
         last_output = None
+        last_model_output = None
         next_speaker = self.judge.get_next_expected_speaker()
         while next_speaker:
             speaker = self.name_to_agent[next_speaker]
-            batch_response = speaker()
+            batch_response, model_output = speaker()
             for idx, response in enumerate(batch_response):
                 validated_response = str(response)
                 if speaker.quotes_require_validation:
@@ -95,17 +102,22 @@ class DebateRound:
                     agent.receive_message(speaker=speaker.name, content=response_to_use, idx=idx)
             next_speaker = self.judge.get_next_expected_speaker()
             last_output = batch_response
-        return last_output
+            last_model_output = model_output
+        return last_output, last_model_output
 
     def record_winners(
-        self, last_output: list[str], save_file_path_prefix: Optional[str] = None
+        self, last_output: list[str], last_model_output: list[ModelResponse], save_file_path_prefix: Optional[str] = None
     ) -> list[DebateRoundSummary]:
         """Generates a full summary of the debate round including the winner, transcript, metadata, and aliases of all the participating models"""
         first_debater_win_list = []
-        for i, debater_a_wins in enumerate(last_output):
+        winning_probability_list = []
+        for i, (debater_a_wins, model_output) in enumerate(zip(last_output, last_model_output)):
             winner = constants.DEFAULT_DEBATER_A_NAME if debater_a_wins else constants.DEFAULT_DEBATER_B_NAME
             first_debater_win_list.append(winner == self.first_debater.name)
             string_value = self.judge.get_transcript(idx=i).full_string_value()
+            winning_probability_list.append(
+                1.0 if not model_output.probabilistic_decision else model_output.probabilistic_decision[winner]
+            )
             self.logger.debug(string_value)
 
         if save_file_path_prefix:
@@ -121,14 +133,23 @@ class DebateRound:
                 second_debater_alias=self.second_debater.get_alias(),
                 first_debater_wins=first_debater_wins,
                 judge_alias=self.judge.get_alias(),
+                winning_debater_prob=winning_probability_list[i],
+                first_debater_win_prob=winning_probability_list[i]
+                if first_debater_wins
+                else (1 - winning_probability_list[i]),
+                second_debater_win_prob=(1 - winning_probability_list[i])
+                if first_debater_wins
+                else winning_probability_list[i],
             )
             for i, first_debater_wins in enumerate(first_debater_win_list)
         ]
 
     def __call__(self, save_file_path_prefix: Optional[str] = None) -> list[DebateRoundSummary]:
         """Runs the round and generates a summary of the results"""
-        last_output = self.run_round()
-        return self.record_winners(last_output=last_output, save_file_path_prefix=save_file_path_prefix)
+        last_output, last_model_output = self.run_round()
+        return self.record_winners(
+            last_output=last_output, last_model_output=last_model_output, save_file_path_prefix=save_file_path_prefix
+        )
 
 
 class SplittableDebateRound:

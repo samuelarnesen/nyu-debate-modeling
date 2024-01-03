@@ -215,7 +215,7 @@ Operational_Test:
   word_limit: 500
   batch_size: 1
   num_speeches: 1
-  flip: False
+  flip: True
   agents:
     debaters:
       - model_type: random

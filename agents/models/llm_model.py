@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.models.model import Model, ModelInput, SpeechStructure
+from agents.models.model import Model, ModelInput, ModelResponse, SpeechStructure
 from prompts import RoleType
 from utils import LoggerUtils, StringUtils, timer
 import utils.constants as constants
@@ -13,6 +13,7 @@ import torch
 from enum import Enum
 from typing import Optional, Union, Type
 import copy
+import math
 import re
 
 
@@ -168,7 +169,7 @@ class LLModel(Model):
         speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
         num_return_sequences: int = 1,
         **kwargs,
-    ) -> list[str]:
+    ) -> list[ModelResponse]:
         """
         Generates a list of texts in response to the given input.
 
@@ -185,8 +186,8 @@ class LLModel(Model):
                 have both num_return_sequences > 1 and len(inputs) > 1)
 
         Returns:
-            A list of text, with one string for each entry in the batch (or for as many sequences are specified
-            to be returned by num_return_sequences).
+            A list of model responses, with one response for each entry in the batch (or for as many sequences
+            are specified to be returned by num_return_sequences).
 
         Raises:
             Exception: Raises Exception if num_return_sequences > 1 and len(inputs) > 1
@@ -199,6 +200,10 @@ class LLModel(Model):
         def get_string_log_prob(target_string: list[str], scores: torch.Tensor, batch_index: int) -> float:
             tokenized_target = self.tokenizer(target_string).input_ids[-1]
             return scores[0][batch_index][tokenized_target].item()
+
+        def normalize_log_probs(a_prob: float, b_prob: float) -> tuple[float, float]:
+            exponentiated = [math.exp(logprob) for logprob in [a_prob, b_prob]]
+            return prob[0] / sum(exponentiated), prob[1] / sum(exponentiated)
 
         def create_new_generation_config():
             config_to_use = copy.deepcopy(self.generation_config)
@@ -218,20 +223,32 @@ class LLModel(Model):
                 decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[min(i, len(input_lengths) - 1)] :])
                 new_tokens = decoded.split(constants.INSTRUCTION_SUFFIX)[-1]
                 if speech_structure == SpeechStructure.PREFERENCE and re.search("\\d+(\\.\\d+)?", new_tokens.strip()):
-                    decoded_outputs.append(re.search("\\d+(\\.\\d+)?", new_tokens.strip()).group())
+                    decoded_outputs.append(
+                        ModelResponse(preference=float(re.search("\\d+(\\.\\d+)?", new_tokens.strip()).group()))
+                    )
                 else:
-                    decoded_outputs.append(StringUtils.clean_string(new_tokens))
+                    decoded_outputs.append(ModelResponse(speech=StringUtils.clean_string(new_tokens)))
             else:
                 tokenized_debater_a = self.tokenizer(constants.DEFAULT_DEBATER_A_NAME)
                 tokenized_debater_b = self.tokenizer(constants.DEFAULT_DEBATER_B_NAME)
                 decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[i] :])
                 a_score = get_string_log_prob(constants.DEFAULT_DEBATER_A_NAME, outputs.scores, i)
                 b_score = get_string_log_prob(constants.DEFAULT_DEBATER_B_NAME, outputs.scores, i)
+                normalized_a_score, normalized_b_score = normalize_log_probs(a_score, b_score)
 
                 decoded_outputs.append(
-                    constants.DEFAULT_DEBATER_A_NAME if a_score > b_score else constants.DEFAULT_DEBATER_B_NAME
+                    ModelResponse(
+                        decision=(
+                            constants.DEFAULT_DEBATER_A_NAME if a_score > b_score else constants.DEFAULT_DEBATER_B_NAME
+                        ),
+                        probabilistic_decision={
+                            constants.DEFAULT_DEBATER_A_NAME: normalized_a_score,
+                            constants.DEFAULT_DEBATER_B_NAME: normalized_b_score,
+                        },
+                    )
                 )
-                self.logger.info(f"Scores: A {a_score} - B {b_score}")
+
+                self.logger.info(f"Scores: A {normalized_a_score} - B {normalized_b_score}")
 
         return decoded_outputs
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from agents.agent import Agent
-from agents.models import Model, SpeechStructure
+from agents.models import Model, ModelResponse, SpeechStructure
 from agents.transcript import SpeechFormat, SpeechType, Transcript
 from prompts import Prompt, PromptTag
 from utils import LoggerUtils
@@ -63,7 +63,7 @@ class Judge(Agent):
 
     def generate(
         self, max_new_tokens: int = 150, speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED
-    ) -> [list[str]]:
+    ) -> [list[ModelResponse]]:
         """Calls the underlying model to generate text"""
         model_inputs = [transcript.to_model_input() for transcript in self.transcripts]
         max_new_tokens = max_new_tokens if speech_structure == SpeechStructure.OPEN_ENDED else 15
@@ -77,7 +77,8 @@ class Judge(Agent):
             Either a string with the text it generated or a boolean indicating whether the first debater won
             (depending on whether the speech was a decision or open-ended) for each element in the batch.
         """
-        batch_reasoning = self.generate(max_new_tokens=450, speech_structure=SpeechStructure.OPEN_ENDED)
+        batch_generation = self.generate(max_new_tokens=450, speech_structure=SpeechStructure.OPEN_ENDED)
+        batch_reasoning = [response.speech for response in batch_generation]
         if self.transcripts[0].only_decision_remains():  # all formats should be the same so we can use any transcript
             for i, reasoning in enumerate(batch_reasoning):
                 super().receive_message(speaker=self.name, content=reasoning, idx=i)
@@ -85,20 +86,18 @@ class Judge(Agent):
             batch_predictions = self.generate(max_new_tokens=15, speech_structure=self.speech_structure)
             validated_predictions = self.validate_responses(batch_predictions)
             returned_response = self.process_responses(validated_predictions)
-            return returned_response
-        return batch_reasoning
+            return returned_response, batch_predictions
+        return batch_reasoning, batch_generation
 
-    def validate_responses(self, responses: list[str]) -> None:
+    def validate_responses(self, responses: list[ModelResponse]) -> None:
         """Confirms that the responses matched the expected format"""
-        for response in filter(
-            lambda x: x not in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME], responses
-        ):
+        for response in filter(lambda x: not x.decision, responses):
             self.logger.warn('Response of "{}" was invalid. Must be a debater name.'.format(response))
         return responses
 
-    def process_responses(self, responses: list[str]) -> list[Any]:
+    def process_responses(self, responses: list[ModelResponse]) -> list[Any]:
         """Converts a text response to a list of booleans indicating if Debater_A won"""
-        return [constants.DEFAULT_DEBATER_A_NAME in response for response in responses]
+        return [constants.DEFAULT_DEBATER_A_NAME in response.decision for response in responses]
 
     def copy(self, transcripts: Optional[list[Transcript]] = None, prompts: Optional[list[Prompt] | Prompt] = None) -> Judge:
         """Deep copies everything except the underlying model"""
@@ -141,20 +140,22 @@ class BoNJudge(Judge):
         self.internal_results = []
         self.debater_a = debater_a
 
-    def validate_responses(self, responses: list[str]) -> list[str]:
+    def validate_responses(self, responses: list[ModelResponse]) -> list[str]:
         """Verifies that the response is of the correct format"""
         validated_responses = []
         for i, response in enumerate(responses):
-            if not re.search("\\d+(\\.\\d+)?", response):
-                self.logger.warn('Response of "{}" was invalid. Must be a number.'.format(response))
-                validated_responses.append(-1)
-            else:
-                validated_responses.append(response)
+            if not response.preference:
+                self.logger.warn(f'Response of "{response.preference}" was invalid. Must be a number.')
+                response.preference = -1
+            validated_responses.append(response)
         return validated_responses
 
-    def process_responses(self, responses: list[str]) -> list[Any]:
+    def process_responses(self, responses: list[ModelResponse]) -> list[Any]:
         """Converts the string response to a scale of [0-10] where 0 is bad and 10 is good"""
-        scores = [(float(response) if self.debater_a else (constants.MAX_SCORE - float(response))) for response in responses]
+        scores = [
+            (response.preference if self.debater_a else (constants.MAX_SCORE - response.preference))
+            for response in responses
+        ]
         speeches = [transcript.get_last_external_speech() for transcript in self.transcripts]
         self.internal_results.append(
             [

@@ -60,7 +60,7 @@ class Debater(Agent):
         self.scratchpad_public = scratchpad_public
         self.logger = LoggerUtils.get_default_logger(__name__)
 
-    def generate(self, max_new_tokens=300, round_idx: int = 0) -> Optional[list[str]]:
+    def generate(self, max_new_tokens=300, round_idx: int = 0) -> Optional[list[ModelResponse]]:
         """Generates new text using the pre-existing transcript as input"""
         model_inputs = [transcript.to_model_input() for transcript in self.transcripts]
         return self.model.predict(
@@ -84,24 +84,25 @@ class Debater(Agent):
             debater.transcripts = [transcript.copy() for transcript in transcripts]
         return debater
 
-    def __call__(self) -> Optional[list[str]]:
+    def __call__(self) -> tuple[list[str], Optional[list[ModelResponse]]]:
         """Generates new text using the pre-existing transcript as input. If it has access to a
-        scratchpad, it will use that but keep those results hidden"""
+        scratchpad, it will use that but keep those results hidden."""
         batch_reasoning = []
         if self.use_scratchpad:
-            batch_reasoning = self.generate(max_new_tokens=self.scratchpad_word_limit)
+            batch_reasoning = [reasoning.speech for reasoning in self.generate(max_new_tokens=self.scratchpad_word_limit)]
             for i, reasoning in enumerate(batch_reasoning):
                 super().receive_message(speaker=self.name, content=reasoning, idx=i)
                 self.logger.debug(reasoning)
 
         generation = self.generate(max_new_tokens=300)
+        all_speeches = [gen.speech for gen in generation]
 
         if self.use_scratchpad and self.scratchpad_public:
-            generation = [
-                constants.LINE_SEPARATOR.join([reasoning, speech]) for reasoning, speech in zip(batch_reasoning, generation)
+            all_speeches = [
+                constants.LINE_SEPARATOR.join([reasoning, speech]) for reasoning, speech in zip(all_speeches, generation)
             ]
 
-        return generation
+        return all_speeches, generation
 
 
 class BoNDebater(Debater):
@@ -189,7 +190,8 @@ class OfflineDebater(Debater):
 
     def __call__(self) -> Optional[list[str]]:
         """Generates new text using the OfflineModel"""
-        return self.generate(max_new_tokens=300, round_idx=self.round_idx)
+        generation = self.generate(max_new_tokens=300, round_idx=self.round_idx)
+        return [gen.speech for gen in generation], generation
 
 
 class HumanDebater(Debater):

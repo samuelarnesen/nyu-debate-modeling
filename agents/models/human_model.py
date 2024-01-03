@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.models.model import Model, ModelInput
+from agents.models.model import Model, ModelInput, ModelResponse
 from data import SpeakerType, SpeechData
 from utils import LoggerUtils
 import utils.constants as constants
@@ -28,7 +28,7 @@ class HumanModel(Model):
         self.debater_name = debater_name
         self.logger = LoggerUtils.get_default_logger(__name__)
 
-    def predict(self, inputs: list[list[ModelInput]], **kwargs) -> str:
+    def predict(self, inputs: list[list[ModelInput]], **kwargs) -> ModelResponse:
         """
         Generates a list of texts in response to the given input. This does not support batch processing.
 
@@ -53,7 +53,7 @@ class HumanModel(Model):
             logger.warn(
                 f"Human debater {self.alias} was unable to generate a speech. Current index is {self.speech_idx} but there are only {len(self.speeches)} in its speech list."
             )
-        return [speech]
+        return [ModelResponse(speech=speech)]
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> HumanModel:
         """Generates a deepcopy of this model"""

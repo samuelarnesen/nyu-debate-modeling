@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.models.model import Model, ModelInput, SpeechStructure
+from agents.models.model import Model, ModelInput, ModelResponse, SpeechStructure
 from agents.models.llm_model import GenerationParams, LLModel
 from utils import LoggerUtils, timer
 
@@ -85,6 +85,6 @@ class ServedModel(Model):
                     inputs=inputs, speech_structure=SpeechStructure.OPEN_ENDED
                 )
             ]
-            results = [future.result() for future in as_completed(futures)]
+            results = [ModelResponse(speech=future.result()) for future in as_completed(futures)]
 
         return results

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.models.model import Model, ModelInput, SpeechStructure
+from agents.models.model import Model, ModelInput, ModelResponse, SpeechStructure
 import utils.constants as constants
 
 from typing import Union, Optional
@@ -27,7 +27,7 @@ class DeterministicModel(Model):
         speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
         num_return_sequences: int = 1,
         **kwargs,
-    ) -> str:
+    ) -> ModelResponse:
         """
         Generates a list of texts in response to the given input.
 
@@ -46,7 +46,7 @@ class DeterministicModel(Model):
                 have both num_return_sequences > 1 and len(inputs) > 1)
 
         Returns:
-            A list of text, with one string for each entry in the batch (or for as many sequences are specified
+            A list of ModelResponses, with one response for each entry in the batch (or for as many sequences are specified
             to be returned by num_return_sequences).
 
         Raises:
@@ -58,13 +58,13 @@ class DeterministicModel(Model):
             )
 
         if speech_structure == SpeechStructure.DECISION:
-            return [constants.DEFAULT_DEBATER_A_NAME for i in range(len(inputs))]
+            return [ModelResponse(decision=constants.DEFAULT_DEBATER_A_NAME) for i in range(len(inputs))]
         elif speech_structure == SpeechStructure.PREFERENCE:
-            return [str(5) for i in range(len(inputs))]
+            return [ModelResponse(preference=5.0) for i in range(len(inputs))]
         text_to_repeat = "\n".join([self.text for i in range(int(max_new_tokens / self.text_length))])
 
         num_return_sequences = len(inputs) if len(inputs) > 1 else num_return_sequences
-        return [text_to_repeat for i in range(num_return_sequences)]
+        return [ModelResponse(speech=text_to_repeat) for i in range(num_return_sequences)]
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> DeterministicModel:
         """Generates a deepcopy of this model"""

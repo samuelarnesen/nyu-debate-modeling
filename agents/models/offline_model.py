@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.models.model import Model, ModelInput
+from agents.models.model import Model, ModelInput, ModelResponse
 from prompts import Prompt, PromptTag
 from utils import InputUtils
 import utils.constants as constants
@@ -34,7 +34,7 @@ class OfflineModel(Model):
 
     def predict(
         self, inputs: list[list[ModelInput]], max_new_tokens: int = 250, debater_name: str = "", round_idx: int = 0, **kwargs
-    ) -> str:
+    ) -> ModelResponse:
         """
         Generates a list of texts in response to the given input.
 
@@ -130,4 +130,4 @@ class OfflineModel(Model):
             _, remaining_end_target = get_index(text_to_parse, end_text_two)
             keep_parsing = remaining_end_target is not None
 
-        return speeches
+        return [ModelResponse(speech=speech) for speech in speeches]

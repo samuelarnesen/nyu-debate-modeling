@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.models.model import Model, ModelInput, SpeechStructure
+from agents.models.model import Model, ModelInput, ModelResponse, SpeechStructure
 import utils.constants as constants
 
 from typing import Union, Optional
@@ -60,11 +60,10 @@ class RandomModel(Model):
             )
 
         def generate_random_decision():
-            decision = constants.DEFAULT_DEBATER_A_NAME if random.random() < 0.5 else constants.DEFAULT_DEBATER_B_NAME
-            return decision
-
-        def generate_random_number():
-            return str(random.random() * 10)
+            a_odds = random.random()
+            b_odds = 1 - a_odds
+            decision = constants.DEFAULT_DEBATER_A_NAME if a_odds > 0.5 else constants.DEFAULT_DEBATER_B_NAME
+            return decision, (a_odds, b_odds)
 
         if len(inputs) > 1 and num_return_sequences > 1:
             raise Exception(
@@ -72,12 +71,22 @@ class RandomModel(Model):
             )
 
         if speech_structure == SpeechStructure.DECISION:
-            return [generate_random_decision() for i in range(len(inputs))]
+            decision, (a_odds, b_odds) = generate_random_decision()
+            return [
+                ModelResponse(
+                    decision=decision,
+                    probabilistic_decision={
+                        constants.DEFAULT_DEBATER_A_NAME: a_odds,
+                        constants.DEFAULT_DEBATER_B_NAME: b_odds,
+                    },
+                )
+                for i in range(len(inputs))
+            ]
         elif speech_structure == SpeechStructure.PREFERENCE:
-            return [generate_random_number() for i in range(len(inputs))]
+            return [ModelResponse(preference=(random.random() * 10)) for i in range(len(inputs))]
 
         num_return_sequences = max(num_return_sequences, len(inputs))
-        return [generate_random_text() for i in range(num_return_sequences)]
+        return [ModelResponse(speech=generate_random_text()) for i in range(num_return_sequences)]
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> RandomModel:
         """Generates a deepcopy of this model"""

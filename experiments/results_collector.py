@@ -135,23 +135,20 @@ class ResultsCollector:
 
             alias_to_stats[summary.first_debater_alias].matches += 1
             alias_to_stats[summary.second_debater_alias].matches += 1
-            if summary.first_debater_wins:
-                alias_to_stats[summary.first_debater_alias].wins += 1
-                alias_to_stats[summary.first_debater_alias].first_wins += 1
-                alias_to_stats[summary.first_debater_alias].first_matches += 1
-                if summary.metadata.first_debater_correct:
-                    alias_to_stats[summary.first_debater_alias].correct_matches += 1
-                    alias_to_stats[summary.first_debater_alias].correct_wins += 1
-                else:
-                    alias_to_stats[summary.second_debater_alias].correct_matches += 1
+
+            alias_to_stats[summary.first_debater_alias].first_matches += 1
+
+            alias_to_stats[summary.first_debater_alias].wins += summary.first_debater_win_prob
+            alias_to_stats[summary.second_debater_alias].wins += summary.second_debater_win_prob
+
+            alias_to_stats[summary.first_debater_alias].first_wins += summary.first_debater_win_prob
+
+            if summary.metadata.first_debater_correct:
+                alias_to_stats[summary.first_debater_alias].correct_matches += 1
+                alias_to_stats[summary.first_debater_alias].correct_wins += summary.first_debater_win_prob
             else:
-                alias_to_stats[summary.second_debater_alias].wins += 1
-                alias_to_stats[summary.first_debater_alias].first_matches += 1
-                if not summary.metadata.first_debater_correct:
-                    alias_to_stats[summary.second_debater_alias].correct_matches += 1
-                    alias_to_stats[summary.second_debater_alias].correct_wins += 1
-                else:
-                    alias_to_stats[summary.first_debater_alias].correct_matches += 1
+                alias_to_stats[summary.second_debater_alias].correct_matches += 1
+                alias_to_stats[summary.second_debater_alias].correct_wins += summary.second_debater_win_prob
 
         categories = ["Overall", "Correct", "Incorrect", "First", "Second"]
         index = np.arange(len(categories))
@@ -367,6 +364,7 @@ class ResultsCollector:
             4. Quote statistics
             5. Stylistic info
         """
+
         bt_results = self.__graph_bradley_terry()
         self.logger.info(bt_results)
 
