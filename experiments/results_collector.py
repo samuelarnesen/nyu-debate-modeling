@@ -55,6 +55,7 @@ class ResultsCollector:
             else None
         )
         self.num_debaters = len(set([debater.alias for debater in experiment.agents.debaters])) if experiment else 2
+        self.aliases = sorted(list(set([debater.alias for debater in experiment.agents.debaters])))
         self.save_file_path_prefix = save_file_path_prefix
         self.should_save = should_save
         self.summaries = []
@@ -77,10 +78,8 @@ class ResultsCollector:
             if self.annotator:
                 self.annotator.classify_debate_round(summary=summary)
 
-    def __get_num_debaters(self):
-        return len(set([debater.alias for debater in self.experiment.agents.debaters]))
-
     def __graph_judge(self) -> dict[str, float]:
+        """Graphs the judge accuracy statistics"""
         alias_to_stats = {}
         for summary in self.summaries:
             if summary.judge_alias not in alias_to_stats:
@@ -154,6 +153,8 @@ class ResultsCollector:
         index = np.arange(len(categories))
         bar_width = 0.7 / self.num_debaters
 
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
+
         for i, alias in enumerate(alias_to_stats):
             stats = alias_to_stats[alias]
             values = [
@@ -176,13 +177,39 @@ class ResultsCollector:
                 [abs(interval[1] - values[i]) for i, interval in enumerate(intervals)],
             ]
 
-            plt.bar(index + (i * bar_width), values, bar_width, label=alias, yerr=assymetric_intervals)
+            ax1.bar(index + (i * bar_width), values, bar_width, label=alias, yerr=assymetric_intervals)
 
-        plt.title("Win Rates")
-        plt.xticks(index + ((len(alias_to_stats) - 1) * bar_width) / self.num_debaters, categories)
-        plt.ylim(0, 1)
-        plt.legend()
+        ax1.set_xticks(index + ((len(alias_to_stats) - 1) * bar_width) / self.num_debaters, categories)
+        ax1.set_ylim(0, 1)
+        ax1.set_title("Overall Win Rates")
+        ax1.legend()
+
+        win_rate_map = {}
+        for summary in self.summaries:
+            if summary.winning_alias not in win_rate_map:
+                win_rate_map[summary.winning_alias] = {}
+            if summary.losing_alias not in win_rate_map[summary.winning_alias]:
+                win_rate_map[summary.winning_alias][summary.losing_alias] = 0
+            win_rate_map[summary.winning_alias][summary.losing_alias] += 1
+
+        win_rate_matrix = []
+        for first in self.aliases:
+            win_rate_matrix.append([])
+            for second in self.aliases:
+                wins = win_rate_map.get(first, {}).get(second, 0)
+                losses = win_rate_map.get(second, {}).get(first, 0)
+                win_rate_matrix[-1].append((wins / (wins + losses)) if (wins + losses > 0) else 0.5)
+
+        sns.heatmap(win_rate_matrix, annot=True, fmt=".1%", cmap="coolwarm_r", cbar=False, ax=ax2)
+
+        ax2.set_xticklabels(self.aliases)
+        ax2.set_yticklabels(self.aliases)
+        ax2.set_xlabel("Losing Team")
+        ax2.set_ylabel("Winning Team")
+        ax2.set_title("Head to Head Win Rates")
+
         plt.tight_layout()
+
         self.__save("Win_Rates")
         plt.show()
         return alias_to_stats
@@ -210,33 +237,28 @@ class ResultsCollector:
             optimal_params = scipy.optimize.minimize(lambda x: log_likelihood(x, indices), init_params, method="BFGS").x
             debater_skills = {debater: math.exp(skill) for debater, skill in zip(indices, optimal_params)}
 
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
+
         categories = [str(key) for key in debater_skills]
         values = [value for _, value in debater_skills.items()]
-        plt.bar(categories, values)
-        plt.title("Bradley-Terry Scores")
-        self.__save("BT")
+        ax1.bar(categories, values)
+        ax1.set_title("Bradley-Terry Scores")
 
+        computed_win_rate_matrix = []
+        for first in categories:
+            computed_win_rate_matrix.append([])
+            for second in categories:
+                computed_win_rate = debater_skills[first] / (debater_skills[first] + debater_skills[second])
+                computed_win_rate_matrix[-1].append(computed_win_rate)
+        sns.heatmap(computed_win_rate_matrix, annot=True, fmt=".1%", cmap="coolwarm_r", cbar=False, ax=ax2)
+
+        ax2.set_xticklabels(categories)
+        ax2.set_yticklabels(categories)
+        ax2.set_xlabel("Losing Team")
+        ax2.set_ylabel("Winning Team")
+        ax2.set_title("Computed Win Rates")
+        self.__save("Computed_Win_Rates")
         plt.show()
-        plt.clf()
-
-        try:
-            computed_win_rate_matrix = []
-            for first in categories:
-                computed_win_rate_matrix.append([])
-                for second in categories:
-                    computed_win_rate = debater_skills[first] / (debater_skills[first] + debater_skills[second])
-                    computed_win_rate_matrix[-1].append(computed_win_rate)
-            ax = sns.heatmap(computed_win_rate_matrix, annot=True, fmt=".1%", cmap="coolwarm_r", cbar=False)
-
-            ax.set_xticklabels(categories)
-            ax.set_yticklabels(categories)
-            ax.set_xlabel("Losing Team")
-            ax.set_ylabel("Winning Team")
-            ax.set_title("Computed Win Rates")
-            self.__save("Computed_Win_Rates")
-            plt.show()
-        except:
-            plt.clf()
 
         return debater_skills
 

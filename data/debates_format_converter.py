@@ -62,10 +62,10 @@ if __name__ == "__main__":
             "judge": "-1",
             "turns": turns,
             "isJudgeCorrect": False,
-            "correctAnswer": row["correct answer"]
+            "correctAnswer": row["correct answer"],
         }
         gpt_debates.append(new_debate)
-    
+
     with open(output_gpt_only, "w+") as f:
         for debate in gpt_debates:
             f.write(json.dumps(debate))

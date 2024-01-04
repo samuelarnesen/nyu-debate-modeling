@@ -35,8 +35,6 @@ class QualityDebatesDataset(RawDataset):
         }
         self.idxs = {SplitType.TRAIN: 0, SplitType.VAL: 0, SplitType.TEST: 0}
 
-        print(len(self.data[SplitType.TRAIN]))
-
     def get_data(self, split: SplitType = SplitType.TRAIN) -> list[DataRow]:
         """Returns all the data for a given split"""
         if split not in self.data:
