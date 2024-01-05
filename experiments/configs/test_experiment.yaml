@@ -226,5 +226,5 @@ Operational_Test:
       model_type: random
       alias: random-judge
   dataset:
-    dataset_type: quality
+    dataset_type: quality_debates
     split_type: train

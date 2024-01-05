@@ -49,11 +49,7 @@ class ResultsCollector:
         """
         self.logger = LoggerUtils.get_default_logger(__name__)
         self.quotes_collector = QuotesCollector(experiment=experiment) if experiment else None
-        self.annotator = (
-            Annotator(model_path=experiment.annotations_classifier_file_path)
-            if experiment.annotations_classifier_file_path
-            else None
-        )
+        self.annotator = Annotator(model_path=experiment.annotations_classifier_file_path)
         self.num_debaters = len(set([debater.alias for debater in experiment.agents.debaters])) if experiment else 2
         self.aliases = sorted(list(set([debater.alias for debater in experiment.agents.debaters])))
         self.save_file_path_prefix = save_file_path_prefix
@@ -248,7 +244,11 @@ class ResultsCollector:
         for first in categories:
             computed_win_rate_matrix.append([])
             for second in categories:
-                computed_win_rate = debater_skills[first] / (debater_skills[first] + debater_skills[second])
+                computed_win_rate = (
+                    debater_skills[first] / (debater_skills[first] + debater_skills[second])
+                    if (debater_skills[first] + debater_skills[second]) > 0
+                    else 0.5
+                )
                 computed_win_rate_matrix[-1].append(computed_win_rate)
         sns.heatmap(computed_win_rate_matrix, annot=True, fmt=".1%", cmap="coolwarm_r", cbar=False, ax=ax2)
 

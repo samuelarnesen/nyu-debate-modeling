@@ -345,6 +345,7 @@ class ExperimentLoader:
                 prompt=prompt_judge,
                 model=judge_model,
                 num_speeches=experiment.num_speeches,
+                chain_of_thought=experiment.agents.judge.scratchpad_public or experiment.agents.judge.scratchpad_word_limit,
             )
 
             debate_round = DebateRound(

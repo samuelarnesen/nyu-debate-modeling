@@ -23,6 +23,28 @@
   dataset:
     dataset_type: quality_debates
     split_type: val
+Served Test:
+  word_limit: 500
+  batch_size: 4
+  num_speeches: 1
+  flip: True
+  agents:
+    debaters:
+      - model_type: llama
+        model_file_path: null
+        alias: "merged-4"
+        greedy: True
+        served: True
+      - model_type: llama
+        model_file_path: null
+        alias: "merged-4"
+        served: True
+    judge:
+      model_type: random
+      alias: "random-judge"
+  dataset:
+    dataset_type: quality
+    split_type: train
 13B Validation - Normal Quality:
   word_limit: 500
   batch_size: 1
@@ -31,23 +53,19 @@
   agents:
     debaters:
       - model_type: mistral
-        model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-scratchpad-merged
-        alias: "mixtral-4-1"
+        model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+        alias: "mixtral-nyu-plus"
         greedy: True
-        scratchpad_word_limit: 200
-        scratchpad_public: True
       - model_type: mistral
-        model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-scratchpad-merged
-        alias: "mixtral-4-1"
+        model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+        alias: "mixtral-nyu-plus"
         greedy: True
-        scratchpad_word_limit: 200
-        scratchpad_public: True
     judge:
-      model_type: random
-      alias: "random-judge"
+      model_type: openai
+      alias: "openai-judge"
   dataset:
     dataset_type: quality
-    split_type: train
+    split_type: val
 70B Check:
   word_limit: 500
   batch_size: 1

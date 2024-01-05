@@ -50,7 +50,7 @@ class OpenAIModel(Model):
     def predict(
         self,
         inputs: list[list[ModelInput] | str],
-        max_new_tokens=450,
+        max_new_tokens=200,
         speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
         **kwargs,
     ) -> list[ModelResponse]:
@@ -90,11 +90,10 @@ class OpenAIModel(Model):
                 return default
 
         def process_logprobs(completion: dict) -> tuple[float, float]:
-            debater_suffixes = ["A", "B"]
+            debater_suffixes = ["_A", "_B"]
             logprobs = completion.choices[0].logprobs.content
             for entry in logprobs:
-                main = entry.token
-                if main in debater_suffixes:
+                if entry.token in debater_suffixes:
                     scores = {suffix: 0 for suffix in debater_suffixes}
                     for option in filter(lambda x: x.token in debater_suffixes, entry.top_logprobs):
                         scores[option.token] = math.exp(float(option.logprob))
@@ -117,7 +116,8 @@ class OpenAIModel(Model):
                     model="gpt-4-1106-preview",
                     messages=messages,
                     max_tokens=max_new_tokens,
-                    logprobs=(speech_structure == SpeechStructure.DECISION),
+                    logprobs=(speech_structure != SpeechStructure.OPEN_ENDED),
+                    top_logprobs=5,
                 )
             except Exception as e:
                 self.logger.warn(f"Received an error while calling OpenAI: {e}")
