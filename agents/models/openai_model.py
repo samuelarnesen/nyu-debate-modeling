@@ -6,6 +6,7 @@ import utils.constants as constants
 
 import openai
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Union
 import logging
 import os
@@ -30,6 +31,8 @@ class OpenAIModel(Model):
     decision_regex = ".*Winner: (Debater_[AB])"
 
     preference_regex = ".*Overall Score: (\\d+(\\.\\d+)?)"
+
+    MAX_PARALLEL_REQUESTS = 10
 
     def __init__(self, alias: str, is_debater: bool = True, **kwargs):
         """
@@ -61,6 +64,40 @@ class OpenAIModel(Model):
             inputs: A list of list of model inputs. Each ModelInput corresponds roughly to one command,
                 a list of ModelInputs corresponds to a single debate (or entry in a batch), and so the
                 list of lists is basically a batch of debates.
+            max_new_tokens: The maximum total number of new tokens to generate.
+            speech_structure: the format that the answer is expected to be in. Option includes "open-ended"
+                (which is just free text), "preference" (which means a number is expected), and "decision"
+                (which means a boolean is expected)
+
+        Returns:
+            A list of model responses, with one string for each entry in the batch.
+        """
+        with ThreadPoolExecutor(max_workers=OpenAIModel.MAX_PARALLEL_REQUESTS) as executor:
+            futures = [
+                executor.submit(
+                    self.predict_single_input,
+                    model_input_list=input_value,
+                    max_new_tokens=max_new_tokens,
+                    speech_structure=speech_structure,
+                )
+                for input_value in inputs
+            ]
+            results = [ModelResponse(speech=future.result()) for future in as_completed(futures)]
+
+        return results
+
+    def predict_single_input(
+        self,
+        model_input_list: ModelInput | str,
+        max_new_tokens=200,
+        speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
+        **kwargs,
+    ) -> ModelResponse:
+        """
+        Generates a list of texts in response to a single given input.
+
+        Args:
+            inputs: A list of list of model inputs. Each ModelInput corresponds roughly to one command
             max_new_tokens: The maximum total number of new tokens to generate.
             speech_structure: the format that the answer is expected to be in. Option includes "open-ended"
                 (which is just free text), "preference" (which means a number is expected), and "decision"
@@ -102,61 +139,55 @@ class OpenAIModel(Model):
                     return renormalized_scores[debater_suffixes[0]], renormalized_scores[debater_suffixes[1]]
             return 0.5, 0.5
 
-        responses = []
-        for model_input_list in inputs:
-            messages = [model_input_to_openai_format(model_input) for model_input in model_input_list]
+        messages = [model_input_to_openai_format(model_input) for model_input in model_input_list]
 
-            if speech_structure == SpeechStructure.DECISION:
-                add_addendum(messages=messages, addendum=OpenAIModel.decision_addendum)
-            elif speech_structure == SpeechStructure.PREFERENCE:
-                add_addendum(messages=messages, addendum=OpenAIModel.preference_addendum)
+        if speech_structure == SpeechStructure.DECISION:
+            add_addendum(messages=messages, addendum=OpenAIModel.decision_addendum)
+        elif speech_structure == SpeechStructure.PREFERENCE:
+            add_addendum(messages=messages, addendum=OpenAIModel.preference_addendum)
 
-            try:
-                completion = openai.ChatCompletion.create(
-                    model="gpt-4-1106-preview",
-                    messages=messages,
-                    max_tokens=max_new_tokens,
-                    logprobs=(speech_structure != SpeechStructure.OPEN_ENDED),
-                    top_logprobs=5,
-                )
-            except Exception as e:
-                self.logger.warn(f"Received an error while calling OpenAI: {e}")
-                completion = openai.ChatCompletion.create(
-                    model="gpt-4-1106-preview",
-                    messages=messages,
-                    max_tokens=max_new_tokens,
-                )
+        try:
+            completion = openai.ChatCompletion.create(
+                model="gpt-4-1106-preview",
+                messages=messages,
+                max_tokens=max_new_tokens,
+                logprobs=(speech_structure != SpeechStructure.OPEN_ENDED),
+                top_logprobs=5,
+            )
+        except Exception as e:
+            self.logger.warn(f"Received an error while calling OpenAI: {e}")
+            completion = openai.ChatCompletion.create(
+                model="gpt-4-1106-preview",
+                messages=messages,
+                max_tokens=max_new_tokens,
+            )
 
-            message = completion.choices[0].message["content"]
+        message = completion.choices[0].message["content"]
 
-            if speech_structure == SpeechStructure.DECISION:
-                message = extract_response_from_structured_speech(
-                    message=message,
-                    regex_str=OpenAIModel.decision_regex,
-                    default=constants.DEFAULT_DEBATER_A_NAME if random.random() < 0.5 else constants.DEFAULT_DEBATER_B_NAME,
-                )
-                a_odds, b_odds = process_logprobs(completion)
-                self.logger.debug(f"Debater A's odds: {a_odds}, Debater B's odds: {b_odds}, Winner: {message}")
-                responses.append(
-                    ModelResponse(
-                        decision=message,
-                        probabilistic_decision={
-                            constants.DEFAULT_DEBATER_A_NAME: a_odds,
-                            constants.DEFAULT_DEBATER_B_NAME: b_odds,
-                        },
-                    )
-                )
-            elif speech_structure == SpeechStructure.PREFERENCE:
-                message = extract_response_from_structured_speech(
-                    message=message,
-                    regex_str=OpenAIModel.preference_regex,
-                    default=str(-1),
-                )
-                responses.append(ModelResponse(preference=float(message)))
-            else:
-                responses.append(ModelResponse(speech=message))
+        if speech_structure == SpeechStructure.DECISION:
+            message = extract_response_from_structured_speech(
+                message=message,
+                regex_str=OpenAIModel.decision_regex,
+                default=constants.DEFAULT_DEBATER_A_NAME if random.random() < 0.5 else constants.DEFAULT_DEBATER_B_NAME,
+            )
+            a_odds, b_odds = process_logprobs(completion)
+            self.logger.debug(f"Debater A's odds: {a_odds}, Debater B's odds: {b_odds}, Winner: {message}")
+            return ModelResponse(
+                decision=message,
+                probabilistic_decision={
+                    constants.DEFAULT_DEBATER_A_NAME: a_odds,
+                    constants.DEFAULT_DEBATER_B_NAME: b_odds,
+                },
+            )
+        elif speech_structure == SpeechStructure.PREFERENCE:
+            message = extract_response_from_structured_speech(
+                message=message,
+                regex_str=OpenAIModel.preference_regex,
+                default=str(-1),
+            )
+            return ModelResponse(preference=float(message))
 
-        return responses
+        return ModelResponse(speech=message)
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> HumanModel:
         """Generates a deepcopy of this model"""
