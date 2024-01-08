@@ -64,7 +64,7 @@ class AgentsConfig(BaseModel):
     judge: AgentConfig
 
 
-class BoNConfig(BaseModel):
+class PreferenceConfig(BaseModel):
     count: int
     prompts: Optional[list[str]]
 
@@ -77,7 +77,7 @@ class ExperimentConfig(BaseModel):
     prompt_config: PromptLoadingConfig = PromptLoadingConfig()
     agents: AgentsConfig
     dataset: DatasetConfig
-    best_of_n: Optional[BoNConfig]
+    preference_config: Optional[PreferenceConfig]
     annotations_classifier_file_path: Optional[str]
 
 
@@ -394,16 +394,16 @@ class ExperimentLoader:
                 ],
             )
 
-            if experiment.best_of_n:
+            if experiment.preference_config:
                 if experiment.num_speeches > 1:
                     raise Exception("For now, there can only be 1 speech when doing BoN")
 
                 debater_a_prompts = []
                 debater_b_prompts = []
                 logger.debug(
-                    f"Using {(len(experiment.best_of_n.prompts) if experiment.best_of_n.prompts else 0)} new prompts"
+                    f"Using {(len(experiment.prefrence_config.prompts) if experiment.prefrence_config.prompts else 0)} new prompts"
                 )
-                for prompt_name in experiment.best_of_n.prompts or [experiment.prompt_config.default_prompt_name]:
+                for prompt_name in experiment.prefrence_config.prompts or [experiment.prompt_config.default_prompt_name]:
                     for prompt_list, config in zip([debater_a_prompts, debater_b_prompts], [config_a, config_b]):
                         prompt_list.append(
                             PromptParser.parse(
@@ -413,26 +413,30 @@ class ExperimentLoader:
                             )
                         )
 
-                debate_round.set_judge(BoNJudge(judge=debate_round.judge, n=experiment.best_of_n.count, debater_a=True))
-                flipped_round.set_judge(BoNJudge(judge=flipped_round.judge, n=experiment.best_of_n.count, debater_a=False))
+                debate_round.set_judge(
+                    BoNJudge(judge=debate_round.judge, n=experiment.prefrence_config.count, debater_a=True)
+                )
+                flipped_round.set_judge(
+                    BoNJudge(judge=flipped_round.judge, n=experiment.prefrence_config.count, debater_a=False)
+                )
                 debate_round.set_first_debater(
                     BoNDebater(
                         debater=debate_round.first_debater,
-                        n=experiment.best_of_n.count,
+                        n=experiment.prefrence_config.count,
                         prompts=debater_a_prompts,
                         evaluated=True,
                     )
                 )
                 flipped_round.set_first_debater(
-                    BoNDebater(debater=flipped_round.first_debater, n=experiment.best_of_n.count, evaluated=False)
+                    BoNDebater(debater=flipped_round.first_debater, n=experiment.prefrence_config.count, evaluated=False)
                 )
                 debate_round.set_second_debater(
-                    BoNDebater(debater=debate_round.second_debater, n=experiment.best_of_n.count, evaluated=False)
+                    BoNDebater(debater=debate_round.second_debater, n=experiment.prefrence_config.count, evaluated=False)
                 )
                 flipped_round.set_second_debater(
                     BoNDebater(
                         debater=flipped_round.second_debater,
-                        n=experiment.best_of_n.count,
+                        n=experiment.prefrence_config.count,
                         prompts=debater_b_prompts,
                         evaluated=True,
                     )
@@ -484,7 +488,7 @@ class ExperimentLoader:
             if experiment.flip:
                 rounds.append(flipped_round)
 
-        if len(rounds) <= 1 or experiment.best_of_n:
+        if len(rounds) <= 1 or experiment.prefrence_config:
             return rounds, model_cache
 
         # batches the debate rounds for efficient generation

@@ -105,23 +105,25 @@ class Debater(Agent):
         return all_speeches, generation
 
 
-class BoNDebater(Debater):
+class PreferenceDebater(Debater):
     def __init__(self, debater: Debater, n: int, prompts: Optional[list[Prompt]] = None, evaluated: bool = True):
         """
-        A debater model that generates multiple versions of the same speech for BoN comparisons.
+        A debater model that generates multiple versions of the same speech for preference judgment comparisons.
 
         Params:
-            debater: The underlying debater that is to be converted to a BoNDebater
+            debater: The underlying debater that is to be converted to a PreferenceDebater
             n: The number of speeches to generate for each input.
             prompts: The Prompt structure that controls the inputs to the models. A list is passed in for batch processing.
             evaluated: indicates whether the round has already been judged.
         """
         super().__init__(
             name=debater.name,
-            prompt=BoNDebater.construct_prompts(debater=debater, n=n if evaluated else 1, prompts=prompts),
+            prompt=PreferenceDebater.construct_prompts(debater=debater, n=n if evaluated else 1, prompts=prompts),
             model=debater.model,
             num_speeches=debater.num_speeches,
-            speech_format=DebaterUtils.get_bon_speech_format(debater.name, debater.num_speeches, debater.use_scratchpad),
+            speech_format=DebaterUtils.get_preference_speech_format(
+                debater.name, debater.num_speeches, debater.use_scratchpad
+            ),
         )
         self.n = n
         self.evaluated = evaluated
@@ -135,7 +137,7 @@ class BoNDebater(Debater):
     def copy(self, transcripts: Optional[list[Transcript]] = None) -> Debater:
         """Deepcopies the debater (except for the model, which is a shallow copy)"""
         debater = super().copy(transcripts=self.transcripts)
-        return BoNDebater(debater=debater, n=self.n, prompts=self.prompts, evaluated=self.evaluated)
+        return PreferenceDebater(debater=debater, n=self.n, prompts=self.prompts, evaluated=self.evaluated)
 
     def generate(self, max_new_tokens=300) -> Optional[list[str]]:
         """Generates new text based on the pre-existing transcripts"""
@@ -286,14 +288,14 @@ class DebaterUtils:
 
     @classmethod
     def get_default_speech_format(cls, name: str, num_speeches: int, use_scratchpad: bool):
-        """Gets the speech orders for a normal (non-BoN) debater"""
+        """Gets the speech orders for a normal (non-Preference) debater"""
         return DebaterUtils.get_speech_format(
             name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad, best_of_n=False
         )
 
     @classmethod
-    def get_bon_speech_format(cls, name: str, num_speeches: int, use_scratchpad: bool):
-        """Gets the speech order for a BoN debater"""
+    def get_preference_speech_format(cls, name: str, num_speeches: int, use_scratchpad: bool):
+        """Gets the speech order for a Preference debater"""
         return DebaterUtils.get_speech_format(
-            name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad, best_of_n=True
+            name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad, preference=True
         )

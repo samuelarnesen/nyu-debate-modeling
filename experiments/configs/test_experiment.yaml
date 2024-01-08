@@ -107,7 +107,7 @@ BoN_Test:
       alias: random-judge
   dataset:
     dataset_type: quality_debates
-  best_of_n:
+  preference_config:
     count: 2
     prompts:
       - Thoughtful Prompt
@@ -129,7 +129,7 @@ Quality_Test:
   dataset:
     dataset_type: quality
     split_type: train
-  best_of_n:
+  preference_config:
     count: 2
     prompts:
       - Thoughtful Prompt
