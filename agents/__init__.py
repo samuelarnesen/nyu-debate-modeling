@@ -20,6 +20,6 @@ from agents.models import (
 )
 from .agent import Agent
 from .debate_round import DebateRound, DebateRoundSummary, QuestionMetadata, SplittingRule
-from .debater import BoNDebater, Debater, DebaterUtils, HumanDebater, OfflineDebater
-from .judge import BoNJudge, Judge, JudgeType, JudgeUtils
+from .debater import BestOfNDebater, BestOfNConfig, Debater, DebaterUtils, HumanDebater, OfflineDebater, PreferenceDebater
+from .judge import Judge, JudgeType, JudgeUtils, PreferenceJudge
 from .transcript import Transcript, Speech, SpeechFormat, SpeechFormatEntry, SpeechType

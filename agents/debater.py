@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from agents.agent import Agent
-from agents.models import Model, HumanModel, OfflineModel
+from agents.models import HumanModel, Model, ModelResponse, OfflineModel, SpeechStructure
 from agents.transcript import SpeechFormat, Transcript
 from prompts import Prompt, PromptTag
 from utils import LoggerUtils
 import utils.constants as constants
+
+from pydantic import BaseModel
 
 from typing import Optional, Union
 import copy
@@ -105,6 +107,85 @@ class Debater(Agent):
         return all_speeches, generation
 
 
+class BestOfNConfig(BaseModel):
+    n: int
+    opponent_n: int
+    maxmin: bool
+
+
+class BestOfNDebater(Debater):
+    def __init__(self, debater: Debater, opposing_debater: Debater, judge: Judge, best_of_n_config: BestOfNConfig):
+        super().__init__(
+            name=debater.name,
+            prompt=debater.prompts,
+            model=debater.model,
+            num_speeches=debater.num_speeches,
+            speech_format=debater.speech_format,
+        )
+        self.opposing_debater = opposing_debater
+        self.base_opponent_transcript = copy.deepcopy(opposing_debater.transcripts[0])
+        self.judge = judge
+        self.config = best_of_n_config
+
+    def generate(
+        self, transcript: Transcript, replication: int, name: str, max_new_tokens=300
+    ) -> Optional[list[ModelResponse]]:
+        """Generates new text based on the pre-existing transcripts"""
+        model_responses = []
+        for i in range(replication):
+            model_responses.append(
+                self.model.predict(
+                    inputs=[transcript.to_model_input()],
+                    max_new_tokens=max_new_tokens,
+                    debater_name=name,
+                )[0]
+            )
+        return model_responses
+
+    def __call__(self):
+        # just doing round 1 for now
+        model_responses = self.generate(transcript=self.transcripts[0], replication=self.config.n, name=self.name)
+        opposing_debater_responses = self.generate(
+            transcript=self.base_opponent_transcript,
+            replication=self.config.opponent_n,
+            name=self.opposing_debater.name,
+        )
+
+        judge_inputs = []
+        for response in model_responses:
+            for opposing_response in opposing_debater_responses:
+                judge_transcript = copy.deepcopy(self.judge.transcripts[0])
+                if self.name == constants.DEFAULT_DEBATER_A_NAME:
+                    judge_transcript.add_speech(speaker=self.name, content=response.speech)
+                    judge_transcript.add_speech(speaker=self.opposing_debater.name, content=opposing_response.speech)
+                else:
+                    judge_transcript.add_speech(speaker=self.opposing_debater.name, content=opposing_response.speech)
+                    judge_transcript.add_speech(speaker=self.name, content=response.speech)
+
+                judge_inputs.append(judge_transcript.to_model_input())
+
+        judge_model_response = self.judge.model.predict(
+            inputs=judge_inputs, max_new_tokens=15, speech_structure=SpeechStructure.DECISION
+        )
+
+        split_judge_response = [
+            [resp.probabilistic_decision[self.name] for resp in judge_model_response[i : i + self.config.opponent_n]]
+            for i in range(0, len(judge_model_response), self.config.opponent_n)
+        ]
+        scores = [max(option) if self.config.maxmin else sum(option) / len(option) for option in split_judge_response]
+        best_model_response = sorted(zip(scores, model_responses), key=lambda x: x[0], reverse=True)[0][1]
+        return [best_model_response.speech], [best_model_response]
+
+    def copy(
+        self, transcripts: Optional[list[Transcript]] = None, prompts: Optional[list[Prompt] | Prompt] = None
+    ) -> Debater:
+        """Deepcopies the debater (except for the model, which is a shallow copy)"""
+        debater = super().copy(transcripts=transcripts, prompts=prompts)
+        return BestOfNDebater(
+            debater=debater, opposing_debater=self.opposing_debater, judge=self.judge, best_of_n_config=self.config
+        )
+
+
 class PreferenceDebater(Debater):
     def __init__(self, debater: Debater, n: int, prompts: Optional[list[Prompt]] = None, evaluated: bool = True):
         """
@@ -134,9 +215,11 @@ class PreferenceDebater(Debater):
         prompts = prompts if prompts else debater.prompts
         return [copy.deepcopy(prompts[i % len(prompts)]) for i in range(n)]
 
-    def copy(self, transcripts: Optional[list[Transcript]] = None) -> Debater:
+    def copy(
+        self, transcripts: Optional[list[Transcript]] = None, prompts: Optional[list[Prompt] | Prompt] = None
+    ) -> Debater:
         """Deepcopies the debater (except for the model, which is a shallow copy)"""
-        debater = super().copy(transcripts=self.transcripts)
+        debater = super().copy(transcripts=self.transcripts, prompts=prompts)
         return PreferenceDebater(debater=debater, n=self.n, prompts=self.prompts, evaluated=self.evaluated)
 
     def generate(self, max_new_tokens=300) -> Optional[list[str]]:
@@ -180,9 +263,11 @@ class OfflineDebater(Debater):
         self.file_path = file_path
         self.first_debater_prompt = first_debater_prompt
 
-    def copy(self, transcripts: Optional[list[Transcript]] = None) -> Debater:
+    def copy(
+        self, transcripts: Optional[list[Transcript]] = None, prompts: Optional[list[Prompt] | Prompt] = None
+    ) -> Debater:
         """Deepcopies the debater"""
-        debater = super().copy(transcripts=self.transcripts)
+        debater = super().copy(transcripts=self.transcripts, prompts=prompts)
         return OfflineDebater(
             debater=debater,
             file_path=self.file_path,
@@ -219,7 +304,7 @@ class HumanDebater(Debater):
 
 class DebaterUtils:
     @classmethod
-    def get_speech_format(cls, name: str, num_speeches: int, use_scratchpad: bool, best_of_n: bool = False):
+    def get_speech_format(cls, name: str, num_speeches: int, use_scratchpad: bool, preference: bool = False):
         """Generates the order of speeches that the debater expects to receive"""
         opponent_name = (
             constants.DEFAULT_DEBATER_A_NAME
@@ -262,7 +347,7 @@ class DebaterUtils:
             SpeechFormat(name).add(prompt_tag=PromptTag.PRE_OPENING_SPEECH).add_format(speech_format=own_speech)
         )
 
-        if not best_of_n:
+        if not preference:
             opening_statements = opening_statements.add_format(speech_format=opponent_speech)
 
         later_arguments = (
@@ -290,7 +375,7 @@ class DebaterUtils:
     def get_default_speech_format(cls, name: str, num_speeches: int, use_scratchpad: bool):
         """Gets the speech orders for a normal (non-Preference) debater"""
         return DebaterUtils.get_speech_format(
-            name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad, best_of_n=False
+            name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad, preference=False
         )
 
     @classmethod

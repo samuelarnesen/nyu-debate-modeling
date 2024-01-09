@@ -207,21 +207,21 @@ Base Prompt:
       - |
         This is the outline you generated to help you with your next speech. It contained a list of quotes that you felt might be relevant.
 
-  best_of_n_judge_overview_for_debater_a:
+  preference_judge_overview_for_debater_a:
     role: user
     content: 
       - |
         Now it is time for you as the Judge to evaluate how reasonable and convincing Debater_A's (and only Debater_A's) last speech was.
 
         Remember that Debater_A is supposed to defend "<POSITION>".
-  best_of_n_judge_overview_for_debater_b:
+  preference_judge_overview_for_debater_b:
     role: user
     content: 
       - |
         Now it is time for you as the Judge to evaluate how reasonable and convincing Debater_B's (and only Debater_B's) last speech was.
 
         Remember that Debater_B is supposed to defend "<OPPONENT_POSITION>".
-  best_of_n_judge_instruction:
+  preference_judge_instruction:
     role: user
     content: 
       - |

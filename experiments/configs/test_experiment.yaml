@@ -91,7 +91,7 @@ Offline_Test:
   dataset:
     dataset_type: quality
     split_type: train
-BoN_Test:
+Preference_Test:
   word_limit: 500
   batch_size: 1
   num_speeches: 1
@@ -107,7 +107,7 @@ BoN_Test:
       alias: random-judge
   dataset:
     dataset_type: quality_debates
-  preference_config:
+  preference:
     count: 2
     prompts:
       - Thoughtful Prompt
@@ -220,6 +220,10 @@ Operational_Test:
     debaters:
       - model_type: random
         alias: debater-1
+        best_of_n:
+          n: 4
+          opponent_n: 2
+          maxmin: True
       - model_type: random
         alias: debater-2
     judge:

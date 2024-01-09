@@ -82,7 +82,7 @@ class OpenAIModel(Model):
                 )
                 for input_value in inputs
             ]
-            results = [ModelResponse(speech=future.result()) for future in as_completed(futures)]
+            results = [future.result() for future in as_completed(futures)]
 
         return results
 

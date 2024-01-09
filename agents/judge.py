@@ -18,7 +18,7 @@ import re
 
 class JudgeType(Enum):
     STANDARD = 1
-    BEST_OF_N = 2
+    PREFERENCE = 2
 
 
 class Judge(Agent):
@@ -44,7 +44,7 @@ class Judge(Agent):
             num_speeches: The number of speeches each debater is expected to deliver
             speech_format: the order of speeches the judge expects to hear
             speech_structure: the default way the judge is to supposed to generate text
-            judge_type: whether the judge is a best-of-n judge or not
+            judge_type: whether the judge is a preference judge or not
             expected_saver: whether the judge or the debater is in charge of saving the transcript
             chain_of_thought: whether the judge gets to use chain-of-thought before generating the response
         """
@@ -123,13 +123,13 @@ class Judge(Agent):
         return judge
 
 
-class BoNJudge(Judge):
+class PreferenceJudge(Judge):
     def __init__(self, judge: Judge, n: int, debater_a: bool):
         """
         Abstraction for a judge that generates preferences between different versions of the same speech.
 
         Params:
-            judge: The underlying judge object that is being converted to a BoN judge
+            judge: The underlying judge object that is being converted to a preference judge
             n: The expected number of samples of each speech
             debater_a: Boolean indicating whether the judge is to judge multiple versions of Debater_A or Debater_B's speech.
         """
@@ -139,9 +139,9 @@ class BoNJudge(Judge):
             prompt=[copy.deepcopy(judge.prompts[0]) for i in range(n)],
             model=judge.model,
             num_speeches=1,
-            speech_format=JudgeUtils.get_bon_speech_format(debater_a=debater_a),
+            speech_format=JudgeUtils.get_preference_speech_format(debater_a=debater_a),
             speech_structure=SpeechStructure.PREFERENCE,
-            judge_type=JudgeType.BEST_OF_N,
+            judge_type=JudgeType.PREFERENCE,
             expected_saver=constants.DEFAULT_DEBATER_A_NAME if debater_a else constants.DEFAULT_DEBATER_B_NAME,
         )
         self.internal_results = []
@@ -224,7 +224,7 @@ class JudgeUtils:
 
     @classmethod
     def get_default_speech_format(cls, num_speeches: int, chain_of_thought):
-        """Gets the speech order for non-BoN judges"""
+        """Gets the speech order for non-preference judges"""
         return (
             SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
             .add_format(speech_format=JudgeUtils.pre_debate_speech_format)
@@ -234,11 +234,11 @@ class JudgeUtils:
         )
 
     @classmethod
-    def get_bon_speech_format(cls, debater_a: bool):
-        """Gets the speech order for BoN judges"""
-        bon_speech_format = (
+    def get_preference_speech_format(cls, debater_a: bool):
+        """Gets the speech order for preference judges"""
+        preference_speech_format = (
             SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-            .add(prompt_tag=PromptTag.BEST_OF_N_JUDGE_INSTRUCTION)
+            .add(prompt_tag=PromptTag.PREFERENCE_JUDGE_INSTRUCTION)
             .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
             .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
         )
@@ -246,5 +246,5 @@ class JudgeUtils:
             SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
             .add_format(speech_format=JudgeUtils.pre_debate_speech_format)
             .add_format(speech_format=JudgeUtils.opening_speech_speech_format)
-            .add_format(speech_format=bon_speech_format)
+            .add_format(speech_format=preference_speech_format)
         )

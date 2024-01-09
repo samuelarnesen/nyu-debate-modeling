@@ -1,6 +1,7 @@
 from agents import (
-    BoNDebater,
-    BoNJudge,
+    BestOfNDebater,
+    BestOfNConfig,
+    PreferenceJudge,
     Debater,
     DebateRound,
     HumanDebater,
@@ -9,6 +10,7 @@ from agents import (
     ModelType,
     ModelUtils,
     OfflineDebater,
+    PreferenceDebater,
     QuestionMetadata,
     ServedModel,
 )
@@ -57,6 +59,7 @@ class AgentConfig(BaseModel):
     scratchpad_word_limit: Optional[int] = None
     scratchpad_public: bool = False
     served: bool = False
+    best_of_n: Optional[BestOfNConfig] = None
 
 
 class AgentsConfig(BaseModel):
@@ -77,7 +80,7 @@ class ExperimentConfig(BaseModel):
     prompt_config: PromptLoadingConfig = PromptLoadingConfig()
     agents: AgentsConfig
     dataset: DatasetConfig
-    preference_config: Optional[PreferenceConfig]
+    preference: Optional[PreferenceConfig]
     annotations_classifier_file_path: Optional[str]
 
 
@@ -394,16 +397,16 @@ class ExperimentLoader:
                 ],
             )
 
-            if experiment.preference_config:
+            if experiment.preference:
                 if experiment.num_speeches > 1:
-                    raise Exception("For now, there can only be 1 speech when doing BoN")
+                    raise Exception("For now, there can only be 1 speech when doing preference generation")
 
                 debater_a_prompts = []
                 debater_b_prompts = []
                 logger.debug(
-                    f"Using {(len(experiment.prefrence_config.prompts) if experiment.prefrence_config.prompts else 0)} new prompts"
+                    f"Using {(len(experiment.preference.prompts) if experiment.preference.prompts else 0)} new prompts"
                 )
-                for prompt_name in experiment.prefrence_config.prompts or [experiment.prompt_config.default_prompt_name]:
+                for prompt_name in experiment.preference.prompts or [experiment.prompt_config.default_prompt_name]:
                     for prompt_list, config in zip([debater_a_prompts, debater_b_prompts], [config_a, config_b]):
                         prompt_list.append(
                             PromptParser.parse(
@@ -414,29 +417,29 @@ class ExperimentLoader:
                         )
 
                 debate_round.set_judge(
-                    BoNJudge(judge=debate_round.judge, n=experiment.prefrence_config.count, debater_a=True)
+                    PreferenceJudge(judge=debate_round.judge, n=experiment.preference.count, debater_a=True)
                 )
                 flipped_round.set_judge(
-                    BoNJudge(judge=flipped_round.judge, n=experiment.prefrence_config.count, debater_a=False)
+                    PreferenceJudge(judge=flipped_round.judge, n=experiment.preference.count, debater_a=False)
                 )
                 debate_round.set_first_debater(
-                    BoNDebater(
+                    PreferenceDebater(
                         debater=debate_round.first_debater,
-                        n=experiment.prefrence_config.count,
+                        n=experiment.preference.count,
                         prompts=debater_a_prompts,
                         evaluated=True,
                     )
                 )
                 flipped_round.set_first_debater(
-                    BoNDebater(debater=flipped_round.first_debater, n=experiment.prefrence_config.count, evaluated=False)
+                    PreferenceDebater(debater=flipped_round.first_debater, n=experiment.preference.count, evaluated=False)
                 )
                 debate_round.set_second_debater(
-                    BoNDebater(debater=debate_round.second_debater, n=experiment.prefrence_config.count, evaluated=False)
+                    PreferenceDebater(debater=debate_round.second_debater, n=experiment.preference.count, evaluated=False)
                 )
                 flipped_round.set_second_debater(
-                    BoNDebater(
+                    PreferenceDebater(
                         debater=flipped_round.second_debater,
-                        n=experiment.prefrence_config.count,
+                        n=experiment.preference.count,
                         prompts=debater_b_prompts,
                         evaluated=True,
                     )
@@ -477,6 +480,41 @@ class ExperimentLoader:
                     )
                 )
 
+            if experiment.agents.debaters[debater_idxs[0]].best_of_n:
+                debate_round.set_first_debater(
+                    BestOfNDebater(
+                        debater=debate_round.first_debater,
+                        opposing_debater=debate_round.second_debater,
+                        judge=debate_round.judge,
+                        best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
+                    )
+                )
+                flipped_round.set_second_debater(
+                    BestOfNDebater(
+                        debater=flipped_round.second_debater,
+                        opposing_debater=flipped_round.first_debater,
+                        judge=debate_round.judge,
+                        best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
+                    )
+                )
+            if experiment.agents.debaters[debater_idxs[1]].best_of_n:
+                debate_round.set_second_debater(
+                    BestOfNDebater(
+                        debater=debate_round.second_debater,
+                        opposing_debater=debate_round.first_debater,
+                        judge=debate_round.judge,
+                        best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
+                    )
+                )
+                flipped_round.set_first_debater(
+                    BestOfNDebater(
+                        debater=flipped_round.first_debater,
+                        opposing_debater=flipped_round.second_debater,
+                        judge=debate_round.judge,
+                        best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
+                    )
+                )
+
             if experiment.agents.debaters[debater_idxs[0]].is_human:
                 debate_round.set_first_debater(HumanDebater(debater=debate_round.first_debater, speeches=speeches))
                 flipped_round.set_second_debater(HumanDebater(debater=flipped_round.second_debater, speeches=speeches))
@@ -488,7 +526,7 @@ class ExperimentLoader:
             if experiment.flip:
                 rounds.append(flipped_round)
 
-        if len(rounds) <= 1 or experiment.prefrence_config:
+        if len(rounds) <= 1 or experiment.preference:
             return rounds, model_cache
 
         # batches the debate rounds for efficient generation

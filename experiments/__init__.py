@@ -2,9 +2,9 @@ from .annotator import Annotator, ClassificationConfig, PredictedAnnotation, Par
 from .experiment_loader import (
     AgentConfig,
     AgentsConfig,
-    BoNConfig,
     ExperimentConfig,
     ExperimentLoader,
+    PreferenceConfig,
     PromptLoadingConfig,
 )
 from .quotes_collector import QuotesCollector, QuoteStats

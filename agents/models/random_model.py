@@ -71,17 +71,19 @@ class RandomModel(Model):
             )
 
         if speech_structure == SpeechStructure.DECISION:
-            decision, (a_odds, b_odds) = generate_random_decision()
-            return [
-                ModelResponse(
-                    decision=decision,
-                    probabilistic_decision={
-                        constants.DEFAULT_DEBATER_A_NAME: a_odds,
-                        constants.DEFAULT_DEBATER_B_NAME: b_odds,
-                    },
+            decisions = []
+            for i in range(len(inputs)):
+                decision, (a_odds, b_odds) = generate_random_decision()
+                decisions.append(
+                    ModelResponse(
+                        decision=decision,
+                        probabilistic_decision={
+                            constants.DEFAULT_DEBATER_A_NAME: a_odds,
+                            constants.DEFAULT_DEBATER_B_NAME: b_odds,
+                        },
+                    )
                 )
-                for i in range(len(inputs))
-            ]
+            return decisions
         elif speech_structure == SpeechStructure.PREFERENCE:
             return [ModelResponse(preference=(random.random() * 10)) for i in range(len(inputs))]
 
