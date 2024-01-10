@@ -8,7 +8,7 @@ from pydantic import BaseModel
 import requests
 
 from typing import Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 import sys
 import time
 
@@ -85,6 +85,6 @@ class ServedModel(Model):
                     inputs=inputs, speech_structure=SpeechStructure.OPEN_ENDED
                 )
             ]
-            results = [ModelResponse(speech=future.result()) for future in as_completed(futures)]
+            results = [ModelResponse(speech=future.result()) for future in futures]
 
         return results

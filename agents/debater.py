@@ -4,7 +4,7 @@ from agents.agent import Agent
 from agents.models import HumanModel, Model, ModelResponse, OfflineModel, SpeechStructure
 from agents.transcript import SpeechFormat, Transcript
 from prompts import Prompt, PromptTag
-from utils import LoggerUtils
+from utils import LoggerUtils, QuoteUtils
 import utils.constants as constants
 
 from pydantic import BaseModel
@@ -127,28 +127,18 @@ class BestOfNDebater(Debater):
         self.judge = judge
         self.config = best_of_n_config
 
-    def generate(
-        self, transcript: Transcript, replication: int, name: str, max_new_tokens=300
-    ) -> Optional[list[ModelResponse]]:
-        """Generates new text based on the pre-existing transcripts"""
-        model_responses = []
-        for i in range(replication):
-            model_responses.append(
-                self.model.predict(
-                    inputs=[transcript.to_model_input()],
-                    max_new_tokens=max_new_tokens,
-                    debater_name=name,
-                )[0]
-            )
-        return model_responses
-
     def __call__(self):
         # just doing round 1 for now
-        model_responses = self.generate(transcript=self.transcripts[0], replication=self.config.n, name=self.name)
-        opposing_debater_responses = self.generate(
-            transcript=self.base_opponent_transcript,
-            replication=self.config.opponent_n,
-            name=self.opposing_debater.name,
+        model_responses = self.model.predict(
+            inputs=[self.transcripts[0].to_model_input() for _ in range(self.config.n)],
+            max_new_tokens=300,
+            debater_name=self.name,
+        )
+
+        opposing_debater_responses = self.model.predict(
+            inputs=[self.base_opponent_transcript.to_model_input() for _ in range(self.config.opponent_n)],
+            max_new_tokens=300,
+            debater_name=self.opposing_debater.name,
         )
 
         judge_inputs = []
@@ -172,8 +162,19 @@ class BestOfNDebater(Debater):
             [resp.probabilistic_decision[self.name] for resp in judge_model_response[i : i + self.config.opponent_n]]
             for i in range(0, len(judge_model_response), self.config.opponent_n)
         ]
-        scores = [max(option) if self.config.maxmin else sum(option) / len(option) for option in split_judge_response]
-        best_model_response = sorted(zip(scores, model_responses), key=lambda x: x[0], reverse=True)[0][1]
+        scores = [min(option) if self.config.maxmin else sum(option) / len(option) for option in split_judge_response]
+        selection_idx = sorted(zip(scores, range(len(model_responses))), key=lambda x: x[0], reverse=True)[0][1]
+        best_model_response = model_responses[selection_idx]
+
+        for i, (model_response, score) in enumerate(zip(model_responses, scores)):
+            if i == selection_idx:
+                self.logger.debug("Chosen Speech (Score of {}):\n{}\n".format(round(score, 2), model_response.speech))
+            else:
+                self.logger.debug("Rejected Speech (Score of {}):\n{}\n".format(round(score, 2), model_response.speech))
+
+        for opposing_response in opposing_debater_responses:
+            self.logger.debug("Opponent Speech:\n{}\n".format(opposing_response.speech))
+
         return [best_model_response.speech], [best_model_response]
 
     def copy(

@@ -6,7 +6,7 @@ import utils.constants as constants
 
 import openai
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from typing import Union
 import logging
 import os
@@ -82,7 +82,7 @@ class OpenAIModel(Model):
                 )
                 for input_value in inputs
             ]
-            results = [future.result() for future in as_completed(futures)]
+            results = [future.result() for future in futures]
 
         return results
 
@@ -165,12 +165,16 @@ class OpenAIModel(Model):
         message = completion.choices[0].message["content"]
 
         if speech_structure == SpeechStructure.DECISION:
-            message = extract_response_from_structured_speech(
-                message=message,
-                regex_str=OpenAIModel.decision_regex,
-                default=constants.DEFAULT_DEBATER_A_NAME if random.random() < 0.5 else constants.DEFAULT_DEBATER_B_NAME,
-            )
             a_odds, b_odds = process_logprobs(completion)
+            message = (
+                constants.DEFAULT_DEBATER_A_NAME
+                if a_odds > b_odds
+                else (
+                    constants.DEFAULT_DEBATER_B_NAME
+                    if (b_odds > a_odds or random.random() > 0.5)
+                    else constants.DEFAULT_DEBATER_A_NAME
+                )
+            )
             self.logger.debug(f"Debater A's odds: {a_odds}, Debater B's odds: {b_odds}, Winner: {message}")
             return ModelResponse(
                 decision=message,

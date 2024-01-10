@@ -21,24 +21,22 @@ import time
 
 
 class WinStats(BaseModel):
-    matches: int
-    wins: int
-    correct_matches: int
-    correct_wins: int
-    first_matches: int
-    first_wins: int
+    matches: int = 0
+    wins: int = 0
+    correct_matches: int = 0
+    correct_wins: int = 0
+    first_matches: int = 0
+    first_wins: int = 0
 
 
 class JudgeStats(BaseModel):
-    matches: int
-    correct_calls: int
-    first_calls: int
+    matches: int = 0
+    correct_calls: int = 0
+    first_calls: int = 0
 
 
 class ResultsCollector:
-    def __init__(
-        self, experiment: Optional[ExperimentConfig], save_file_path_prefix: Optional[str] = None, should_save: bool = True
-    ):
+    def __init__(self, experiment: ExperimentConfig, save_file_path_prefix: Optional[str] = None, should_save: bool = True):
         """
         Collects metrics after a series of debate rounds are run.
 
@@ -49,7 +47,7 @@ class ResultsCollector:
         """
         self.logger = LoggerUtils.get_default_logger(__name__)
         self.quotes_collector = QuotesCollector(experiment=experiment) if experiment else None
-        self.annotator = Annotator(model_path=experiment.annotations_classifier_file_path)
+        self.annotator = None  # Annotator(model_path=experiment.annotations_classifier_file_path)
         self.num_debaters = len(set([debater.alias for debater in experiment.agents.debaters])) if experiment else 2
         self.aliases = sorted(list(set([debater.alias for debater in experiment.agents.debaters])))
         self.save_file_path_prefix = save_file_path_prefix
@@ -79,7 +77,7 @@ class ResultsCollector:
         alias_to_stats = {}
         for summary in self.summaries:
             if summary.judge_alias not in alias_to_stats:
-                alias_to_stats[summary.judge_alias] = JudgeStats(matches=0, correct_calls=0, first_calls=0)
+                alias_to_stats[summary.judge_alias] = JudgeStats()
 
             alias_to_stats[summary.judge_alias].matches += 1
 
@@ -109,6 +107,8 @@ class ResultsCollector:
 
     def __graph_wins(self) -> dict[str, float]:
         def bayesian_credible_interval(wins: int, games: int, confidence: float = 0.95):
+            if games == 0:
+                return 0, 0
             alpha = (games / 2) + wins
             beta = (games / 2) + games - wins
 
@@ -118,15 +118,12 @@ class ResultsCollector:
             return lower_bound, upper_bound
 
         alias_to_stats = {}
+
         for summary in self.summaries:
             if summary.first_debater_alias not in alias_to_stats:
-                alias_to_stats[summary.first_debater_alias] = WinStats(
-                    matches=0, wins=0, correct_matches=0, correct_wins=0, first_matches=0, first_wins=0
-                )
+                alias_to_stats[summary.first_debater_alias] = WinStats()
             if summary.second_debater_alias not in alias_to_stats:
-                alias_to_stats[summary.second_debater_alias] = WinStats(
-                    matches=0, wins=0, correct_matches=0, correct_wins=0, first_matches=0, first_wins=0
-                )
+                alias_to_stats[summary.second_debater_alias] = WinStats()
 
             alias_to_stats[summary.first_debater_alias].matches += 1
             alias_to_stats[summary.second_debater_alias].matches += 1
