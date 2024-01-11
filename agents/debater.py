@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from agents.agent import Agent
+from agents.agent import Agent, BestOfNConfig, ScratchpadConfig
+from agents.judge import JudgeUtils
 from agents.models import HumanModel, Model, ModelResponse, OfflineModel, SpeechStructure
 from agents.transcript import SpeechFormat, Transcript
 from prompts import Prompt, PromptTag
@@ -21,8 +22,7 @@ class Debater(Agent):
         model: Model,
         num_speeches: int,
         speech_format: Optional[SpeechFormat] = None,
-        scratchpad_word_limit: Optional[int] = None,
-        scratchpad_public: bool = False,
+        scratchpad_config: ScratchpadConfig = ScratchpadConfig(),
         quotes_require_validation: bool = True,
     ):
         """
@@ -53,13 +53,10 @@ class Debater(Agent):
             quotes_require_validation=quotes_require_validation,
             speech_format=speech_format
             if speech_format
-            else DebaterUtils.get_default_speech_format(
-                name, num_speeches, scratchpad_word_limit is not None and scratchpad_word_limit > 0
-            ),
+            else DebaterUtils.get_default_speech_format(name, num_speeches, scratchpad_config.use_scratchpad),
         )
-        self.use_scratchpad = scratchpad_word_limit is not None and scratchpad_word_limit > 0
-        self.scratchpad_word_limit = scratchpad_word_limit
-        self.scratchpad_public = scratchpad_public
+        self.scratchpad_config = scratchpad_config
+        self.quotes_require_validation = quotes_require_validation
         self.logger = LoggerUtils.get_default_logger(__name__)
 
     def generate(self, max_new_tokens=300, round_idx: int = 0) -> Optional[list[ModelResponse]]:
@@ -79,8 +76,8 @@ class Debater(Agent):
             model=self.model,
             num_speeches=self.num_speeches,
             speech_format=self.speech_format,
-            scratchpad_word_limit=self.scratchpad_word_limit,
-            scratchpad_public=self.scratchpad_public,
+            scratchpad_config=self.scratchpad_config,
+            quotes_require_validation=self.quotes_require_validation,
         )
         if transcripts:
             debater.transcripts = [transcript.copy() for transcript in transcripts]
@@ -90,8 +87,10 @@ class Debater(Agent):
         """Generates new text using the pre-existing transcript as input. If it has access to a
         scratchpad, it will use that but keep those results hidden."""
         batch_reasoning = []
-        if self.use_scratchpad:
-            batch_reasoning = [reasoning.speech for reasoning in self.generate(max_new_tokens=self.scratchpad_word_limit)]
+        if self.scratchpad_config.use_scratchpad:
+            batch_reasoning = [
+                reasoning.speech for reasoning in self.generate(max_new_tokens=self.scratchpad_config.scratchpad_word_limit)
+            ]
             for i, reasoning in enumerate(batch_reasoning):
                 super().receive_message(speaker=self.name, content=reasoning, idx=i)
                 self.logger.debug(reasoning)
@@ -99,18 +98,12 @@ class Debater(Agent):
         generation = self.generate(max_new_tokens=300)
         all_speeches = [gen.speech for gen in generation]
 
-        if self.use_scratchpad and self.scratchpad_public:
+        if self.scratchpad_config.use_scratchpad and self.scratchpad_config.scratchpad_public:
             all_speeches = [
                 constants.LINE_SEPARATOR.join([reasoning, speech]) for reasoning, speech in zip(all_speeches, generation)
             ]
 
         return all_speeches, generation
-
-
-class BestOfNConfig(BaseModel):
-    n: int
-    opponent_n: int
-    maxmin: bool
 
 
 class BestOfNDebater(Debater):
@@ -128,7 +121,7 @@ class BestOfNDebater(Debater):
         self.config = best_of_n_config
 
     def __call__(self):
-        # just doing round 1 for now
+        # just doing round 1 for now and unbatched inputs
         model_responses = self.model.predict(
             inputs=[self.transcripts[0].to_model_input() for _ in range(self.config.n)],
             max_new_tokens=300,
@@ -144,7 +137,13 @@ class BestOfNDebater(Debater):
         judge_inputs = []
         for response in model_responses:
             for opposing_response in opposing_debater_responses:
-                judge_transcript = copy.deepcopy(self.judge.transcripts[0])
+                judge_transcript = Transcript(
+                    name=self.judge.transcripts[0].name,
+                    prompt=self.judge.transcripts[0].prompt,
+                    speech_format=JudgeUtils.get_default_speech_format(
+                        num_speeches=self.judge.num_speeches, chain_of_thought=False
+                    ),
+                )
                 if self.name == constants.DEFAULT_DEBATER_A_NAME:
                     judge_transcript.add_speech(speaker=self.name, content=response.speech)
                     judge_transcript.add_speech(speaker=self.opposing_debater.name, content=opposing_response.speech)
@@ -204,7 +203,7 @@ class PreferenceDebater(Debater):
             model=debater.model,
             num_speeches=debater.num_speeches,
             speech_format=DebaterUtils.get_preference_speech_format(
-                debater.name, debater.num_speeches, debater.use_scratchpad
+                debater.name, debater.num_speeches, debater.scratchpad_config.use_scratchpad
             ),
         )
         self.n = n

@@ -1,12 +1,13 @@
 from agents import (
+    AgentConfig,
     BestOfNDebater,
-    BestOfNConfig,
     PreferenceJudge,
     Debater,
     DebateRound,
     HumanDebater,
     Judge,
     Model,
+    ModelSettings,
     ModelType,
     ModelUtils,
     OfflineDebater,
@@ -15,7 +16,7 @@ from agents import (
     ServedModel,
 )
 from data import DatasetConfig, DatasetType, LoaderUtils, RawDataLoader, RawDataset, SplitType
-from prompts import DynamicPromptParser, Prompt, PromptConfig, PromptParser
+from prompts import DynamicPromptParser, Prompt, PromptConfig, PromptLoadingConfig, PromptParser
 from utils import LoggerUtils
 import utils.constants as constants
 
@@ -26,40 +27,6 @@ import yaml
 from enum import Enum
 from typing import Optional
 import itertools
-
-
-class HardcodedTopicConfig(BaseModel):
-    topic: str
-    positions: tuple[str, str]
-
-
-class DynamicPromptsLoadingConfig(BaseModel):
-    dynamic_prompts_file_path: Optional[str] = None
-    dynamic_prompt_name: Optional[str] = None
-
-
-class PromptLoadingConfig(BaseModel):
-    file_path: Optional[str] = None
-    default_prompt_name: str = "Base Prompt"
-    use_dynamic_prompt: bool = False
-    dynamic_prompts_config: DynamicPromptsLoadingConfig = DynamicPromptsLoadingConfig()
-    use_hardcoded_topics: bool = False
-    hardcoded_topic_config: Optional[HardcodedTopicConfig] = None
-
-
-class AgentConfig(BaseModel):
-    model_type: str
-    model_file_path: Optional[str]
-    alias: str
-    override_prompt: Optional[str] = None
-    greedy: bool = True
-    is_memorized: bool = False
-    is_human: bool = False
-    offline_file_path: Optional[str] = None
-    scratchpad_word_limit: Optional[int] = None
-    scratchpad_public: bool = False
-    served: bool = False
-    best_of_n: Optional[BestOfNConfig] = None
 
 
 class AgentsConfig(BaseModel):
@@ -80,7 +47,7 @@ class ExperimentConfig(BaseModel):
     prompt_config: PromptLoadingConfig = PromptLoadingConfig()
     agents: AgentsConfig
     dataset: DatasetConfig
-    preference: Optional[PreferenceConfig]
+    preference: Optional[PreferenceConfig] = None
     annotations_classifier_file_path: Optional[str]
 
 
@@ -140,6 +107,10 @@ class ExperimentLoader:
         return SplitType[experiment.dataset.split_type.upper()] if experiment.dataset.split_type else SplitType.TRAIN
 
     @classmethod
+    def get_model_id(cls, model_settings: ModelSettings):
+        return f"{model_settings.model_type}_{model_settings.model_file_path}"
+
+    @classmethod
     def create_debate_rounds_for_combination(
         cls,
         experiment: ExperimentConfig,
@@ -171,65 +142,48 @@ class ExperimentLoader:
         # create logger
         logger = LoggerUtils.get_default_logger(__name__)
 
-        # create debater models
-        debater_one_model_type = ModelType[experiment.agents.debaters[debater_idxs[0]].model_type.upper()]
-        debater_two_model_type = ModelType[experiment.agents.debaters[debater_idxs[1]].model_type.upper()]
-        judge_model_type = ModelType[experiment.agents.judge.model_type.upper()]
-        debater_one_model_path = experiment.agents.debaters[debater_idxs[0]].model_file_path
-        debater_two_model_path = experiment.agents.debaters[debater_idxs[1]].model_file_path
-        judge_model_path = experiment.agents.judge.model_file_path
-        logger.debug(f"Instantiating a {debater_one_model_type} from {debater_one_model_path}")
+        debater_one_model_id = ExperimentLoader.get_model_id(experiment.agents.debaters[debater_idxs[0]].model_settings)
+        debater_two_model_id = ExperimentLoader.get_model_id(experiment.agents.debaters[debater_idxs[1]].model_settings)
+        judge_model_id = ExperimentLoader.get_model_id(experiment.agents.judge.model_settings)
 
         if not model_cache:
             model_cache = {}
 
         debater_one_model = (
             ModelUtils.instantiate_model(
-                model_type=debater_one_model_type,
-                file_path=debater_one_model_path if not experiment.agents.debaters[debater_idxs[0]].served else None,
+                model_settings=experiment.agents.debaters[debater_idxs[0]].model_settings,
                 is_debater=True,
-                alias=experiment.agents.debaters[debater_idxs[0]].alias,
-                greedy=experiment.agents.debaters[debater_idxs[0]].greedy,
-                served=experiment.agents.debaters[debater_idxs[0]].served,
             )
-            if f"{debater_one_model_type}_{debater_one_model_path}" not in model_cache
-            else model_cache[f"{debater_one_model_type}_{debater_one_model_path}"].copy(
-                alias=experiment.agents.debaters[debater_idxs[0]].alias, is_debater=True
+            if debater_one_model_id not in model_cache
+            else model_cache[debater_one_model_id].copy(
+                alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias, is_debater=True
             )
         )
-        model_cache[f"{debater_one_model_type}_{debater_one_model_path}"] = debater_one_model
+        model_cache[debater_one_model_id] = debater_one_model
 
         debater_two_model = (
             ModelUtils.instantiate_model(
-                model_type=debater_two_model_type,
-                file_path=debater_two_model_path if not experiment.agents.debaters[debater_idxs[1]].served else None,
+                model_settings=experiment.agents.debaters[debater_idxs[1]].model_settings,
                 is_debater=True,
-                alias=experiment.agents.debaters[debater_idxs[1]].alias,
-                greedy=experiment.agents.debaters[debater_idxs[1]].greedy,
-                served=experiment.agents.debaters[debater_idxs[1]].served,
             )
-            if f"{debater_two_model_type}_{debater_two_model_path}" not in model_cache
-            else model_cache[f"{debater_two_model_type}_{debater_two_model_path}"].copy(
-                alias=experiment.agents.debaters[debater_idxs[1]].alias,
+            if debater_two_model_id not in model_cache
+            else model_cache[debater_two_model_id].copy(
+                alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
                 is_debater=True,
-                greedy=experiment.agents.debaters[debater_idxs[1]].greedy,
+                nucleus=experiment.agents.debaters[debater_idxs[1]].model_settings.nucleus,
             )
         )
-        model_cache[f"{debater_two_model_type}_{debater_two_model_path}"] = debater_two_model
+        model_cache[debater_two_model_id] = debater_two_model
 
         judge_model = (
             ModelUtils.instantiate_model(
-                model_type=judge_model_type,
-                file_path=judge_model_path,
+                model_settings=experiment.agents.judge.model_settings,
                 is_debater=False,
-                alias=experiment.agents.judge.alias,
             )
-            if f"{judge_model_type}_{judge_model_path}" not in model_cache
-            else model_cache[f"{judge_model_type}_{judge_model_path}"].copy(
-                alias=experiment.agents.judge.alias, is_debater=False
-            )
+            if judge_model_id not in model_cache
+            else model_cache[judge_model_id].copy(alias=experiment.agents.judge.model_settings.alias, is_debater=False)
         )
-        model_cache[f"{judge_model_type}_{judge_model_path}"] = judge_model
+        model_cache[judge_model_id] = judge_model
 
         # create debate rounds
         rounds = []
@@ -259,7 +213,9 @@ class ExperimentLoader:
                 position=position,
                 opponent_position=opponent_position,
                 topic=topic,
-                background_text=background_text if not experiment.agents.debaters[debater_idxs[0]].is_memorized else title,
+                background_text=background_text
+                if not experiment.agents.debaters[debater_idxs[0]].model_settings.is_memorized
+                else title,
             )
 
             config_b = PromptConfig(
@@ -269,34 +225,36 @@ class ExperimentLoader:
                 position=opponent_position,
                 opponent_position=position,
                 topic=topic,
-                background_text=background_text if not experiment.agents.debaters[debater_idxs[1]].is_memorized else title,
+                background_text=background_text
+                if not experiment.agents.debaters[debater_idxs[1]].model_settings.is_memorized
+                else title,
             )
 
             prompt_a = PromptParser.parse(
                 prompt_config=config_a,
                 prompts_file_path=experiment.prompt_config.file_path,
-                name=experiment.agents.debaters[debater_idxs[0]].override_prompt
+                name=experiment.agents.debaters[debater_idxs[0]].model_settings.override_prompt
                 or experiment.prompt_config.default_prompt_name,
             )
 
             flipped_prompt_a = PromptParser.parse(
                 prompt_config=config_a,
                 prompts_file_path=experiment.prompt_config.file_path,
-                name=experiment.agents.debaters[debater_idxs[1]].override_prompt
+                name=experiment.agents.debaters[debater_idxs[1]].model_settings.override_prompt
                 or experiment.prompt_config.default_prompt_name,
             )
 
             prompt_b = PromptParser.parse(
                 prompt_config=config_b,
                 prompts_file_path=experiment.prompt_config.file_path,
-                name=experiment.agents.debaters[debater_idxs[1]].override_prompt
+                name=experiment.agents.debaters[debater_idxs[1]].model_settings.override_prompt
                 or experiment.prompt_config.default_prompt_name,
             )
 
             flipped_prompt_b = PromptParser.parse(
                 prompt_config=config_a,
                 prompts_file_path=experiment.prompt_config.file_path,
-                name=experiment.agents.debaters[debater_idxs[0]].override_prompt
+                name=experiment.agents.debaters[debater_idxs[0]].model_settings.override_prompt
                 or experiment.prompt_config.default_prompt_name,
             )
 
@@ -330,8 +288,7 @@ class ExperimentLoader:
                 prompt=prompt_a,
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
-                scratchpad_word_limit=experiment.agents.debaters[debater_idxs[0]].scratchpad_word_limit,
-                scratchpad_public=experiment.agents.debaters[debater_idxs[0]].scratchpad_public,
+                scratchpad_config=experiment.agents.debaters[debater_idxs[0]].scratchpad,
             )
 
             debater_b = Debater(
@@ -339,8 +296,7 @@ class ExperimentLoader:
                 prompt=prompt_b,
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
-                scratchpad_word_limit=experiment.agents.debaters[debater_idxs[1]].scratchpad_word_limit,
-                scratchpad_public=experiment.agents.debaters[debater_idxs[1]].scratchpad_public,
+                scratchpad_config=experiment.agents.debaters[debater_idxs[1]].scratchpad,
             )
 
             judge = Judge(
@@ -348,7 +304,7 @@ class ExperimentLoader:
                 prompt=prompt_judge,
                 model=judge_model,
                 num_speeches=experiment.num_speeches,
-                chain_of_thought=experiment.agents.judge.scratchpad_public or experiment.agents.judge.scratchpad_word_limit,
+                chain_of_thought=experiment.agents.judge.scratchpad.use_scratchpad,
             )
 
             debate_round = DebateRound(
@@ -370,8 +326,7 @@ class ExperimentLoader:
                 prompt=flipped_prompt_a,
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
-                scratchpad_word_limit=experiment.agents.debaters[debater_idxs[1]].scratchpad_word_limit,
-                scratchpad_public=experiment.agents.debaters[debater_idxs[1]].scratchpad_public,
+                scratchpad_config=experiment.agents.debaters[debater_idxs[1]].scratchpad,
             )
 
             flipped_debater_b = Debater(
@@ -379,8 +334,7 @@ class ExperimentLoader:
                 prompt=flipped_prompt_b,
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
-                scratchpad_word_limit=experiment.agents.debaters[debater_idxs[0]].scratchpad_word_limit,
-                scratchpad_public=experiment.agents.debaters[debater_idxs[0]].scratchpad_public,
+                scratchpad_config=experiment.agents.debaters[debater_idxs[0]].scratchpad,
             )
 
             flipped_round = DebateRound(
@@ -445,11 +399,11 @@ class ExperimentLoader:
                     )
                 )
 
-            if experiment.agents.debaters[debater_idxs[0]].offline_file_path:
+            if experiment.agents.debaters[debater_idxs[0]].model_settings.offline_file_path:
                 debate_round.set_first_debater(
                     OfflineDebater(
                         debater=debate_round.first_debater,
-                        file_path=experiment.agents.debaters[debater_idxs[0]].offline_file_path,
+                        file_path=experiment.agents.debaters[debater_idxs[0]].model_settings.offline_file_path,
                         first_debater_prompt=prompt_a,
                         round_idx=(i * 2) if experiment.flip else i,
                     )
@@ -457,16 +411,16 @@ class ExperimentLoader:
                 flipped_round.set_second_debater(
                     OfflineDebater(
                         debater=flipped_round.second_debater,
-                        file_path=experiment.agents.debaters[debater_idxs[0]].offline_file_path,
+                        file_path=experiment.agents.debaters[debater_idxs[0]].model_settings.offline_file_path,
                         first_debater_prompt=prompt_a,
                         round_idx=((i * 2) + 1) if experiment.flip else i,
                     )
                 )
-            if experiment.agents.debaters[debater_idxs[1]].offline_file_path:
+            if experiment.agents.debaters[debater_idxs[1]].model_settings.offline_file_path:
                 debate_round.set_second_debater(
                     OfflineDebater(
                         debater=debate_round.second_debater,
-                        file_path=experiment.agents.debaters[debater_idxs[0]].offline_file_path,
+                        file_path=experiment.agents.debaters[debater_idxs[0]].model_settings.offline_file_path,
                         first_debater_prompt=prompt_a,
                         round_idx=(i * 2) if experiment.flip else i,
                     )
@@ -474,7 +428,7 @@ class ExperimentLoader:
                 flipped_round.set_first_debater(
                     OfflineDebater(
                         debater=flipped_round.first_debater,
-                        file_path=experiment.agents.debaters[debater_idxs[1]].offline_file_path,
+                        file_path=experiment.agents.debaters[debater_idxs[1]].model_settings.offline_file_path,
                         first_debater_prompt=prompt_a,
                         round_idx=((i * 2) + 1) if experiment.flip else i,
                     )
@@ -515,10 +469,10 @@ class ExperimentLoader:
                     )
                 )
 
-            if experiment.agents.debaters[debater_idxs[0]].is_human:
+            if experiment.agents.debaters[debater_idxs[0]].model_settings.is_human:
                 debate_round.set_first_debater(HumanDebater(debater=debate_round.first_debater, speeches=speeches))
                 flipped_round.set_second_debater(HumanDebater(debater=flipped_round.second_debater, speeches=speeches))
-            if experiment.agents.debaters[debater_idxs[1]].is_human:
+            if experiment.agents.debaters[debater_idxs[1]].model_settings.is_human:
                 debate_round.set_second_debater(HumanDebater(debater=debate_round.second_debater, speeches=speeches))
                 flipped_round.set_first_debater(HumanDebater(debater=flipped_round.first_debater, speeches=speeches))
 

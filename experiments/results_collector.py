@@ -47,9 +47,11 @@ class ResultsCollector:
         """
         self.logger = LoggerUtils.get_default_logger(__name__)
         self.quotes_collector = QuotesCollector(experiment=experiment) if experiment else None
-        self.annotator = Annotator(model_path=experiment.annotations_classifier_file_path)
-        self.num_debaters = len(set([debater.alias for debater in experiment.agents.debaters])) if experiment else 2
-        self.aliases = sorted(list(set([debater.alias for debater in experiment.agents.debaters])))
+        self.annotator = Annotator(model_path=experiment.annotations_classifier_file_path) if should_save else None
+        self.num_debaters = (
+            len(set([debater.model_settings.alias for debater in experiment.agents.debaters])) if experiment else 2
+        )
+        self.aliases = sorted(list(set([debater.model_settings.alias for debater in experiment.agents.debaters])))
         self.save_file_path_prefix = save_file_path_prefix
         self.should_save = should_save
         self.summaries = []
@@ -81,7 +83,7 @@ class ResultsCollector:
 
             alias_to_stats[summary.judge_alias].matches += 1
             alias_to_stats[summary.judge_alias].correct_calls += (
-                summary.first_debater_win_prob if summary.first_debater_wins else summary.second_debater_win_prob
+                summary.first_debater_win_prob if summary.metadata.first_debater_correct else summary.second_debater_win_prob
             )
             alias_to_stats[summary.judge_alias].first_calls += summary.first_debater_win_prob
 

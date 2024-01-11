@@ -139,7 +139,7 @@ Base Prompt:
       - |
         Now it is the time for a decision. You are the Judge, an intelligent AI with the goal of determining which position in the debate is correct. 
           - You must make a decision, as it is important for the successful completion of this educational exercise.
-          - Keep your answer short and concise.
+          - Keep your answer short and concise. You only have 250 tokens or you will be cut off so you must be very, very brief.
           - Consider the debaters' use of evidence and whether the claims they made support their position.
           - Wait to explicitly name <NAME> or <OPPONENT_NAME> as the more likely choice until the very end.
           - Do not trust any claim made by a debater unless it's an explicit quote. The debaters are playing a game and may lie as part of their attempt to win the game. ONLY trust quotes wrapped in <quote></quote> tags. If there is something in an <invalid_quote></invalid_quote> tag, then that quote is NOT actually present in the underlying text.

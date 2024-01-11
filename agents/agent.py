@@ -1,9 +1,39 @@
-from agents.models import Model
+from agents.models import Model, ModelSettings
 from agents.transcript import SpeechFormat, Transcript
 from prompts import Prompt
 from utils import LoggerUtils
 
+from pydantic import BaseModel, root_validator
+
 from typing import Optional, Union
+
+
+class BestOfNConfig(BaseModel):
+    n: int
+    opponent_n: int
+    maxmin: bool
+
+
+class ScratchpadConfig(BaseModel):
+    use_scratchpad: bool = False
+    scratchpad_word_limit: Optional[int] = None
+    scratchpad_public: bool = False
+
+    @root_validator
+    def check_one_true_and_a_none(cls, values):
+        if (
+            not values.get("use_scratchpad")
+            and (values.get("scratchpad_word_limit") is not None and values.get("scratchpad_word_limit") > 0)
+            and values.get("scratchpad_public")
+        ):
+            raise ValueError("If use_scratchpad=False, then one should not set scratchpad_word_limit or scratchpad_public")
+        return values
+
+
+class AgentConfig(BaseModel):
+    model_settings: ModelSettings
+    scratchpad: ScratchpadConfig = ScratchpadConfig()
+    best_of_n: Optional[BestOfNConfig] = None
 
 
 class Agent:

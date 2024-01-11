@@ -152,7 +152,7 @@ class OpenAIModel(Model):
                 messages=messages,
                 max_tokens=max_new_tokens,
                 logprobs=(speech_structure != SpeechStructure.OPEN_ENDED),
-                top_logprobs=5,
+                top_logprobs=5 if (speech_structure != SpeechStructure.OPEN_ENDED) else None,
             )
         except Exception as e:
             self.logger.warn(f"Received an error while calling OpenAI: {e}")

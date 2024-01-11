@@ -12,13 +12,16 @@ Hardcoded_Test:
         - LeBron James
   agents:
     debaters:
-      - model_type: random
-        alias: random-debater
-      - model_type: random
-        alias: random-debater
+      - model_settings:
+          model_type: random
+          alias: random-debater
+      - model_settings:
+          model_type: random
+          alias: random-debater
     judge:
-      model_type: random
-      alias: random-judge
+      model_settings:
+        model_type: random
+        alias: random-judge
   dataset:
     dataset_type: quality
     split_type: val
@@ -29,13 +32,16 @@ Simple_Test:
   flip: False
   agents:
     debaters:
-      - model_type: random
-        alias: random-debater
-      - model_type: deterministic
-        alias: deterministic-debater
+      - model_settings:
+          model_type: random
+          alias: random-debater
+      - model_settings:
+          model_type: deterministic
+          alias: deterministic-debater
     judge:
-      model_type: deterministic
-      alias: deterministic-judge
+      model_settings:
+        model_type: deterministic
+        alias: deterministic-judge
   dataset:
     dataset_type: quality_debates
     split_type: val
@@ -46,13 +52,16 @@ Batched_Test:
   flip: False
   agents:
     debaters:
-      - model_type: random
-        alias: random-debater
-      - model_type: deterministic
-        alias: deterministic-debater
+      - model_settings:
+          model_type: random
+          alias: random-debater
+      - model_settings:
+          model_type: deterministic
+          alias: deterministic-debater
     judge:
-      model_type: random
-      alias: random-judge
+        model_settings:
+          model_type: random
+          alias: random-judge
   dataset:
     dataset_type: quality_debates
     split_type: val
@@ -63,13 +72,16 @@ Single_Test:
   flip: True
   agents:
     debaters:
-      - model_type: random
-        alias: random-debater
-      - model_type: deterministic
-        alias: deterministic-debater
+      - model_settings:
+          model_type: random
+          alias: random-debater
+      - model_settings:
+          model_type: deterministic
+          alias: deterministic-debater
     judge:
-      model_type: random
-      alias: random-judge
+      model_settings:
+        model_type: random
+        alias: random-judge
   dataset:
     dataset_type: quality_debates
 Offline_Test:
@@ -79,15 +91,18 @@ Offline_Test:
   flip: False
   agents:
     debaters:
-      - model_type: random
-        alias: offline-debater-1
-        offline_file_path: 2023-11-28_11:09:25.726737
-      - model_type: random
-        alias: offline-debater-1
-        offline_file_path: 2023-11-28_11:09:25.726737
+      - model_settings:
+          model_type: random
+          alias: offline-debater-1
+          offline_file_path: 2023-11-28_11:09:25.726737
+      - model_settings:
+          model_type: random
+          alias: offline-debater-1
+          offline_file_path: 2023-11-28_11:09:25.726737
     judge:
-      model_type: random
-      alias: random-judge
+      model_settings:
+        model_type: random
+        alias: random-judge
   dataset:
     dataset_type: quality
     split_type: train
@@ -98,13 +113,16 @@ Preference_Test:
   flip: False
   agents:
     debaters:
-      - model_type: random
-        alias: random-debater-1
-      - model_type: random
-        alias: random-debater-2
+      - model_settings:
+          model_type: random
+          alias: random-debater-1
+      - model_settings:
+          model_type: random
+          alias: random-debater-2
     judge:
-      model_type: random
-      alias: random-judge
+      model_settings:
+        model_type: random
+        alias: random-judge
   dataset:
     dataset_type: quality_debates
   preference:
@@ -119,13 +137,16 @@ Quality_Test:
   flip: False
   agents:
     debaters:
-      - model_type: random
-        alias: random-debater-1
-      - model_type: random
-        alias: random-debater-2
+      - model_settings:
+          model_type: random
+          alias: random-debater-1
+      - model_settings:
+          model_type: random
+          alias: random-debater-2
     judge:
-      model_type: random
-      alias: random-judge
+      model_settings:
+        model_type: random
+        alias: random-judge
   dataset:
     dataset_type: quality
     split_type: train
@@ -141,15 +162,18 @@ Human_Test:
   flip: True
   agents:
     debaters:
-      - model_type: random
-        alias: human-debater
-        is_human: True
-      - model_type: random
-        alias: human-debater
-        is_human: True
+      - model_settings:
+          model_type: random
+          alias: human-debater
+          is_human: True
+      - model_settings:
+          model_type: random
+          alias: human-debater
+          is_human: True
     judge:
-      model_type: random
-      alias: random-judge
+      model_settings:
+        model_type: random
+        alias: random-judge
   dataset:
     dataset_type: quality_debates
 Dynamic_Test:
@@ -159,13 +183,16 @@ Dynamic_Test:
   flip: True
   agents:
     debaters:
-      - model_type: random
-        alias: random-debater-1
-      - model_type: random
-        alias: random-debater-2
+      - model_settings:
+          model_type: random
+          alias: random-debater-1
+      - model_settings:
+          model_type: random
+          alias: random-debater-2
     judge:
-      model_type: random
-      alias: random-judge
+      model_settings:
+        model_type: random
+        alias: random-judge
   dataset:
     dataset_type: annotated_quality_debates
     split_type: train
@@ -176,17 +203,18 @@ Dynamic_Override_Test:
   flip: True
   agents:
     debaters:
-      - model_type: random
-        alias: random-debater-1
-        override_prompt: Quote Heavy
-        greedy: True
-      - model_type: random
-        alias: random-debater-2
-        override_prompt: Quote Light
-        greedy: False
+      - model_settings:
+          model_type: random
+          alias: random-debater-1
+          override_prompt: Quote Heavy
+      - model_settings:
+          model_type: random
+          alias: random-debater-2
+          override_prompt: Quote Light
     judge:
-      model_type: random
-      alias: random-judge
+      model_settings:
+        model_type: random
+        alias: random-judge
   dataset:
     dataset_type: annotated_quality_debates
     split_type: train
@@ -197,17 +225,24 @@ Labelled_Scratchpad_Test:
   flip: False
   agents:
     debaters:
-      - model_type: random
-        alias: debater-1
-        scratchpad_word_limit: 100
-        scratchpad_public: False
-      - model_type: random
-        alias: debater-2
-        scratchpad_word_limit: 100
-        scratchpad_public: False
+      - model_settings:
+          model_type: random
+          alias: debater-1
+        scratchpad:
+          use_scratchpad: True
+          scratchpad_word_limit: 100
+          scratchpad_public: False
+      - model_settings:
+          model_type: random
+          alias: debater-2
+        scratchpad:
+          use_scratchpad: True
+          scratchpad_word_limit: 100
+          scratchpad_public: False
     judge:
-      model_type: random
-      alias: random-judge
+      model_settings:
+        model_type: random
+        alias: random-judge
   dataset:
     dataset_type: scratchpad_quality_debates
     split_type: train
@@ -218,17 +253,22 @@ Operational_Test:
   flip: True
   agents:
     debaters:
-      - model_type: random
-        alias: debater-1
+      - model_settings:
+          model_type: random
+          alias: first-debater
         best_of_n:
           n: 4
-          opponent_n: 2
+          opponent_n: 1
           maxmin: True
-      - model_type: random
-        alias: debater-2
+      - model_settings:
+          model_type: random
+          alias: second-debater
     judge:
-      model_type: random
-      alias: random-judge
+      model_settings:
+        model_type: random
+        alias: random-judge
+      scratchpad:
+        use_scratchpad: True
   dataset:
     dataset_type: quality_debates
     split_type: train

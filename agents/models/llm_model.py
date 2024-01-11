@@ -42,7 +42,7 @@ class LLModel(Model):
         alias: str,
         file_path: Optional[str] = None,
         is_debater: bool = True,
-        greedy: bool = True,
+        nucleus: bool = True,
         instruction_prefix: str = "",
         instruction_suffix: str = "",
     ):
@@ -52,7 +52,7 @@ class LLModel(Model):
         Args:
             alias: String that identifies the model for metrics and deduplication
             is_debater: Boolean indicating whether the model is a debater (true) or judge (false)
-            greedy: Whether greedy decoding (true) or beam_search (false) should be used.
+            nucleus: Whether nucleus sampling (true) or beam_search (false) should be used.
             instruction_prefix: the prefix to use before the instructions that get passed to the model
             instruction_suffix: the suffix to use after the instructions that get passed to the model
         """
@@ -93,7 +93,7 @@ class LLModel(Model):
                 pad_token_id=self.tokenizer.eos_token_id,
             )
 
-            if not greedy:
+            if not nucleus:
                 self.generation_config.num_beams = 2
                 self.generation_config.do_sample = False
                 self.generation_config.top_p = None
@@ -252,9 +252,9 @@ class LLModel(Model):
 
         return decoded_outputs
 
-    def copy(self, alias: str, is_debater: Optional[bool] = None, greedy: bool = False) -> LLModel:
+    def copy(self, alias: str, is_debater: Optional[bool] = None, nucleus: bool = False) -> LLModel:
         """Generates a deepcopy of this model"""
-        copy = LLModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, greedy=greedy)
+        copy = LLModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, nucleus=nucleus)
         copy.is_debater = self.is_debater if is_debater == None else is_debater
         copy.tokenizer = self.tokenizer
         copy.model = self.model
@@ -272,13 +272,13 @@ class LlamaModel(LLModel):
         alias: str,
         file_path: Optional[str] = None,
         is_debater: bool = True,
-        greedy: bool = True,
+        nucleus: bool = True,
     ):
         super().__init__(
             alias=alias,
             file_path=file_path,
             is_debater=is_debater,
-            greedy=greedy,
+            nucleus=nucleus,
             instruction_prefix="instruction:",
             instruction_suffix="output:",
         )
@@ -286,9 +286,9 @@ class LlamaModel(LLModel):
         if self.model:
             self.model.config.max_position_embeddings = constants.MAX_LENGTH
 
-    def copy(self, alias: str, is_debater: Optional[bool] = None, greedy: bool = False) -> LLModel:
+    def copy(self, alias: str, is_debater: Optional[bool] = None, nucleus: bool = False) -> LLModel:
         """Generates a deepcopy of this model"""
-        copy = LlamaModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, greedy=greedy)
+        copy = LlamaModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, nucleus=nucleus)
         copy.is_debater = self.is_debater if is_debater == None else is_debater
         copy.tokenizer = self.tokenizer
         copy.model = self.model
@@ -306,13 +306,13 @@ class MistralModel(LLModel):
         alias: str,
         file_path: Optional[str] = None,
         is_debater: bool = True,
-        greedy: bool = True,
+        nucleus: bool = True,
     ):
         super().__init__(
             alias=alias,
             file_path=file_path,
             is_debater=is_debater,
-            greedy=greedy,
+            nucleus=nucleus,
             instruction_prefix="[INST]",
             instruction_suffix="[/INST]",
         )
@@ -320,9 +320,9 @@ class MistralModel(LLModel):
         if self.model:
             self.model.config.sliding_window = constants.MAX_LENGTH
 
-    def copy(self, alias: str, is_debater: Optional[bool] = None, greedy: bool = False) -> LLModel:
+    def copy(self, alias: str, is_debater: Optional[bool] = None, nucleus: bool = False) -> LLModel:
         """Generates a deepcopy of this model"""
-        copy = MistralModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, greedy=greedy)
+        copy = MistralModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, nucleus=nucleus)
         copy.is_debater = self.is_debater if is_debater == None else is_debater
         copy.tokenizer = self.tokenizer
         copy.model = self.model

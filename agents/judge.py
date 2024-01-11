@@ -65,6 +65,7 @@ class Judge(Agent):
         self.judge_type = judge_type
         self.expected_saver = expected_saver
         self.chain_of_thought = chain_of_thought
+        self.num_speeches = num_speeches
 
     def generate(
         self, max_new_tokens: int = 150, speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED
@@ -83,7 +84,7 @@ class Judge(Agent):
             (depending on whether the speech was a decision or open-ended) for each element in the batch.
         """
         if self.chain_of_thought or not self.transcripts[0].only_decision_remains():
-            batch_generation = self.generate(max_new_tokens=450, speech_structure=SpeechStructure.OPEN_ENDED)
+            batch_generation = self.generate(max_new_tokens=250, speech_structure=SpeechStructure.OPEN_ENDED)
             batch_reasoning = [response.speech for response in batch_generation]
         if self.transcripts[0].only_decision_remains():  # all formats should be the same so we can use any transcript
             if self.chain_of_thought:
@@ -223,7 +224,7 @@ class JudgeUtils:
         )
 
     @classmethod
-    def get_default_speech_format(cls, num_speeches: int, chain_of_thought):
+    def get_default_speech_format(cls, num_speeches: int, chain_of_thought: bool):
         """Gets the speech order for non-preference judges"""
         return (
             SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)

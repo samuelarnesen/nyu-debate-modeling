@@ -11,6 +11,25 @@ import random
 import re
 
 
+class HardcodedTopicConfig(BaseModel):
+    topic: str
+    positions: tuple[str, str]
+
+
+class DynamicPromptsLoadingConfig(BaseModel):
+    dynamic_prompts_file_path: Optional[str] = None
+    dynamic_prompt_name: Optional[str] = None
+
+
+class PromptLoadingConfig(BaseModel):
+    file_path: Optional[str] = None
+    default_prompt_name: str = "Base Prompt"
+    use_dynamic_prompt: bool = False
+    dynamic_prompts_config: DynamicPromptsLoadingConfig = DynamicPromptsLoadingConfig()
+    use_hardcoded_topics: bool = False
+    hardcoded_topic_config: Optional[HardcodedTopicConfig] = None
+
+
 class PromptTag(Enum):
     PRE_DEBATE = 1
     PRE_OPENING_SPEECH = 2
@@ -90,6 +109,12 @@ class PromptParser:
     DEFAULT_PROMPT_FILE_PATH = os.environ[constants.SRC_ROOT] + "prompts/configs/prompts.yaml"
     DEFAULT_PROMPT_NAME = "Base Prompt"
 
+    try:
+        with open(DEFAULT_PROMPT_FILE_PATH) as f:
+            DEFAULT_YAML = yaml.safe_load(f)
+    except:
+        DEFAULT_YAML = None
+
     @classmethod
     def parse(
         cls,
@@ -109,9 +134,12 @@ class PromptParser:
         Returns:
             prompt: a prompt object containing a list of messages that the agents use to run a debate round
         """
-        prompts_file_path = prompts_file_path or PromptParser.DEFAULT_PROMPT_FILE_PATH
-        with open(prompts_file_path) as f:
-            loaded_yaml = yaml.safe_load(f)
+        if not prompts_file_path or prompts_file_path == PromptParser.DEFAULT_PROMPT_FILE_PATH and DEFAULT_YAML:
+            loaded_yaml = PromptParser.DEFAULT_YAML
+        else:
+            prompts_file_path = prompts_file_path or PromptParser.DEFAULT_PROMPT_FILE_PATH
+            with open(prompts_file_path) as f:
+                loaded_yaml = yaml.safe_load(f)
 
         name = name or PromptParser.DEFAULT_PROMPT_NAME
         prompt = Prompt(name=name, messages=loaded_yaml[name])

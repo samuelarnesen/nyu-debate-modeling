@@ -5,21 +5,18 @@
   flip: True
   agents:
     debaters:
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
-        alias: "merged-4"
-        greedy: True
-        scratchpad_word_limit: 200
-        scratchpad_public: True
-      - model_type: llama
-        model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
-        alias: "merged-4"
-        greedy: True
-        scratchpad_word_limit: 200
-        scratchpad_public: True
+      - model_settings:
+          model_type: llama
+          model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+          alias: "merged-4"
+      - model_settings:
+          model_type: llama
+          model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+          alias: "merged-4"
     judge:
-      model_type: openai
-      alias: "openai-judge"
+      model_settings:
+        model_type: openai
+        alias: "openai-judge"
   dataset:
     dataset_type: quality_debates
     split_type: val
@@ -30,18 +27,20 @@ Served Test:
   flip: True
   agents:
     debaters:
-      - model_type: llama
-        model_file_path: null
-        alias: "merged-4"
-        greedy: True
-        served: True
-      - model_type: llama
-        model_file_path: null
-        alias: "merged-4"
-        served: True
+      - model_settings:
+          model_type: llama
+          model_file_path: null
+          alias: "merged-4"
+          served: True
+      - model_settings:
+          model_type: llama
+          model_file_path: null
+          alias: "merged-4"
+          served: True
     judge:
-      model_type: random
-      alias: "random-judge"
+      model_settings:
+        model_type: random
+        alias: "random-judge"
   dataset:
     dataset_type: quality
     split_type: train
@@ -52,17 +51,18 @@ Served Test:
   flip: True
   agents:
     debaters:
-      - model_type: mistral
-        model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-        alias: "mixtral-nyu-plus"
-        greedy: True
-      - model_type: mistral
-        model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-        alias: "mixtral-nyu-plus"
-        greedy: True
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+          alias: "mixtral-nyu-plus"
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+          alias: "mixtral-nyu-plus"
     judge:
-      model_type: openai
-      alias: "openai-judge"
+      model_settings:
+        model_type: openai
+        alias: "openai-judge"
   dataset:
     dataset_type: quality
     split_type: val
@@ -73,17 +73,18 @@ Served Test:
   flip: True
   agents:
     debaters:
-      - model_type: mistral
-        model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-        alias: "mixtral-nyu-plus"
-        greedy: True
-      - model_type: mistral
-        model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-        alias: "mixtral-nyu-plus"
-        greedy: True
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+          alias: "mixtral-nyu-plus"
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+          alias: "mixtral-nyu-plus"
     judge:
-      model_type: openai
-      alias: "openai-judge"
+      model_settings:
+        model_type: openai
+        alias: "openai-judge"
   dataset:
     dataset_type: quality
     split_type: val
@@ -94,40 +95,24 @@ Served Test:
   flip: True
   agents:
     debaters:
-      - model_type: mistral
-        model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-        alias: "mixtral-nyu-plus-4-1"
-        greedy: True
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+          alias: "mixtral-nyu-plus-4-1-a"
         best_of_n:
           n: 4
           opponent_n: 1
-          maxmin: False
-      - model_type: mistral
-        model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-        alias: "mixtral-nyu-plus-0-0"
-        greedy: True
+          maxmin: True
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+          alias: "mixtral-nyu-plus-0-0-b"
     judge:
-      model_type: openai
-      alias: "openai-judge"
+      model_settings:
+        model_type: openai
+        alias: "openai-judge"
+      scratchpad:
+        use_scratchpad: True
   dataset:
     dataset_type: quality
     split_type: val
-70B Check:
-  word_limit: 500
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  agents:
-    debaters:
-      - model_type: llama
-        model_file_path: Yukang/LongAlpaca-70B
-        alias: "70b-debater"
-      - model_type: llama
-        model_file_path: Yukang/LongAlpaca-70B
-        alias: "70b-debater"
-    judge:
-      model_type: deterministic
-      alias: "deterministic-judge"
-  dataset:
-    dataset_type: quality_debates
-    split_type: train

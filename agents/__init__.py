@@ -10,6 +10,7 @@ from agents.models import (
     Model,
     ModelInput,
     ModelResponse,
+    ModelSettings,
     ModelType,
     ModelUtils,
     OfflineModel,
@@ -18,7 +19,7 @@ from agents.models import (
     ServedModel,
     SpeechStructure,
 )
-from .agent import Agent
+from .agent import Agent, AgentConfig, BestOfNConfig, ScratchpadConfig
 from .debate_round import DebateRound, DebateRoundSummary, QuestionMetadata, SplittingRule
 from .debater import BestOfNDebater, BestOfNConfig, Debater, DebaterUtils, HumanDebater, OfflineDebater, PreferenceDebater
 from .judge import Judge, JudgeType, JudgeUtils, PreferenceJudge
