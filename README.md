@@ -49,6 +49,7 @@ This module handles the loading of different datasets. The data loaded in these 
 * **Quality Debates**: These are the debates that were run as part of the NYU Human Debate experiments.
 * **Quality**: These are the full set of hard questions from the QuALITY dataset.
 * **Annotated Quality Debates**: These are the debates that were run as part of the NYU Human Debate experiments, with the opening speeches annotated with different tags pertaining to style and tone.
+* **Scratchpad Quality Debates**: These are the debates that were run as part of the NYU Human Debate experiments, annotated alongside an automatically-generated scratchpad that records the quotes used.
 
 ## Agents
 This module controls the primary abstractions for running experiments and interacting with models. The main abstractions are as follows:
@@ -64,6 +65,7 @@ This module also contains the `Model` abstraction that is used to generate text.
 * **Offline Model**: This model just repeats the text from a text transcript that it is provided. This is useful if one wants to re-evaluate the debate with a different judge than the one originally used.
 * **OpenAI Model**: This model generates text by calling OpenAI.
 * **Random Model**: This model generates random strings of text. It is useful when testing.
+* **Served Model**: This model makes requests to a localhost destination where it expects a model to be hosted (this can speed up inference dramatically if the model is hosted using an inference engine).
 
 ## Prompts
 This module controls the prompts that are used while conducting experiments or training. There is a parser for both normal prompts and 'dynamic prompts' (which are just prompts that change depending on certain attributes). The actual prompt language can be found in `prompts/configs`
