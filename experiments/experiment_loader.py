@@ -213,9 +213,7 @@ class ExperimentLoader:
                 position=position,
                 opponent_position=opponent_position,
                 topic=topic,
-                background_text=background_text
-                if not experiment.agents.debaters[debater_idxs[0]].model_settings.is_memorized
-                else title,
+                background_text=background_text if not experiment.prompt_config.is_memorized else title,
             )
 
             config_b = PromptConfig(
@@ -225,9 +223,7 @@ class ExperimentLoader:
                 position=opponent_position,
                 opponent_position=position,
                 topic=topic,
-                background_text=background_text
-                if not experiment.agents.debaters[debater_idxs[1]].model_settings.is_memorized
-                else title,
+                background_text=background_text if not experiment.prompt_config.is_memorized else title,
             )
 
             prompt_a = PromptParser.parse(
@@ -252,7 +248,7 @@ class ExperimentLoader:
             )
 
             flipped_prompt_b = PromptParser.parse(
-                prompt_config=config_a,
+                prompt_config=config_b,
                 prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.agents.debaters[debater_idxs[0]].model_settings.override_prompt
                 or experiment.prompt_config.default_prompt_name,

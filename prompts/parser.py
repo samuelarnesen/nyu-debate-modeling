@@ -28,6 +28,7 @@ class PromptLoadingConfig(BaseModel):
     dynamic_prompts_config: DynamicPromptsLoadingConfig = DynamicPromptsLoadingConfig()
     use_hardcoded_topics: bool = False
     hardcoded_topic_config: Optional[HardcodedTopicConfig] = None
+    is_memorized: bool = False
 
 
 class PromptTag(Enum):

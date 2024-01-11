@@ -46,20 +46,17 @@ class ModelSettings(BaseModel):
     alias: str
     override_prompt: Optional[str] = None
     nucleus: bool = True
-    is_memorized: bool = False
     is_human: bool = False
     offline_file_path: Optional[str] = None
     served: bool = False
 
     @root_validator
     def verify_custom_settings(cls, values):
-        existence_count = sum(
-            [values.get("is_memorized", False), values.get("is_human", False), values.get("served", False)]
-        ) + (1 if values.get("offline_file_path", None) else 0)
+        existence_count = sum([values.get("is_human", False), values.get("served", False)]) + (
+            1 if values.get("offline_file_path", None) else 0
+        )
         if existence_count > 1:
-            raise ValueError(
-                "One cannot set more than one of is_memorized, is_human, served, or offline_file_path to non-null and true"
-            )
+            raise ValueError("One cannot set more than one of is_human, served, or offline_file_path to non-null and true")
         return values
 
 

@@ -246,7 +246,7 @@ Labelled_Scratchpad_Test:
   dataset:
     dataset_type: scratchpad_quality_debates
     split_type: train
-Operational_Test:
+BoN_Test:
   word_limit: 500
   batch_size: 1
   num_speeches: 1
@@ -260,6 +260,28 @@ Operational_Test:
           n: 4
           opponent_n: 1
           maxmin: True
+      - model_settings:
+          model_type: random
+          alias: second-debater
+    judge:
+      model_settings:
+        model_type: random
+        alias: random-judge
+      scratchpad:
+        use_scratchpad: True
+  dataset:
+    dataset_type: quality_debates
+    split_type: train
+Operational_Test:
+  word_limit: 500
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  agents:
+    debaters:
+      - model_settings:
+          model_type: random
+          alias: first-debater
       - model_settings:
           model_type: random
           alias: second-debater
