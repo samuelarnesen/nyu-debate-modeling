@@ -9,15 +9,17 @@ import utils.constants as constants
 from pydantic import BaseModel
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import seaborn as sns
 import scipy.optimize
 import scipy.stats
 
 from enum import Enum
-from typing import Optional, Union
+from typing import Optional, Union, Any
+import json
 import math
-import re
-import time
+import os
+import uuid
 
 
 class WinStats(BaseModel):
@@ -35,14 +37,44 @@ class JudgeStats(BaseModel):
     first_calls: int = 0
 
 
+class ResultsRow(BaseModel):
+    first_debater_alias: str
+    second_debater_alias: str
+    first_debater_settings: dict[Any, Any]
+    second_debater_settings: dict[Any, Any]
+    run_idx: int
+    debate_identifier: str
+    question: str
+    first_debater_answer: str
+    second_debater_answer: str
+    first_debater_correct: bool
+    second_debater_correct: bool
+    first_debater_win_prob: float
+    second_debater_win_prob: float
+    first_debater_wins: bool
+    second_debater_wins: bool
+    correct_side_win_prob: float
+    incorrect_side_win_prob: float
+    correct_side_wins: bool
+
+
 class ResultsCollector:
-    def __init__(self, experiment: ExperimentConfig, save_file_path_prefix: Optional[str] = None, should_save: bool = True):
+    def __init__(
+        self,
+        experiment: ExperimentConfig,
+        graphs_path_prefix: Optional[str] = None,
+        full_record_path_prefix: Optional[str] = None,
+        stats_path_prefix: Optional[str] = None,
+        should_save: bool = True,
+    ):
         """
         Collects metrics after a series of debate rounds are run.
 
         Params:
             experiment: the config used to generate the debate rounds
-            save_file_path_prefix: the directory and experiment name where the stats are to be saved
+            graphs_path_prefix: the directory and experiment name where the graphs are to be saved
+            full_record_path_prefix: the directory and experiment name where the csv of the full run is to be saved
+            stats_path_prefix: the directory and experiment name where the summary stats are to be saved
             should_save: whether or not to actually save the metrics
         """
         self.logger = LoggerUtils.get_default_logger(__name__)
@@ -52,17 +84,35 @@ class ResultsCollector:
             len(set([debater.model_settings.alias for debater in experiment.agents.debaters])) if experiment else 2
         )
         self.aliases = sorted(list(set([debater.model_settings.alias for debater in experiment.agents.debaters])))
-        self.save_file_path_prefix = save_file_path_prefix
+        self.graphs_path_prefix = graphs_path_prefix
+        self.full_record_path_prefix = full_record_path_prefix
+        self.stats_path_prefix = stats_path_prefix
         self.should_save = should_save
+        self.experiment = experiment
         self.summaries = []
+
+        self.create_output_directories()
+
+    def create_output_directories(self) -> None:
+        """Creates the directories needed to output the log files"""
+
+        def create_dir(path: Optional[str]) -> None:
+            if path:
+                parent_dir = os.path.dirname(path)
+                if not os.path.exists(parent_dir):
+                    os.makedirs(parent_dir)
+
+        create_dir(self.graphs_path_prefix)
+        create_dir(self.full_record_path_prefix)
+        create_dir(self.stats_path_prefix)
 
     def reset(self) -> None:
         """removes all the records of previous debate rounds"""
         self.summaries = []
 
-    def __save(self, name: str):
-        if self.save_file_path_prefix and self.should_save:
-            plt.savefig(f"{self.save_file_path_prefix}{name}.png")
+    def __save_graph(self, name: str):
+        if self.graphs_path_prefix and self.should_save:
+            plt.savefig(f"{self.graphs_path_prefix}{name}.png")
 
     def record_result(self, summaries: DebateRoundSummary | list[DebateRoundSummary]) -> None:
         """Adds metrics from that debate round to local store"""
@@ -99,7 +149,7 @@ class ResultsCollector:
 
         fig.suptitle("Judge Metrics")
         plt.tight_layout()
-        self.__save("Judge")
+        self.__save_graph("Judge")
         plt.show()
         return alias_to_stats
 
@@ -201,7 +251,7 @@ class ResultsCollector:
 
         plt.tight_layout()
 
-        self.__save("Win_Rates")
+        self.__save_graph("Win_Rates")
         plt.show()
         return alias_to_stats
 
@@ -252,7 +302,7 @@ class ResultsCollector:
         ax2.set_xlabel("Losing Team")
         ax2.set_ylabel("Winning Team")
         ax2.set_title("Computed Win Rates")
-        self.__save("Computed_Win_Rates")
+        self.__save_graph("Computed_Win_Rates")
         plt.show()
 
         return debater_skills
@@ -333,7 +383,7 @@ class ResultsCollector:
         fig.suptitle("Quotes")
         plt.tight_layout()
         plt.legend()
-        self.__save("Quotes")
+        self.__save_graph("Quotes")
         plt.show()
 
         return results
@@ -368,8 +418,50 @@ class ResultsCollector:
             axs[i].legend()
 
         plt.show()
-        self.__save("Features")
+        self.__save_graph("Features")
         return {"average": average, "lower": lower, "upper": upper}
+
+    def __organize_into_df(self):
+        def construct_debater_settings(alias: str) -> dict[Any, Any]:
+            for debater in filter(lambda x: x.model_settings.alias == alias, self.experiment.agents.debaters):
+                return debater.dict()
+            return None
+
+        run_idx = uuid.uuid4()
+        rows = []
+        for summary in self.summaries:
+            rows.append(
+                ResultsRow(
+                    first_debater_alias=summary.first_debater_alias,
+                    second_debater_alias=summary.second_debater_alias,
+                    first_debater_settings=construct_debater_settings(summary.first_debater_alias),
+                    second_debater_settings=construct_debater_settings(summary.second_debater_alias),
+                    run_idx=run_idx,
+                    debate_identifier=summary.metadata.debate_identifier,
+                    question=summary.metadata.question,
+                    first_debater_answer=summary.metadata.first_debater_answer,
+                    second_debater_answer=summary.metadata.second_debater_answer,
+                    first_debater_correct=summary.metadata.first_debater_correct,
+                    second_debater_correct=not summary.metadata.first_debater_correct,
+                    first_debater_win_prob=summary.first_debater_win_prob,
+                    second_debater_win_prob=summary.second_debater_win_prob,
+                    first_debater_wins=summary.first_debater_wins,
+                    second_debater_wins=not summary.first_debater_wins,
+                    correct_side_win_prob=summary.first_debater_win_prob
+                    if summary.metadata.first_debater_correct
+                    else summary.second_debater_win_prob,
+                    incorrect_side_win_prob=summary.first_debater_win_prob
+                    if not summary.metadata.first_debater_correct
+                    else summary.second_debater_win_prob,
+                    correct_side_wins=summary.first_debater_wins
+                    if summary.metadata.first_debater_correct
+                    else not summary.first_debater_wins,
+                ).dict()
+            )
+
+        df = pd.DataFrame.from_dict(rows)
+        if self.should_save and self.full_record_path_prefix:
+            df.to_csv(f"{self.full_record_path_prefix}run.csv")
 
     def graph_results(self) -> None:
         """
@@ -382,23 +474,40 @@ class ResultsCollector:
             5. Stylistic info
         """
 
+        all_stats = []
+
         bt_results = self.__graph_bradley_terry()
+        all_stats.append(bt_results)
         self.logger.info(bt_results)
 
         plt.clf()
         win_results = self.__graph_wins()
+        converted_win_results = {key: value.dict() for key, value in win_results.items()}
+        all_stats.append(converted_win_results)
         self.logger.info(win_results)
 
         plt.clf()
         judge_results = self.__graph_judge()
+        converted_judge_results = {key: value.dict() for key, value in judge_results.items()}
+        all_stats.append(converted_judge_results)
         self.logger.info(judge_results)
 
         if self.quotes_collector:
             plt.clf()
             quote_results = self.__graph_quotes(win_stats_dict=win_results)
+            converted_quote_results = {key: {k: v.dict() for k, v in value.items()} for key, value in quote_results.items()}
+            all_stats.append(converted_quote_results)
             self.logger.info(quote_results)
 
         if self.annotator:
             plt.clf()
             classifier_results = self.__graph_features()
+            converted_classifier_results = {key: value for key, value in classifier_results.items()}
+            all_stats.append(converted_classifier_results)
             self.logger.info(classifier_results)
+
+        self.__organize_into_df()
+
+        if self.should_save and self.stats_path_prefix:
+            with open(f"{self.stats_path_prefix}.json", "w") as f:
+                json.dump(all_stats, f)

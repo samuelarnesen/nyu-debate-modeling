@@ -12,7 +12,10 @@ import sys
 class DebateRoundScriptConfig(BaseModel):
     experiment_name: str
     experiment_file_path: str
-    save_path_base: str
+    transcript_path_prefix: str
+    graphs_path_prefix: str
+    stats_path_prefix: str
+    full_record_path_prefix: str
 
 
 class ModelRunScriptConfig(BaseModel):
@@ -72,20 +75,26 @@ class ScriptUtils:
     @classmethod
     def get_debate_round_script_config(cls, args) -> DebateRoundScriptConfig:
         root = os.environ["SRC_ROOT"]
-        save_path_base = f"{root}/outputs/transcripts"
+        transcript_path = f"{root}outputs/transcripts"
+        graphs_path = f"{root}outputs/graphs"
+        stats_path = f"{root}outputs/stats"
+        full_record_path = f"{root}outputs/runs"
         if args.test:
             experiment_name = args.configuration
-            experiment_file_path = f"{root}/experiments/configs/test_experiment.yaml"
+            experiment_file_path = f"{root}experiments/configs/test_experiment.yaml"
         else:
             experiment_name = args.configuration
-            experiment_file_path = f"{root}/experiments/configs/standard_experiment.yaml"
+            experiment_file_path = f"{root}experiments/configs/standard_experiment.yaml"
         if args.bon:
-            save_path_base = f"{root}/outputs/bon"
-            experiment_file_path = f"{root}/experiments/configs/bon_experiment.yaml"
+            transcript_path = f"{root}/outputs/bon"
+            experiment_file_path = f"{root}experiments/configs/bon_experiment.yaml"
         return DebateRoundScriptConfig(
             experiment_name=experiment_name,
             experiment_file_path=experiment_file_path,
-            save_path_base=save_path_base,
+            transcript_path_prefix=transcript_path,
+            graphs_path_prefix=graphs_path,
+            stats_path_prefix=stats_path,
+            full_record_path_prefix=full_record_path,
         )
 
     @classmethod

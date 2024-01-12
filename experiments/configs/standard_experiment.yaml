@@ -28,12 +28,12 @@ Served Test:
   agents:
     debaters:
       - model_settings:
-          model_type: llama
+          model_type: mistral
           model_file_path: null
           alias: "merged-4"
           served: True
       - model_settings:
-          model_type: llama
+          model_type: mistral
           model_file_path: null
           alias: "merged-4"
           served: True
@@ -98,15 +98,19 @@ Served Test:
       - model_settings:
           model_type: mistral
           model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-          alias: "mixtral-nyu-plus-4-1-a"
+          alias: "mixtral-nyu-plus-2-2"
         best_of_n:
-          n: 4
-          opponent_n: 1
+          n: 2
+          opponent_n: 2
           maxmin: True
       - model_settings:
           model_type: mistral
           model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-          alias: "mixtral-nyu-plus-0-0-b"
+          alias: "mixtral-nyu-plus-4-1"
+        best_of_n:
+          n: 4
+          opponent_n: 1
+          maxmin: True
     judge:
       model_settings:
         model_type: openai

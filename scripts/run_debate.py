@@ -16,9 +16,12 @@ logger = LoggerUtils.get_default_logger(__name__)
 debate_rounds, experiment = ExperimentLoader.generate_debate_rounds(
     experiment_file_path=config.experiment_file_path, name=config.experiment_name, count=args.num_iters
 )
+
 results_collector = ResultsCollector(
     experiment=experiment,
-    save_file_path_prefix=f"{config.save_path_base}/{start_time}_",
+    graphs_path_prefix=f"{config.graphs_path_prefix}/{start_time}_",
+    full_record_path_prefix=f"{config.full_record_path_prefix}/{start_time}_",
+    stats_path_prefix=f"{config.stats_path_prefix}/{start_time}",
     should_save=(not args.local),
 )
 

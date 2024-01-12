@@ -19,6 +19,10 @@ class QuestionMetadata(BaseModel):
     first_debater_correct: bool
     question_idx: int
     background_text: str
+    question: str
+    first_debater_answer: str
+    second_debater_answer: str
+    debate_identifier: str
 
 
 class DebateRoundSummary(BaseModel):
@@ -121,6 +125,7 @@ class DebateRound:
             self.logger.debug(string_value)
 
         if save_file_path_prefix:
+            print(save_file_path_prefix)
             self.name_to_agent[self.judge.expected_saver].save(save_file_path_prefix=save_file_path_prefix)
 
         return [

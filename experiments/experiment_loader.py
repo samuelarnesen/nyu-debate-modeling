@@ -205,6 +205,7 @@ class ExperimentLoader:
                 title = example.story_title
                 correct_index = example.correct_index
                 speeches = example.speeches
+            debate_identifier = f"{title}_{topic}"
 
             config_a = PromptConfig(
                 name=constants.DEFAULT_DEBATER_A_NAME,
@@ -312,7 +313,10 @@ class ExperimentLoader:
                         first_debater_correct=correct_index == 0,
                         question_idx=i,
                         background_text=background_text,
-                        split=split_type,
+                        question=topic,
+                        first_debater_answer=position,
+                        second_debater_answer=opponent_position,
+                        debate_identifier=debate_identifier,
                     )
                 ],
             )
@@ -342,7 +346,10 @@ class ExperimentLoader:
                         first_debater_correct=correct_index == 0,
                         question_idx=i,
                         background_text=background_text,
-                        split=split_type,
+                        question=topic,
+                        first_debater_answer=opponent_position,
+                        second_debater_answer=position,
+                        debate_identifier=debate_identifier,
                     )
                 ],
             )

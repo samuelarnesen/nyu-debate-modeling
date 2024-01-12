@@ -74,7 +74,7 @@ class ModelUtils:
             raise Exception(f"Model {model_type} not found")
 
         if model_settings.served:
-            if model_type in [ModelType.LLAMA]:  # expand when more types allow serving
+            if model_type in [ModelType.LLAMA, ModelType.MISTRAL]:  # expand when more types allow serving
                 model = ServedModel(base_model=model)
             else:
                 raise Exception(f"Model type {model_type} does not support serving")
