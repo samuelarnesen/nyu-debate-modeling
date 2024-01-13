@@ -1,4 +1,5 @@
 from data.dataset import DataRow, DatasetType, RawDataLoader, RawDataset, SplitType
+from data.quality_debates_loader import QualityDebatesDataset, QualityDebatesLoader
 import utils.constants as constants
 
 from typing import Any, Optional
@@ -17,6 +18,7 @@ class QualityDataset(RawDataset):
         test_data: list[dict[str, Any]],
         override_type: Optional[DatasetType] = None,
         allow_multiple_positions_per_question: bool = False,
+        dedupe_dataset: QualityDebatesDataset = None,
     ):
         """
         Dataset where each row contains a question and positions from the Quality dataset
@@ -29,15 +31,20 @@ class QualityDataset(RawDataset):
             allow_multiple_positions_per_question: many quality questions have more than two answers. By default,
                 we will select the best distractor If this parameter is set to true, we will create
                 a separate row for every single combination of positions
+            dedupe_dataset: The dataset to dedupe from. This is used because the NYU Human Debate experiments used
+                questions from the Quality dataset so if one trained on that data, then one needs to remove those
+                rows from the validation set.
         """
         super().__init__(override_type or DatasetType.QUALITY)
         self.allow_multiple_positions_per_question = allow_multiple_positions_per_question
         self.data = {
             SplitType.TRAIN: self.__convert_batch_to_rows(train_data),
-            SplitType.VAL: self.__convert_batch_to_rows(val_data),
-            SplitType.TEST: self.__convert_batch_to_rows(test_data),
+            SplitType.VAL: self.__dedupe_rows(self.__convert_batch_to_rows(val_data), dedupe_dataset),
+            SplitType.TEST: self.__dedupe_rows(self.__convert_batch_to_rows(test_data), dedupe_dataset),
         }
         self.idxs = {SplitType.TRAIN: 0, SplitType.VAL: 0, SplitType.TEST: 0}
+        if not self.data[SplitType.TEST]:  # Adding b/c Quality Test Set does not have gold labels
+            self.__split_validation_and_test_sets()
 
     def get_data(self, split: SplitType = SplitType.TRAIN) -> list[DataRow]:
         """Returns all the data for a given split"""
@@ -64,10 +71,9 @@ class QualityDataset(RawDataset):
                 rows_to_add = self.__example_to_row(entry, i)
                 if rows_to_add:
                     rows.extend(rows_to_add)
-        random.shuffle(rows)
         return rows
 
-    def __example_to_row(self, entry: dict[str, Any], question_idx: int) -> tuple[str, Any]:
+    def __example_to_row(self, entry: dict[str, Any], question_idx: int) -> list[DataRow]:
         question = entry["questions"][question_idx]
         if "gold_label" not in question or "difficult" not in question or question["difficult"] == 0:
             return None
@@ -88,8 +94,7 @@ class QualityDataset(RawDataset):
             ]
             incorrect_answer = statistics.mode(best_wrong_guesses) - 1
             possible_position_pairs = [(correct_answer, incorrect_answer, True), (incorrect_answer, correct_answer, False)]
-
-        random.shuffle(possible_position_pairs)
+            random.shuffle(possible_position_pairs)
 
         rows = []
         for first, second, first_correct in possible_position_pairs:
@@ -106,6 +111,29 @@ class QualityDataset(RawDataset):
                 )
             )
         return rows
+
+    def __split_validation_and_test_sets(self):
+        second_half = self.data[SplitType.VAL][int(len(self.data[SplitType.VAL]) / 2) :]
+        self.data[SplitType.VAL] = self.data[SplitType.VAL][0 : int(len(self.data[SplitType.VAL]) / 2)]
+        val_stories = set([row.story_title for row in self.data[SplitType.VAL]])
+
+        test_data = []
+        added_count = 0
+        for row in second_half:
+            if row.story_title not in val_stories:
+                test_data.append(row)
+            else:
+                self.data[SplitType.VAL].append(row)
+        self.data[SplitType.TEST] = test_data
+
+    def __dedupe_rows(self, rows: list[DataRow], dedupe_dataset: Optional[QualityDebatesDataset] = None) -> None:
+        if not dedupe_dataset:
+            return rows
+        used_stories = []
+        for other_split in SplitType:
+            used_stories += [row.story_title for row in dedupe_dataset.get_data(split=other_split)]
+
+        return [row for row in filter(lambda x: x.story_title not in used_stories, rows)]
 
 
 class QualityLoader(RawDataLoader):
@@ -146,16 +174,27 @@ class QualityLoader(RawDataLoader):
         val_filepath: Optional[str] = None,
         test_filepath: Optional[str] = None,
         allow_multiple_positions_per_question: bool = False,
+        deduplicate_with_quality_debates: bool = True,
+        supplemental_file_paths: Optional[dict[str, str]] = None,
         **kwargs,
     ) -> QualityDataset:
         """Constructs a QualityDataset"""
-
         train_split, val_split, test_split = QualityLoader.get_splits(
             train_filepath=train_filepath, val_filepath=val_filepath, test_filepath=test_filepath
         )
+
+        if deduplicate_with_quality_debates:
+            quality_debates_filepath = (supplemental_file_paths or {}).get(
+                "quality_debates_file_path", QualityDebatesLoader.DEFAULT_FILE_PATH
+            )
+            quality_debates_dataset = QualityDebatesLoader.load(
+                full_dataset_filepath=quality_debates_filepath, deduplicate=True
+            )
+
         return QualityDataset(
             train_data=train_split,
             val_data=val_split,
             test_data=test_split,
             allow_multiple_positions_per_question=allow_multiple_positions_per_question,
+            dedupe_dataset=quality_debates_dataset if deduplicate_with_quality_debates else None,
         )
