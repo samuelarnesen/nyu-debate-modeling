@@ -126,24 +126,26 @@ class ResultsCollector:
 
     def __graph_judge(self) -> dict[str, float]:
         """Graphs the judge accuracy statistics"""
-        alias_to_stats = {}
+        matchup_to_stats = {}
         for summary in self.summaries:
-            if summary.judge_alias not in alias_to_stats:
-                alias_to_stats[summary.judge_alias] = JudgeStats()
-
-            alias_to_stats[summary.judge_alias].matches += 1
-            alias_to_stats[summary.judge_alias].correct_calls += (
+            pair = "_v_".join(sorted([summary.first_debater_alias, summary.second_debater_alias]))
+            if summary.judge_alias not in matchup_to_stats:
+                matchup_to_stats[pair] = JudgeStats()
+            matchup_to_stats[pair].matches += 1
+            matchup_to_stats[pair].correct_calls += (
                 summary.first_debater_win_prob if summary.metadata.first_debater_correct else summary.second_debater_win_prob
             )
-            alias_to_stats[summary.judge_alias].first_calls += summary.first_debater_win_prob
+            matchup_to_stats[pair].first_calls += summary.first_debater_win_prob
 
         fig, axs = plt.subplots(1, 2)
 
-        axs[0].bar(alias_to_stats.keys(), [val.correct_calls / val.matches for _, val in alias_to_stats.items()])
+        axs[0].bar(matchup_to_stats.keys(), [val.correct_calls / val.matches for _, val in matchup_to_stats.items()])
+        axs[0].set_xticklabels(matchup_to_stats.keys(), rotation="vertical")
         axs[0].set_title("Percent Correct")
         axs[0].set_ylim(0, 1)
 
-        axs[1].bar(alias_to_stats.keys(), [val.first_calls / val.matches for _, val in alias_to_stats.items()])
+        axs[1].bar(matchup_to_stats.keys(), [val.first_calls / val.matches for _, val in matchup_to_stats.items()])
+        axs[1].set_xticklabels(matchup_to_stats.keys(), rotation="vertical")
         axs[1].set_title("Percent Chose First Debater")
         axs[1].set_ylim(0, 1)
 
@@ -151,7 +153,7 @@ class ResultsCollector:
         plt.tight_layout()
         self.__save_graph("Judge")
         plt.show()
-        return alias_to_stats
+        return matchup_to_stats
 
     def __graph_wins(self) -> dict[str, float]:
         def bayesian_credible_interval(wins: int, games: int, confidence: float = 0.95):
