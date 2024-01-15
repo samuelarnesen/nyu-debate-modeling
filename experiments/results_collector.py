@@ -8,6 +8,7 @@ import utils.constants as constants
 
 from pydantic import BaseModel
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -42,6 +43,7 @@ class ResultsRow(BaseModel):
     second_debater_alias: str
     first_debater_settings: dict[Any, Any]
     second_debater_settings: dict[Any, Any]
+    judge_settings: dict[Any, Any]
     run_idx: int
     debate_identifier: str
     question: str
@@ -129,7 +131,7 @@ class ResultsCollector:
         matchup_to_stats = {}
         for summary in self.summaries:
             pair = "_v_".join(sorted([summary.first_debater_alias, summary.second_debater_alias]))
-            if summary.judge_alias not in matchup_to_stats:
+            if pair not in matchup_to_stats:
                 matchup_to_stats[pair] = JudgeStats()
             matchup_to_stats[pair].matches += 1
             matchup_to_stats[pair].correct_calls += (
@@ -141,11 +143,13 @@ class ResultsCollector:
 
         axs[0].bar(matchup_to_stats.keys(), [val.correct_calls / val.matches for _, val in matchup_to_stats.items()])
         axs[0].set_xticklabels(matchup_to_stats.keys(), rotation="vertical")
+        axs[0].xaxis.set_major_locator(ticker.FixedLocator(range(len(matchup_to_stats))))
         axs[0].set_title("Percent Correct")
         axs[0].set_ylim(0, 1)
 
         axs[1].bar(matchup_to_stats.keys(), [val.first_calls / val.matches for _, val in matchup_to_stats.items()])
         axs[1].set_xticklabels(matchup_to_stats.keys(), rotation="vertical")
+        axs[1].xaxis.set_major_locator(ticker.FixedLocator(range(len(matchup_to_stats))))
         axs[1].set_title("Percent Chose First Debater")
         axs[1].set_ylim(0, 1)
 
@@ -438,6 +442,7 @@ class ResultsCollector:
                     second_debater_alias=summary.second_debater_alias,
                     first_debater_settings=construct_debater_settings(summary.first_debater_alias),
                     second_debater_settings=construct_debater_settings(summary.second_debater_alias),
+                    judge_settings=self.experiment.agents.judge,
                     run_idx=run_idx,
                     debate_identifier=summary.metadata.debate_identifier,
                     question=summary.metadata.question,

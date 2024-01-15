@@ -46,6 +46,10 @@ class QualityDataset(RawDataset):
         if not self.data[SplitType.TEST]:  # Adding b/c Quality Test Set does not have gold labels
             self.__split_validation_and_test_sets()
 
+        self.data[SplitType.TRAIN] = self.__reorder(self.data[SplitType.TRAIN])
+        self.data[SplitType.VAL] = self.__reorder(self.data[SplitType.VAL])
+        self.data[SplitType.TEST] = self.__reorder(self.data[SplitType.TEST])
+
     def get_data(self, split: SplitType = SplitType.TRAIN) -> list[DataRow]:
         """Returns all the data for a given split"""
         if split not in self.data:
@@ -134,6 +138,23 @@ class QualityDataset(RawDataset):
             used_stories += [row.story_title for row in dedupe_dataset.get_data(split=other_split)]
 
         return [row for row in filter(lambda x: x.story_title not in used_stories, rows)]
+
+    def __reorder(self, rows: list[DataRow]) -> list[DataRow]:
+        if len(rows) == 0:
+            return rows
+
+        story_to_rows = {}
+        for row in rows:
+            if row.story_title not in story_to_rows:
+                story_to_rows[row.story_title] = []
+            story_to_rows[row.story_title].append(row)
+
+        final_order = []
+        max_index = max([len(story_to_rows[row.story_title]) for row in rows])
+        for index in range(max_index):
+            for story in filter(lambda x: len(story_to_rows[x]) > index, story_to_rows):
+                final_order.append(story_to_rows[story][index])
+        return final_order
 
 
 class QualityLoader(RawDataLoader):
