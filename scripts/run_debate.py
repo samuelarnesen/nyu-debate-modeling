@@ -27,7 +27,7 @@ results_collector = ResultsCollector(
 
 for i, debate_round in enumerate(debate_rounds):
     logger.debug(f"Beginning round {i} out of {len(debate_rounds)}")
-    save_file_path_prefix = f"{config.save_path_base}/{start_time}_{i}" if not args.local else None
+    save_file_path_prefix = f"{config.transcript_path_prefix}/{start_time}_{i}" if not args.local else None
     summary = debate_round(save_file_path_prefix=save_file_path_prefix)
     results_collector.record_result(summary)
 

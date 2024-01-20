@@ -37,6 +37,7 @@ class DebateRoundSummary(BaseModel):
     winning_debater_prob: float = 1.0
     first_debater_win_prob: float = 0.5
     second_debater_win_prob: float = 0.5
+    failed: bool = False
 
 
 class SplittingRule(Enum):
@@ -93,7 +94,12 @@ class DebateRound:
         next_speaker = self.judge.get_next_expected_speaker()
         while next_speaker:
             speaker = self.name_to_agent[next_speaker]
-            batch_response, model_output = speaker()
+            try:
+                batch_response, model_output = speaker()
+            except Exception as e:
+                self.logger.error("Received an error while trying to generate a speech %s", str(e), exc_info=True)
+                return None, None
+
             for idx, response in enumerate(batch_response):
                 validated_response = str(response)
                 if speaker.quotes_require_validation:
@@ -104,15 +110,22 @@ class DebateRound:
                 for _, agent in self.name_to_agent.items():
                     response_to_use = validated_response if agent.receive_validated_quotes else response
                     agent.receive_message(speaker=speaker.name, content=response_to_use, idx=idx)
+
             next_speaker = self.judge.get_next_expected_speaker()
             last_output = batch_response
             last_model_output = model_output
         return last_output, last_model_output
 
     def record_winners(
-        self, last_output: list[str], last_model_output: list[ModelResponse], save_file_path_prefix: Optional[str] = None
+        self,
+        last_output: Optional[list[str]],
+        last_model_output: Optional[list[ModelResponse]],
+        save_file_path_prefix: Optional[str] = None,
     ) -> list[DebateRoundSummary]:
         """Generates a full summary of the debate round including the winner, transcript, metadata, and aliases of all the participating models"""
+        if not last_output:
+            return []
+
         first_debater_win_list = []
         winning_probability_list = []
         for i, (debater_a_wins, model_output) in enumerate(zip(last_output, last_model_output)):

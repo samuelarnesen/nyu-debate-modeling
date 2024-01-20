@@ -6,7 +6,6 @@ import json
 import os
 import re
 
-
 class QualityDebatesDataset(RawDataset):
     def __init__(
         self,

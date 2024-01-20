@@ -4,7 +4,8 @@ and reformats them to the format that QualityDebatesLoader expects.
 
 import json
 import pandas as pd
-
+import re
+import sys
 
 external_debate_sources = [
     "/Users/samarnesen/Downloads/sp/claude2.1_Bo16_claude2.1_Bo16/debate_sim/data0.csv",
@@ -24,44 +25,59 @@ external_debate_sources = [
 output_gpt_only = "/Users/samarnesen/nyu/scratch/mega_gpt_debates.jsonl"
 output_combined = "/Users/samarnesen/nyu/scratch/mega_human_and_gpt4_debates.jsonl"
 
+
+def get_debaters_from_file_path(file_path: str):
+    filename = file_path.split("/")[-3]
+    split_debaters = filename.split("_")
+    debater_one = {"model_type": None, "bo": 0, "co": 0}
+    debater_two = {"model_type": None, "bo": 0, "co": 0}
+    current = None
+    for comp in filename.split("_"):
+        if re.match("Bo\d", comp):
+            current["bo"] = int(re.match("Bo(\d)", comp).group(1))
+        elif re.match("Co\d", comp):
+            current["co"] = int(re.match("Co(\d)", comp).group(1))
+        else:
+            if not current:
+                current = debater_one
+            else:
+                current = debater_two
+            current["model_type"] = comp
+
+    return debater_one, debater_two
+
+
 def get_external_debates(file_path: str):
-    def create_turn(text):
-        turn = {
+    def create_turn(text: str, correct: bool = True, swap: bool = False, role: str = "Debater"):
+        return {
             "chars": -1,
             "charLimit": -1,
             "quoteChars": -1,
             "quoteCharLimit": -1,
-            "index": -1,
+            "index": 0 if correct != swap else 1,
             "probabilities": None,
-            "role": "Debater",
+            "role": role,
             "text": text,
         }
-        return turn
 
     debates = []
 
-    print(file_path)
     df = pd.read_csv(file_path)
+    one, two = get_debaters_from_file_path(file_path)
     for i, row in df.iterrows():
+        swap = i % 2 == 1
         transcript = json.loads(row["transcript"])
-        if transcript["swap"]:
+        if swap:
             answers = [transcript["answers"]["incorrect"], transcript["answers"]["correct"]]
         else:
             answers = [transcript["answers"]["correct"], transcript["answers"]["incorrect"]]
         turns = []
-        for round in transcript["rounds"]:
-            correct_turn = create_turn(round["correct"])
-            incorrect_turn = create_turn(round["incorrect"])
-            if transcript["swap"]:
-                incorrect_turn["index"] = 0
-                correct_turn["index"] = 1
-                turns.append(incorrect_turn)
-                turns.append(correct_turn)
-            else:
-                correct_turn["index"] = 0
-                incorrect_turn["index"] = 1
-                turns.append(correct_turn)
-                turns.append(incorrect_turn)
+
+        rd = transcript["rounds"][0]
+        correct_turn = create_turn(text=rd["correct"], correct=True, swap=swap)
+        incorrect_turn = create_turn(rd["incorrect"], correct=False, swap=swap)
+        turns.extend([correct_turn, incorrect_turn] if not swap else [incorrect_turn, correct_turn])
+        turns.append(create_turn(text="", role="Judge"))
 
         new_debate = {
             "storyId": "-1",
@@ -74,16 +90,50 @@ def get_external_debates(file_path: str):
             "turns": turns,
             "isJudgeCorrect": False,
             "correctAnswer": row["correct answer"],
+            "debaters": [one, two],
         }
         debates.append(new_debate)
 
     return debates
 
-if __name__ == "__main__":
 
+def deduplicate(debates: list[dict]):
+    story_id_to_debate = {}
+    for debate in debates:
+        key = debate["storyTitle"] + "_" + debate["question"]
+        if key not in story_id_to_debate:
+            story_id_to_debate[key] = debate
+        else:
+            existing = story_id_to_debate[key]["debaters"][0]
+            current = debate["debaters"][0]
+            if existing["model_type"] != current["model_type"]:
+                story_id_to_debate[key] = (
+                    story_id_to_debate[key]
+                    if existing["model_type"] == "gpt4t" and current["model_type"] == "claude2.1"
+                    else debate
+                )
+            elif existing["bo"] != current["bo"]:
+                story_id_to_debate[key] = story_id_to_debate[key] if existing["bo"] > current["bo"] else debate
+            elif existing["co"] != current["co"]:
+                story_id_to_debate[key] = story_id_to_debate[key] if existing["co"] > current["co"] else debate
+    for debate in debates:
+        del debate["debaters"]
+
+    return list(story_id_to_debate.values())
+
+
+if __name__ == "__main__":
     gpt_debates = []
     for source in external_debate_sources:
-        gpt_debates += get_external_debates(source)
+        external_debate_sources = get_external_debates(source)
+        for source in external_debate_sources:
+            is_truncated = False
+            for turn in source["turns"]:
+                if "TRUNCATED" in turn["text"]:
+                    is_truncated = True
+            if not is_truncated:
+                gpt_debates.append(source)
+    #gpt_debates = deduplicate(gpt_debates)
 
     with open(output_gpt_only, "w+") as f:
         for debate in gpt_debates:
@@ -93,7 +143,6 @@ if __name__ == "__main__":
     with open("data/datasets/quality-debates/debates-readable.jsonl", "r") as human_f:
         lines = human_f.readlines()
         human_debates = [json.loads(line) for line in lines]
-
 
     with open(output_combined, "w") as f:
         all_debates = human_debates + gpt_debates
