@@ -138,7 +138,9 @@ class DebateRound:
             self.logger.debug(string_value)
 
         if save_file_path_prefix:
-            self.name_to_agent[self.judge.expected_saver].save(save_file_path_prefix=save_file_path_prefix)
+            self.name_to_agent[self.judge.expected_saver].save(
+                save_file_path_prefix=save_file_path_prefix, metadata=[item.dict() for item in self.metadata]
+            )
 
         return [
             DebateRoundSummary(

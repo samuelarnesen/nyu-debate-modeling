@@ -5,7 +5,7 @@ from utils import LoggerUtils
 
 from pydantic import BaseModel, root_validator
 
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 
 class BestOfNConfig(BaseModel):
@@ -105,10 +105,11 @@ class Agent:
         """This must be implemented in each agent. This is where they should generate text"""
         pass
 
-    def save(self, save_file_path_prefix: str):
+    def save(self, save_file_path_prefix: str, metadata: Optional[list[dict[Any, Any]]] = None):
         """Saves the transcripts to the specified location, with a separate file for each element in the batch"""
-        for i, transcript in enumerate(self.transcripts):
-            transcript.save(save_file_path=f"{save_file_path_prefix}_{i}.txt")
+        metadata = (metadata or []) + [{} for i in range(len(self.transcripts) - len((metadata or [])))]
+        for i, (transcript, metadata) in enumerate(zip(self.transcripts, metadata)):
+            transcript.save(save_file_path_prefix=f"{save_file_path_prefix}_{i}", metadata=metadata)
 
     def get_transcript(self, idx: int = 0) -> Transcript:
         """Returns the transcript at the specified index"""

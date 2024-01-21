@@ -7,8 +7,9 @@ import utils.constants as constants
 from pydantic import BaseModel
 
 from enum import Enum
-from typing import Callable, Optional, Union
+from typing import Any, Callable, Optional, Union
 import copy
+import json
 
 
 class Speech(BaseModel):
@@ -136,10 +137,12 @@ class Transcript:
         """Adds an agent-generated speech to the transcript"""
         self.speeches.append(Speech(speaker=speaker, content=content))
 
-    def save(self, save_file_path: str) -> None:
+    def save(self, save_file_path_prefix: str, metadata: Optional[dict[Any, Any]]) -> None:
         """Saves to the specified path"""
-        with open(save_file_path, "w") as f:
+        with open(save_file_path_prefix + ".txt", "w") as f:
             f.write(str(self.full_string_value()))
+        with open(save_file_path_prefix + ".json", "w") as f:
+            json.dump(self.json_value(metadata=metadata), f)
 
     def to_model_input(self) -> list[ModelInput]:
         """Converts the speech to a list of inputs that can be used to generate more text by models"""
@@ -204,6 +207,27 @@ class Transcript:
     def full_string_value(self) -> str:
         """Converts the transcript into a string for logging and saving"""
         return "\n\n".join([x.content for x in self.to_model_input()])
+
+    def json_value(self, metadata: Optional[dict[Any, Any]] = None) -> str:
+        """Converts the transcript into a json object that can be parsed for offline processing"""
+        speeches = []
+        index = 0
+        for i, (speech_type, prompt_tag, _, expected_speaker) in enumerate(self.speech_format):
+            if speech_type == SpeechType.PRE_FILLED:
+                content = self.prompt.messages[prompt_tag].content[index % len(self.prompt.messages[prompt_tag].content)]
+            else:
+                if index >= len(self.speeches):
+                    break
+                content = self.speeches[index].content
+                index += 1
+            speeches.append(
+                Speech(
+                    speaker=expected_speaker or "Prompt",
+                    content=content,
+                ).dict()
+            )
+
+        return {"metadata": metadata, "speeches": speeches}
 
     def copy(self) -> Transcript:
         """Deepcopies this objects"""
