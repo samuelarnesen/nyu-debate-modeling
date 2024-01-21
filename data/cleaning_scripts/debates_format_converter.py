@@ -133,7 +133,7 @@ if __name__ == "__main__":
                     is_truncated = True
             if not is_truncated:
                 gpt_debates.append(source)
-    #gpt_debates = deduplicate(gpt_debates)
+    # gpt_debates = deduplicate(gpt_debates)
 
     with open(output_gpt_only, "w+") as f:
         for debate in gpt_debates:
