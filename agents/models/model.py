@@ -41,7 +41,7 @@ class ModelResponse(BaseModel):
 
 
 class ModelSettings(BaseModel):
-    model_type: str
+    model_type: Optional[str] = None
     model_file_path: Optional[str] = None
     alias: str
     override_prompt: Optional[str] = None

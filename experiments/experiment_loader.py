@@ -10,7 +10,7 @@ from agents import (
     ModelSettings,
     ModelType,
     ModelUtils,
-    OfflineDebater,
+    OfflineModelHelper,
     PreferenceDebater,
     QuestionMetadata,
     ServedModel,
@@ -159,7 +159,8 @@ class ExperimentLoader:
                 alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias, is_debater=True
             )
         )
-        model_cache[debater_one_model_id] = debater_one_model
+        if debater_one_model:
+            model_cache[debater_one_model_id] = debater_one_model
 
         debater_two_model = (
             ModelUtils.instantiate_model(
@@ -173,7 +174,8 @@ class ExperimentLoader:
                 nucleus=experiment.agents.debaters[debater_idxs[1]].model_settings.nucleus,
             )
         )
-        model_cache[debater_two_model_id] = debater_two_model
+        if debater_two_model:
+            model_cache[debater_two_model_id] = debater_two_model
 
         judge_model = (
             ModelUtils.instantiate_model(
@@ -183,7 +185,21 @@ class ExperimentLoader:
             if judge_model_id not in model_cache
             else model_cache[judge_model_id].copy(alias=experiment.agents.judge.model_settings.alias, is_debater=False)
         )
-        model_cache[judge_model_id] = judge_model
+        if judge_model:
+            model_cache[judge_model_id] = judge_model
+
+        # instantiates offline model helper
+        offline_model_helper = None
+        first_offline_file_path = experiment.agents.debaters[debater_idxs[0]].model_settings.offline_file_path
+        second_offline_file_path = experiment.agents.debaters[debater_idxs[1]].model_settings.offline_file_path
+        is_offline = first_offline_file_path or second_offline_file_path
+        if is_offline:
+            if (first_offline_file_path and second_offline_file_path) and (
+                first_offline_file_path != second_offline_file_path
+            ):
+                raise Exception("Offline file paths must be the same")
+            prefix = first_offline_file_path if first_offline_file_path else second_offline_file_path
+            offline_model_helper = OfflineModelHelper(file_path_prefix=prefix, dataset=dataset)
 
         # create debate rounds
         rounds = []
@@ -197,7 +213,11 @@ class ExperimentLoader:
                 correct_index = None
                 speeches = []
             else:
-                example = dataset.get_example(idx=i, split=split_type)
+                example = (
+                    dataset.get_example(idx=i, split=split_type)
+                    if not is_offline
+                    else offline_model_helper.get_example(idx=i, split_type=split_type)
+                )
                 topic = example.question
                 position = example.positions[0]
                 opponent_position = example.positions[1]
@@ -402,39 +422,27 @@ class ExperimentLoader:
                     )
                 )
 
-            if experiment.agents.debaters[debater_idxs[0]].model_settings.offline_file_path:
-                debate_round.set_first_debater(
-                    OfflineDebater(
-                        debater=debate_round.first_debater,
-                        file_path=experiment.agents.debaters[debater_idxs[0]].model_settings.offline_file_path,
-                        first_debater_prompt=prompt_a,
-                        round_idx=(i * 2) if experiment.flip else i,
-                    )
+            if first_offline_file_path:
+                debate_round.first_debater.model = offline_model_helper.create_offline_model(
+                    alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
+                    debater_name=debate_round.first_debater.name,
+                    idx=(i * 2) if experiment.flip else i,
                 )
-                flipped_round.set_second_debater(
-                    OfflineDebater(
-                        debater=flipped_round.second_debater,
-                        file_path=experiment.agents.debaters[debater_idxs[0]].model_settings.offline_file_path,
-                        first_debater_prompt=prompt_a,
-                        round_idx=((i * 2) + 1) if experiment.flip else i,
-                    )
+                flipped_round.second_debater.model = offline_model_helper.create_offline_model(
+                    alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
+                    debater_name=debate_round.second_debater.name,
+                    idx=((i * 2) + 1) if experiment.flip else (i + 1),
                 )
-            if experiment.agents.debaters[debater_idxs[1]].model_settings.offline_file_path:
-                debate_round.set_second_debater(
-                    OfflineDebater(
-                        debater=debate_round.second_debater,
-                        file_path=experiment.agents.debaters[debater_idxs[0]].model_settings.offline_file_path,
-                        first_debater_prompt=prompt_a,
-                        round_idx=(i * 2) if experiment.flip else i,
-                    )
+            if second_offline_file_path:
+                debate_round.second_debater.model = offline_model_helper.create_offline_model(
+                    alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
+                    debater_name=flipped_round.second_debater.name,
+                    idx=(i * 2) if experiment.flip else i,
                 )
-                flipped_round.set_first_debater(
-                    OfflineDebater(
-                        debater=flipped_round.first_debater,
-                        file_path=experiment.agents.debaters[debater_idxs[1]].model_settings.offline_file_path,
-                        first_debater_prompt=prompt_a,
-                        round_idx=((i * 2) + 1) if experiment.flip else i,
-                    )
+                flipped_round.first_debater.model = offline_model_helper.create_offline_model(
+                    alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
+                    debater_name=flipped_round.first_debater.name,
+                    idx=((i * 2) + 1) if experiment.flip else (i + 1),
                 )
 
             if experiment.agents.debaters[debater_idxs[0]].best_of_n:

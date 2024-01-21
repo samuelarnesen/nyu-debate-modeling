@@ -14,6 +14,7 @@ from agents.models import (
     ModelType,
     ModelUtils,
     OfflineModel,
+    OfflineModelHelper,
     OpenAIModel,
     RandomModel,
     ServedModel,
@@ -21,6 +22,6 @@ from agents.models import (
 )
 from .agent import Agent, AgentConfig, BestOfNConfig, ScratchpadConfig
 from .debate_round import DebateRound, DebateRoundSummary, QuestionMetadata, SplittingRule
-from .debater import BestOfNDebater, BestOfNConfig, Debater, DebaterUtils, HumanDebater, OfflineDebater, PreferenceDebater
+from .debater import BestOfNDebater, BestOfNConfig, Debater, DebaterUtils, HumanDebater, PreferenceDebater
 from .judge import Judge, JudgeType, JudgeUtils, PreferenceJudge
 from .transcript import Transcript, Speech, SpeechFormat, SpeechFormatEntry, SpeechType

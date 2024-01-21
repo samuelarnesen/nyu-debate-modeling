@@ -28,7 +28,7 @@ class ModelUtils:
         cls,
         model_settings: ModelSettings,
         is_debater: bool = True,
-    ) -> Model:
+    ) -> Optional[Model]:
         """
         Builds a model using the given inputs.
 
@@ -65,7 +65,7 @@ class ModelUtils:
         elif model_type == ModelType.OPENAI:
             model = OpenAIModel(alias=model_settings.alias, is_debater=is_debater)
         elif model_type == ModelType.OFFLINE:
-            raise Exception("Offline model cannot be directly instantiated")
+            model = None  # offline models aren't directly instantiated
         elif model_type == ModelType.HUMAN:
             raise Exception("Human model cannot be directly instantiated")
         elif model_type == ModelType.SERVED:

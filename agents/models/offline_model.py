@@ -1,133 +1,97 @@
 from __future__ import annotations
 
 from agents.models.model import Model, ModelInput, ModelResponse
-from prompts import Prompt, PromptTag
+from data import DataRow, RawDataset, SplitType
 from utils import InputUtils
 import utils.constants as constants
 
-from typing import Union, Optional
+from typing import Optional
+import json
 import os
-import random
 
 
 class OfflineModel(Model):
-    DEFAULT_FILE_PATH_PREFIX = os.environ[constants.SRC_ROOT] + "outputs/"
+    DEFAULT_FILE_PATH_PREFIX = os.environ[constants.SRC_ROOT] + "outputs/transcripts"
 
-    def __init__(self, alias: str, is_debater: bool, file_path: str, prompt: Prompt, **kwargs):
+    def __init__(self, alias: str, speeches: list[str], **kwargs):
         """
         An offline model returns the text that was previously generated during an earlier run. This is useful if you
         want to re-judge a round.
 
         Args:
             alias: String that identifies the model for metrics and deduplication
-            is_debater: Boolean indicating whether the model is a debater (true) or judge (false)
-            file_path: The path to the directory of
-            prompt: The prompt structure that was used to generate the speeches originally. This is required so that
-                it can correctly parse the speech transcripts.
+            speeches: a list of strings corresponding to the speeches the model will output
         """
-        super().__init__(alias=alias, is_debater=is_debater)
-        self.speeches = self.__load(file_path=file_path, prompt=prompt)
+        super().__init__(alias=alias, is_debater=True)
         self.speech_idx = 0
-        self.last_round_idx = -1
-        self.last_debater_name = ""
-        self.prompt = prompt
+        self.speeches = speeches
 
-    def predict(
-        self, inputs: list[list[ModelInput]], max_new_tokens: int = 250, debater_name: str = "", round_idx: int = 0, **kwargs
-    ) -> ModelResponse:
-        """
-        Generates a list of texts in response to the given input.
+    def predict(self, inputs: list[list[ModelInput] | str], **kwargs) -> ModelResponse:
+        """Generates a list of texts in response to the given input."""
 
-        Args:
-            inputs: A list of list of model inputs. Each ModelInput corresponds roughly to one command,
-                a list of ModelInputs corresponds to a single debate (or entry in a batch), and so the
-                list of lists is basically a batch of debates. Since the model will return the same
-                deterministic response no matter what, the content of the input does not matter.
-            max_new_tokens: the total number of new tokens to generate. This is ignored here.
-            debater_name: The name of the debater (typically Debater_A or Debater_B). This is used so that we can
-                return the correct speech. Since one model may be shared across multiple debaters, this has to
-                be passed in with each prediction.
-            round_idx: Which round is being debated. This is needed to match the previously generated speeches
-                with the current round beign debated.
-
-        Returns:
-            A list of length one containing the text generation.
-
-        Raises:
-            Exception: Raises Exception if the model is being used for judging or if the number of inputs is >1.
-        """
-        if not debater_name:
-            raise Exception(
-                "Debater name cannot be empty -- did you try using the OfflineModel as a judge? That's not supported"
-            )
-        if len(inputs) > 1:
-            raise Exception(f"OfflineModel does not support a batch size of >1 ({len(inputs)}) was passed in.")
-        if self.last_debater_name != debater_name:
-            self.last_round_idx = -1
-        if self.last_round_idx != round_idx:
-            self.speech_idx = 0
-            self.last_round_idx = round_idx
-
-        speech = self.speeches[round_idx][debater_name][self.speech_idx]
-
+        speech = self.speeches[self.speech_idx]
         self.speech_idx += 1
-        return [speech]
+        return [ModelResponse(speech=speech)]
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> OfflineModel:
         """Generates a deepcopy of this model"""
-        return OfflineModel(alias=alias, is_debater=is_debater, prompt=self.prompt)
+        return OfflineModel(alias=alias, speeches=self.speeches)
 
-    def __load(self, file_path: str, prompt: Prompt):
-        file_path = file_path if "/" in file_path else "/".join([OfflineModel.DEFAULT_FILE_PATH_PREFIX, file_path])
-        file_texts = InputUtils.read_file_texts(base_path=file_path)
-        debate_rounds = [self.__extract_speeches(text=text, prompt=prompt) for text in file_texts]
-        debater_to_speech_map = []
-        for i, debate_round in enumerate(debate_rounds):
-            debater_to_speech_map.append({})
-            for speaker, speech in debate_round:
-                debater_to_speech_map[i].setdefault(speaker, [])
-                debater_to_speech_map[i][speaker].append(speech)
 
-        return debater_to_speech_map
+class OfflineModelHelper:
+    def __init__(self, file_path_prefix: str, dataset: RawDataset):
+        """
+        This class is used to generate the data and models for offline processing.
 
-    def __extract_speeches(self, text: str, prompt: Prompt) -> list[str]:
-        def get_index(text, targets):
-            max_length = 100
-            for target in targets:
-                index = text.find(target[: min(len(target), max_length)])
-                if index > -1:
-                    return index, target
-            return float("inf"), None
+        Args:
+            file_path_prefix: Either the full path of the transcript jsons (not including the numbers at the end) or just
+                the timestamp of the files
+            dataset: The dataset that was used to generate the original prompts
+        """
+        file_path_prefix = (
+            file_path_prefix
+            if "/" in file_path_prefix
+            else "/".join([OfflineModel.DEFAULT_FILE_PATH_PREFIX, file_path_prefix])
+        )
+        self.data = [json.loads(text) for text in InputUtils.read_file_texts(base_path=file_path_prefix, extension="json")]
+        self.dataset = dataset
 
-        start_text = prompt.messages[PromptTag.PRE_DEBATER_A_SPEECH_JUDGE].content
-        mid_text = prompt.messages[PromptTag.PRE_DEBATER_B_SPEECH_JUDGE].content
-        end_text_one = prompt.messages[PromptTag.JUDGE_QUESTION_INSTRUCTIONS].content
-        end_text_two = prompt.messages[PromptTag.POST_ROUND_JUDGE].content
+    def get_example(self, idx: int, split_type: SplitType = SplitType.TRAIN) -> DataRow:
+        """
+        Gets the row of the dataset that was used to generate the original round.
 
-        speeches = []
-        keep_parsing = True
-        text_to_parse = text
-        while keep_parsing:
-            first_speech_start, used_start_target = get_index(text_to_parse, start_text)
-            first_speech_end, used_mid_target = get_index(text_to_parse, mid_text)
-            second_speech_end, used_end_target = min(
-                get_index(text_to_parse, end_text_one), get_index(text_to_parse, end_text_two)
-            )
-            speeches.append(
-                (
-                    constants.DEFAULT_DEBATER_A_NAME,
-                    (text_to_parse[first_speech_start + len(used_start_target) : first_speech_end].lstrip().rstrip()),
-                )
-            )
-            speeches.append(
-                (
-                    constants.DEFAULT_DEBATER_B_NAME,
-                    (text_to_parse[first_speech_end + len(used_mid_target) : second_speech_end].lstrip().rstrip()),
-                )
-            )
+        Args:
+            idx: The index of the round to be replayed (not the index in the dataset)
+            split_type: The split of the dataset that the original round was from
 
-            text_to_parse = text_to_parse[second_speech_end + len(used_end_target) :]
-            _, remaining_end_target = get_index(text_to_parse, end_text_two)
-            keep_parsing = remaining_end_target is not None
+        Returns:
+            The corresponding row in the dataset that was used to generate the original round.
+        """
+        debate_identifier = self.data[idx % len(self.data)]["metadata"]["debate_identifier"]
+        question = self.data[idx % len(self.data)]["metadata"]["question"]
+        story_title = debate_identifier.replace("_" + question, "")
+        for row in self.dataset.get_data(split=split_type):
+            if row.story_title == story_title and row.question == question:
+                return row
+        raise Exception(f"A row with title {story_title} and question {question} could not be found in the dataset")
 
-        return [ModelResponse(speech=speech) for speech in speeches]
+    def create_offline_model(self, alias: str, debater_name: str, idx: int) -> OfflineModel:
+        """
+        Generates an OfflineModel
+
+        Args:
+            alias: The alias of the model
+            debater_name: The name of the debater (Debater_A, Debater_B) that will use the model since
+                OfflineModels are single use
+            idx: The index of the original round that was used (not the datsset index)
+
+        Returns:
+            An offline model that can be used once
+        """
+        return OfflineModel(
+            alias=alias,
+            speeches=[
+                speech["content"]
+                for speech in filter(lambda x: x["speaker"] == debater_name, self.data[idx % len(self.data)]["speeches"])
+            ],
+        )

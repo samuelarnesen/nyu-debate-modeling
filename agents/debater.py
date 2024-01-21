@@ -238,49 +238,6 @@ class PreferenceDebater(Debater):
         return prediction
 
 
-class OfflineDebater(Debater):
-    def __init__(self, debater: Debater, file_path: str, first_debater_prompt: Prompt, round_idx: int = 0):
-        """
-        A separate abstraction for a debater that uses an OfflineModel.
-
-        Params:
-            debater: The underlying debater that is to be converted to an OfflineDebater
-            file_path: The path to the transcripts that the OfflineModel will use to replay text
-            first_debater_prompt: The prompt of the first debater in te debate round (needed for parsing)
-            round_idx: The index of the round within the context off all the rounds found at the file_path.
-        """
-        super().__init__(
-            name=debater.name,
-            prompt=debater.prompts,
-            model=OfflineModel(
-                alias=debater.model.alias, is_debater=debater.is_debater, file_path=file_path, prompt=first_debater_prompt
-            ),
-            num_speeches=debater.num_speeches,
-            speech_format=debater.speech_format,
-            quotes_require_validation=False,
-        )
-        self.round_idx = round_idx
-        self.file_path = file_path
-        self.first_debater_prompt = first_debater_prompt
-
-    def copy(
-        self, transcripts: Optional[list[Transcript]] = None, prompts: Optional[list[Prompt] | Prompt] = None
-    ) -> Debater:
-        """Deepcopies the debater"""
-        debater = super().copy(transcripts=self.transcripts, prompts=prompts)
-        return OfflineDebater(
-            debater=debater,
-            file_path=self.file_path,
-            first_debater_prompt=self.first_debater_prompt,
-            round_idx=self.round_idx,
-        )
-
-    def __call__(self) -> Optional[list[str]]:
-        """Generates new text using the OfflineModel"""
-        generation = self.generate(max_new_tokens=300, round_idx=self.round_idx)
-        return [gen.speech for gen in generation], generation
-
-
 class HumanDebater(Debater):
     def __init__(self, debater: Debater, speeches: list[SpeechData]):
         """
