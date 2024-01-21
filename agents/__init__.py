@@ -22,6 +22,6 @@ from agents.models import (
 )
 from .agent import Agent, AgentConfig, BestOfNConfig, ScratchpadConfig
 from .debate_round import DebateRound, DebateRoundSummary, QuestionMetadata, SplittingRule
-from .debater import BestOfNDebater, BestOfNConfig, Debater, DebaterUtils, HumanDebater, PreferenceDebater
-from .judge import Judge, JudgeType, JudgeUtils, PreferenceJudge
+from .debater import BestOfNDebater, BestOfNConfig, Debater, DebaterUtils, HumanDebater
+from .judge import Judge, JudgeUtils
 from .transcript import Transcript, Speech, SpeechFormat, SpeechFormatEntry, SpeechType

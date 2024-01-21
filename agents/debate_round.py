@@ -1,6 +1,6 @@
 from agents.agent import Agent
 from agents.debater import Debater
-from agents.judge import Judge, JudgeType
+from agents.judge import Judge
 from agents.models import ModelResponse
 from agents.transcript import Transcript
 from prompts import Prompt, PromptConfig, PromptParser
@@ -100,7 +100,7 @@ class DebateRound:
                 self.logger.error("Received an error while trying to generate a speech %s", str(e), exc_info=True)
                 return None, None
 
-            for idx, response in enumerate(batch_response):
+            for idx, (response, output) in enumerate(zip(batch_response, model_output)):
                 validated_response = str(response)
                 if speaker.quotes_require_validation:
                     validated_response = QuoteUtils.validate_and_replace_quotes(
@@ -109,7 +109,7 @@ class DebateRound:
                     )
                 for _, agent in self.name_to_agent.items():
                     response_to_use = validated_response if agent.receive_validated_quotes else response
-                    agent.receive_message(speaker=speaker.name, content=response_to_use, idx=idx)
+                    agent.receive_message(speaker=speaker.name, content=response_to_use, idx=idx, supplemental=output)
 
             next_speaker = self.judge.get_next_expected_speaker()
             last_output = batch_response

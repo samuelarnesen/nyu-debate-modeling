@@ -1,8 +1,12 @@
+import utils.constants as constants
+
 from typing import Union
 import os
 
 
 class InputUtils:
+    DEFAULT_FILE_PATH_PREFIX = os.environ[constants.SRC_ROOT] + "outputs/transcripts"
+
     @classmethod
     def read_file_texts(cls, base_path: str, group_by_batch: bool = False, extension: str = "txt") -> list[str | list[str]]:
         """
@@ -28,6 +32,8 @@ class InputUtils:
                 else:
                     file_texts += [example for example in current_batch]
                 current_batch.clear()
+
+        base_path = base_path if "/" in base_path else "/".join([InputUtils.DEFAULT_FILE_PATH_PREFIX, base_path])
 
         round_idx = 0
         batch_idx = 0

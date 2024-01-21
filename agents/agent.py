@@ -81,7 +81,9 @@ class Agent:
         ]
         self.cached_messages = {}
 
-    def receive_message(self, speaker: str, content: str, idx: int):
+    def receive_message(
+        self, speaker: str, content: str, idx: int, supplemental: Optional[dict[Any, Any] | list[dict[Any, Any]]] = None
+    ):
         """
         The agent takes in a speech from another agent (or itself) and adds it to its internal transcript:
 
@@ -89,15 +91,16 @@ class Agent:
             speaker: The name of the agent who delivered the speech
             content: The text of the speech
             idx: The index corresponding to which debate in the batch this speech is a part of.
+            supplemental: Any additional data that one wants to associate with the speech
         """
         if idx >= len(self.transcripts):
             return
 
-        self.cached_messages.setdefault(speaker, {}).setdefault(idx, []).append(content)
+        self.cached_messages.setdefault(speaker, {}).setdefault(idx, []).append((content, supplemental))
         expected_speaker = self.get_next_expected_speaker(idx=idx)
         while self.cached_messages.get(expected_speaker, {}).get(idx):
-            for message in self.cached_messages[expected_speaker][idx]:
-                self.transcripts[idx].add_speech(speaker=expected_speaker, content=message)
+            for message, supplemental in self.cached_messages[expected_speaker][idx]:
+                self.transcripts[idx].add_speech(speaker=expected_speaker, content=message, supplemental=supplemental)
             del self.cached_messages[expected_speaker][idx]
             expected_speaker = self.get_next_expected_speaker(idx=idx)
 

@@ -54,33 +54,11 @@ Served Test:
       - model_settings:
           model_type: mistral
           model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-          alias: "mixtral-nyu-plus"
+          alias: "mixtral-old"
       - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-          alias: "mixtral-nyu-plus"
-    judge:
-      model_settings:
-        model_type: openai
-        alias: "openai-judge"
-  dataset:
-    dataset_type: quality
-    split_type: val
-13B Validation - Normal Quality:
-  word_limit: 500
-  batch_size: 1
-  num_speeches: 1
-  flip: True
-  agents:
-    debaters:
-      - model_settings:
-          model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-          alias: "mixtral-nyu-plus"
-      - model_settings:
-          model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-          alias: "mixtral-nyu-plus"
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-mega
+          alias: "mixtral-new"
     judge:
       model_settings:
         model_type: openai
@@ -98,15 +76,15 @@ Served Test:
       - model_settings:
           model_type: mistral
           model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-          alias: "mixtral-nyu-plus-2-2"
+          alias: "mixtral-4"
         best_of_n:
-          n: 2
-          opponent_n: 2
+          n: 4
+          opponent_n: 1
           maxmin: True
       - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-          alias: "mixtral-nyu-plus-4-1"
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified/checkpoint-313
+          alias: "mixtral-2"
         best_of_n:
           n: 4
           opponent_n: 1
@@ -115,8 +93,6 @@ Served Test:
       model_settings:
         model_type: openai
         alias: "openai-judge"
-      scratchpad:
-        use_scratchpad: True
   dataset:
     dataset_type: quality
     split_type: val

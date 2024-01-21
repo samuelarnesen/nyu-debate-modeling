@@ -135,8 +135,6 @@ class LLModel(Model):
         def get_extra_suffix(speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED):
             if speech_structure == SpeechStructure.DECISION:
                 return "\n\n" + constants.JUDGING_PREFIX
-            elif speech_structure == SpeechStructure.PREFERENCE:
-                return "\n\n" + constants.PREFERENCE_PREFIX
             return ""
 
         input_strs = []
@@ -152,13 +150,6 @@ class LLModel(Model):
             )
 
         return input_strs
-
-    def tokenize(
-        self, inputs: list[list[ModelInput]], speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED
-    ) -> torch.Tensor:
-        """Converts a list of model inputs into a tensor that can be passed to a model"""
-        input_strs = self.generate_input_strs(inputs=inputs, speech_structure=speech_structure)
-        return self.tokenizer(input_strs, return_tensors="pt", padding=True)
 
     @timer("llm inference")
     @torch.inference_mode()
@@ -179,8 +170,7 @@ class LLModel(Model):
                 list of lists is basically a batch of debates.
             max_new_tokens: the maximum number of new tokens to generate.
             speech_structure: the format that the answer is expected to be in. Option includes "open-ended"
-                (which is just free text), "preference" (which means a number is expected), and "decision"
-                (which means a boolean is expected)
+                (which is just free text), and "decision" (which means a boolean is expected)
             num_return_sequences: the number of responses that the model is expected to generate. If a batch
                 size of >1 is passed in, then this value will be overridden by the batch size (so you cannot
                 have both num_return_sequences > 1 and len(inputs) > 1)
@@ -213,7 +203,8 @@ class LLModel(Model):
 
         validate()
         self.model.eval()
-        inputs = self.tokenize(inputs=inputs, speech_structure=speech_structure).to("cuda")
+        input_strs = self.generate_input_strs(inputs=inputs, speech_structure=speech_structure)
+        inputs = self.tokenizer(input_strs, return_tensors="pt", padding=True)
         outputs = self.model.generate(**inputs, generation_config=create_new_generation_config())
         input_lengths = (inputs.input_ids != self.tokenizer.pad_token_id).sum(axis=1)
 
@@ -222,12 +213,7 @@ class LLModel(Model):
             if self.is_debater or speech_structure != SpeechStructure.DECISION:
                 decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[min(i, len(input_lengths) - 1)] :])
                 new_tokens = decoded.split(constants.INSTRUCTION_SUFFIX)[-1]
-                if speech_structure == SpeechStructure.PREFERENCE and re.search("\\d+(\\.\\d+)?", new_tokens.strip()):
-                    decoded_outputs.append(
-                        ModelResponse(preference=float(re.search("\\d+(\\.\\d+)?", new_tokens.strip()).group()))
-                    )
-                else:
-                    decoded_outputs.append(ModelResponse(speech=StringUtils.clean_string(new_tokens)))
+                decoded_outputs.append(ModelResponse(speech=StringUtils.clean_string(new_tokens)))
             else:
                 tokenized_debater_a = self.tokenizer(constants.DEFAULT_DEBATER_A_NAME)
                 tokenized_debater_b = self.tokenizer(constants.DEFAULT_DEBATER_B_NAME)
@@ -245,6 +231,7 @@ class LLModel(Model):
                             constants.DEFAULT_DEBATER_A_NAME: normalized_a_score,
                             constants.DEFAULT_DEBATER_B_NAME: normalized_b_score,
                         },
+                        prompt=input_strs[i],
                     )
                 )
 

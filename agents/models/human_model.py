@@ -53,7 +53,7 @@ class HumanModel(Model):
             logger.warn(
                 f"Human debater {self.alias} was unable to generate a speech. Current index is {self.speech_idx} but there are only {len(self.speeches)} in its speech list."
             )
-        return [ModelResponse(speech=speech)]
+        return [ModelResponse(speech=speech, prompt="\n".join(model_input.content for model_input in inputs[0]))]
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> HumanModel:
         """Generates a deepcopy of this model"""

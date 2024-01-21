@@ -1,7 +1,6 @@
 from agents import (
     AgentConfig,
     BestOfNDebater,
-    PreferenceJudge,
     Debater,
     DebateRound,
     HumanDebater,
@@ -11,7 +10,6 @@ from agents import (
     ModelType,
     ModelUtils,
     OfflineModelHelper,
-    PreferenceDebater,
     QuestionMetadata,
     ServedModel,
 )
@@ -34,11 +32,6 @@ class AgentsConfig(BaseModel):
     judge: AgentConfig
 
 
-class PreferenceConfig(BaseModel):
-    count: int
-    prompts: Optional[list[str]]
-
-
 class ExperimentConfig(BaseModel):
     word_limit: int
     batch_size: int
@@ -47,7 +40,6 @@ class ExperimentConfig(BaseModel):
     prompt_config: PromptLoadingConfig = PromptLoadingConfig()
     agents: AgentsConfig
     dataset: DatasetConfig
-    preference: Optional[PreferenceConfig] = None
     annotations_classifier_file_path: Optional[str]
 
 
@@ -374,54 +366,6 @@ class ExperimentLoader:
                 ],
             )
 
-            if experiment.preference:
-                if experiment.num_speeches > 1:
-                    raise Exception("For now, there can only be 1 speech when doing preference generation")
-
-                debater_a_prompts = []
-                debater_b_prompts = []
-                logger.debug(
-                    f"Using {(len(experiment.preference.prompts) if experiment.preference.prompts else 0)} new prompts"
-                )
-                for prompt_name in experiment.preference.prompts or [experiment.prompt_config.default_prompt_name]:
-                    for prompt_list, config in zip([debater_a_prompts, debater_b_prompts], [config_a, config_b]):
-                        prompt_list.append(
-                            PromptParser.parse(
-                                prompts_file_path=experiment.prompt_config.file_path,
-                                prompt_config=config,
-                                name=prompt_name,
-                            )
-                        )
-
-                debate_round.set_judge(
-                    PreferenceJudge(judge=debate_round.judge, n=experiment.preference.count, debater_a=True)
-                )
-                flipped_round.set_judge(
-                    PreferenceJudge(judge=flipped_round.judge, n=experiment.preference.count, debater_a=False)
-                )
-                debate_round.set_first_debater(
-                    PreferenceDebater(
-                        debater=debate_round.first_debater,
-                        n=experiment.preference.count,
-                        prompts=debater_a_prompts,
-                        evaluated=True,
-                    )
-                )
-                flipped_round.set_first_debater(
-                    PreferenceDebater(debater=flipped_round.first_debater, n=experiment.preference.count, evaluated=False)
-                )
-                debate_round.set_second_debater(
-                    PreferenceDebater(debater=debate_round.second_debater, n=experiment.preference.count, evaluated=False)
-                )
-                flipped_round.set_second_debater(
-                    PreferenceDebater(
-                        debater=flipped_round.second_debater,
-                        n=experiment.preference.count,
-                        prompts=debater_b_prompts,
-                        evaluated=True,
-                    )
-                )
-
             if first_offline_file_path:
                 debate_round.first_debater.model = offline_model_helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
@@ -491,7 +435,7 @@ class ExperimentLoader:
             if experiment.flip:
                 rounds.append(flipped_round)
 
-        if len(rounds) <= 1 or experiment.preference:
+        if len(rounds) <= 1:
             return rounds, model_cache
 
         # batches the debate rounds for efficient generation

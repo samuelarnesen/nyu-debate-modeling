@@ -20,6 +20,8 @@ class ModelResponse(BaseModel):
     decision: Literal[constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME, ""] = ""
     probabilistic_decision: Optional[dict[str, float]] = None
     preference: Optional[float] = None
+    rejected_responses: list[ModelResponse] = []
+    prompt: str = ""
 
     @validator("probabilistic_decision")
     def check_keys(cls, v):
@@ -63,7 +65,6 @@ class ModelSettings(BaseModel):
 class SpeechStructure(Enum):
     OPEN_ENDED = 1
     DECISION = 2
-    PREFERENCE = 3
 
 
 class Model(ABC):

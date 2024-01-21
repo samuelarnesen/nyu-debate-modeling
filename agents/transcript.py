@@ -15,6 +15,7 @@ import json
 class Speech(BaseModel):
     speaker: str
     content: str
+    supplemental: Optional[dict[Any, Any] | list[dict[Any, Any]]]
 
 
 class SpeechType(Enum):
@@ -133,9 +134,18 @@ class Transcript:
         """Removes all the given speeches"""
         self.speeches = []
 
-    def add_speech(self, speaker: str, content: str) -> None:
-        """Adds an agent-generated speech to the transcript"""
-        self.speeches.append(Speech(speaker=speaker, content=content))
+    def add_speech(
+        self, speaker: str, content: str, supplemental: Optional[dict[Any, Any] | list[dict[Any, Any]]] = None
+    ) -> None:
+        """
+        Adds an agent-generated speech to the transcript
+
+        Args:
+            speaker: The name of the debater (Debater_A, Debater_B) that gave the speech
+            content: The text of the speech
+            supplemental: Any additional metadata that one wants to tag along with the speech
+        """
+        self.speeches.append(Speech(speaker=speaker, content=content, supplemental=supplemental))
 
     def save(self, save_file_path_prefix: str, metadata: Optional[dict[Any, Any]]) -> None:
         """Saves to the specified path"""
@@ -213,19 +223,16 @@ class Transcript:
         speeches = []
         index = 0
         for i, (speech_type, prompt_tag, _, expected_speaker) in enumerate(self.speech_format):
+            supplemental = None
             if speech_type == SpeechType.PRE_FILLED:
                 content = self.prompt.messages[prompt_tag].content[index % len(self.prompt.messages[prompt_tag].content)]
             else:
                 if index >= len(self.speeches):
                     break
                 content = self.speeches[index].content
+                supplemental = self.speeches[index].supplemental
                 index += 1
-            speeches.append(
-                Speech(
-                    speaker=expected_speaker or "Prompt",
-                    content=content,
-                ).dict()
-            )
+            speeches.append(Speech(speaker=expected_speaker or "Prompt", content=content, supplemental=supplemental).dict())
 
         return {"metadata": metadata, "speeches": speeches}
 

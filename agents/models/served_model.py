@@ -79,12 +79,13 @@ class ServedModel(Model):
             raise Exception("You cannot have multiple return sequences and a batch size of >1")
 
         with ThreadPoolExecutor(max_workers=ServedModel.MAX_PARALLEL_REQUESTS) as executor:
-            futures = [
-                executor.submit(self.fetch, input_string)
+            input_strs = [
+                input_string
                 for input_string in self.base_model.generate_input_strs(
                     inputs=inputs, speech_structure=SpeechStructure.OPEN_ENDED
                 )
             ]
-            results = [ModelResponse(speech=future.result()) for future in futures]
+            futures = [executor.submit(self.fetch, input_string) for input_string in input_strs]
+            results = [ModelResponse(speech=future.result(), prompt=input_strs[i]) for i, future in enumerate(futures)]
 
         return results

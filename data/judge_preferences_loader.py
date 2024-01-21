@@ -1,12 +1,10 @@
-from data.dataset import DatasetType, JudgePreferenceDataRow, RawDataLoader, RawDataset, SpeakerType, SpeechData, SplitType
+from data.dataset import DataRow, DatasetType, JudgePreferenceDataRow, RawDataLoader, RawDataset, SplitType
+from data.quality_loader import QualityLoader
 from utils import InputUtils
 import utils.constants as constants
 
 from typing import Any, Optional
 import json
-import os
-import re
-import sys
 
 
 class JudgePreferencesDataset(RawDataset):
@@ -49,45 +47,47 @@ class JudgePreferencesDataset(RawDataset):
 
 
 class JudgePreferencesLoader(RawDataLoader):
+    MIN_GAP = 0.10
+
     @classmethod
-    def load(cls, full_dataset_filepath: str, **kwargs) -> JudgePreferencesDataset:
+    def load(
+        cls, full_dataset_filepath: str, supplemental_file_paths: Optional[dict[str, str]] = None, **kwargs
+    ) -> JudgePreferencesDataset:
         """
         Constructs a JudgePreferencesDataset.
 
         Params:
             full_dataset_filepath: This is the *prefix* of the files with all the Best-of-N generations.
-                If the Best-of-N generations are all saved as "directory/some_file_0_0.txt", the
-                full_dataset_filepath would be "directory/some_file".
 
         Returns:
             A JudgePreferencesDataset where each row has a chosen and a rejected speech.
         """
+
+        def get_original_data_row(data: dict[Any, Any], dataset: RawDataset) -> DataRow:
+            debate_identifier = data["metadata"]["debate_identifier"]
+            question = data["metadata"]["question"]
+            story_title = debate_identifier.replace("_" + question, "")
+            for row in dataset.get_data(split=SplitType.TRAIN):
+                if row.story_title == story_title and row.question == question:
+                    return row
+            raise Exception(f"A row with title {story_title} and question {question} could not be found in the dataset")
+
+        quality_filepath = (supplemental_file_paths or {}).get("quality_file_path", QualityLoader.DEFAULT_TRAIN_PATH)
+        quality_dataset = QualityLoader.load(full_dataset_filepath=quality_filepath)
+
         train_data = []
-        input_texts = InputUtils.read_file_texts(base_path=full_dataset_filepath, group_by_batch=True)
-        for batch in input_texts:
-            position = 0 if constants.DEBATER_A_IDENTIFICATION in batch[0] else 1
-            parsed_texts = []
-            previous_instruction = None
-            for example in batch:
-                instruction_end_text = re.search("|".join(constants.BEGIN_SPEECH_OPTIONS), example, re.DOTALL).group()
-                verdict_start_text = re.search("|".join(constants.BEGIN_JUDGING_OPTIONS), example, re.DOTALL).group()
-                instruction_end = example.find(instruction_end_text) + len(instruction_end_text)
-                verdict_start = example.find(verdict_start_text)
-                verdict_end = verdict_start + len(verdict_start_text)
-                instruction = example[:instruction_end].strip()
-                speech = example[instruction_end:verdict_start].strip()
-                verdict = float(example[verdict_end:])
-                parsed_texts.append((instruction, speech, verdict))
-
-                if previous_instruction:
-                    assert instruction == previous_instruction
-                previous_instruction = instruction
-
-            sorted_parsed_texts = sorted(parsed_texts, key=lambda x: x[2], reverse=True)
-            sorted_speeches = [speech for _, speech, _ in sorted_parsed_texts]
-            train_data.append((instruction, sorted_speeches[0], sorted_speeches[-1]))
-            if len(sorted_speeches) > 4:
-                train_data.append((instruction, sorted_speeches[1], sorted_speeches[-2]))
+        input_texts = InputUtils.read_file_texts(base_path=full_dataset_filepath, extension="json")
+        for text in input_texts:
+            data = json.loads(text)
+            row = get_original_data_row(data=data, dataset=quality_dataset)
+            for selected in filter(
+                lambda x: x["speaker"] in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME],
+                data["speeches"],
+            ):
+                instruction = selected["supplemental"]["prompt"]
+                rejected = sorted(selected["supplemental"]["rejected_responses"], key=lambda x: x["preference"])[0]
+                if selected["supplemental"]["preference"] - rejected["preference"] > JudgePreferencesLoader.MIN_GAP:
+                    train_data.append((instruction, selected["content"], rejected["speech"]))
 
         return JudgePreferencesDataset(
             train_data=train_data,

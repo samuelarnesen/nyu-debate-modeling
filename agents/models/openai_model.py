@@ -22,15 +22,7 @@ class OpenAIModel(Model):
         + "Do not contain any other text at all."
     )
 
-    preference_addendum = (
-        "\nNow please give your answer exclusively in this format:\n"
-        + "Overall Score: [0-10] (Example 1 - Overall Score: 3. Example 2: Overall Score: 7)\n"
-        + "Do not contain any other text at all."
-    )
-
     decision_regex = ".*Winner: (Debater_[AB])"
-
-    preference_regex = ".*Overall Score: (\\d+(\\.\\d+)?)"
 
     MAX_PARALLEL_REQUESTS = 10
 
@@ -66,8 +58,7 @@ class OpenAIModel(Model):
                 list of lists is basically a batch of debates.
             max_new_tokens: The maximum total number of new tokens to generate.
             speech_structure: the format that the answer is expected to be in. Option includes "open-ended"
-                (which is just free text), "preference" (which means a number is expected), and "decision"
-                (which means a boolean is expected)
+                (which is just free text), and "decision" (which means a boolean is expected)
 
         Returns:
             A list of model responses, with one string for each entry in the batch.
@@ -88,7 +79,7 @@ class OpenAIModel(Model):
 
     def predict_single_input(
         self,
-        model_input_list: ModelInput | str,
+        model_input_list: list[ModelInput] | str,
         max_new_tokens=200,
         speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
         **kwargs,
@@ -97,11 +88,10 @@ class OpenAIModel(Model):
         Generates a list of texts in response to a single given input.
 
         Args:
-            inputs: A list of list of model inputs. Each ModelInput corresponds roughly to one command
+            model_input_list: A list of model inputs. Each ModelInput corresponds roughly to one command
             max_new_tokens: The maximum total number of new tokens to generate.
             speech_structure: the format that the answer is expected to be in. Option includes "open-ended"
-                (which is just free text), "preference" (which means a number is expected), and "decision"
-                (which means a boolean is expected)
+                (which is just free text) and "decision" (which means a boolean is expected)
 
         Returns:
             A list of model responses, with one string for each entry in the batch.
@@ -143,8 +133,6 @@ class OpenAIModel(Model):
 
         if speech_structure == SpeechStructure.DECISION:
             add_addendum(messages=messages, addendum=OpenAIModel.decision_addendum)
-        elif speech_structure == SpeechStructure.PREFERENCE:
-            add_addendum(messages=messages, addendum=OpenAIModel.preference_addendum)
 
         try:
             completion = openai.ChatCompletion.create(
@@ -182,16 +170,10 @@ class OpenAIModel(Model):
                     constants.DEFAULT_DEBATER_A_NAME: a_odds,
                     constants.DEFAULT_DEBATER_B_NAME: b_odds,
                 },
+                prompt="\n".join(model_input.content for model_input in model_input_list),
             )
-        elif speech_structure == SpeechStructure.PREFERENCE:
-            message = extract_response_from_structured_speech(
-                message=message,
-                regex_str=OpenAIModel.preference_regex,
-                default=str(-1),
-            )
-            return ModelResponse(preference=float(message))
 
-        return ModelResponse(speech=message)
+        return ModelResponse(speech=message, prompt="\n".join(model_input.content for model_input in model_input_list))
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> HumanModel:
         """Generates a deepcopy of this model"""

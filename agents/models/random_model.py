@@ -38,8 +38,7 @@ class RandomModel(Model):
                 response no matter what, the content of the input does not matter.
             max_new_tokens: The total number of new tokens to generate.
             speech_structure: The format that the answer is expected to be in. Option includes "open-ended"
-                (which is just free text), "preference" (which means a number is expected), and "decision"
-                (which means a boolean is expected)
+                (which is just free text) and "decision" (which means a boolean is expected)
             num_return_sequences: The number of responses that the model is expected to generate. If a batch
                 size of >1 is passed in, then this value will be overridden by the batch size (so you cannot
                 have both num_return_sequences > 1 and len(inputs) > 1)
@@ -82,14 +81,18 @@ class RandomModel(Model):
                             constants.DEFAULT_DEBATER_A_NAME: a_odds,
                             constants.DEFAULT_DEBATER_B_NAME: b_odds,
                         },
+                        prompt="\n".join([model_input.content for model_input in inputs[i]]),
                     )
                 )
             return decisions
-        elif speech_structure == SpeechStructure.PREFERENCE:
-            return [ModelResponse(preference=(random.random() * 10)) for i in range(len(inputs))]
 
         num_return_sequences = max(num_return_sequences, len(inputs))
-        return [ModelResponse(speech=generate_random_text()) for i in range(num_return_sequences)]
+        return [
+            ModelResponse(
+                speech=generate_random_text(), prompt="\n".join([model_input.content for model_input in inputs[i]])
+            )
+            for i in range(num_return_sequences)
+        ]
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> RandomModel:
         """Generates a deepcopy of this model"""

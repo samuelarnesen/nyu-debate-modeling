@@ -51,10 +51,5 @@ MyExperiment: # The name of your experiment
     test_file_path: null # path to a file that stores the training dataset. Not needed if the dataset is not pre-split or if defaults are used
     supplemental_file_paths: null # set of additional kwargs that are specific to individual dataset
     split_type: train # the split of the data to actually use
-  preference: # Configuration for preference judgements. Only needed if one is doing preference data generation (will likely be removed soon)
-    count: 2 # how many speeches to generate for the best-of-n calculations
-    prompts: # Additional prompts to use for each of the best of n generations. If the number of prompts does not match the count, we will repeat from the beginning. Optional if defaults are used.
-      - Example Prompt 1 # first override prompt name
-      - Example Prompt 2 # second override prompt name
   annotations_classifier_file_path: /path/to/annotator/model.p # path to annotations model. Uses default if unspecified.
   is_memorized: False # whether the model has been trained to memorize the stories (in which case the stories will not be passed in). Defaults false

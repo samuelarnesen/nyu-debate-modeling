@@ -16,11 +16,6 @@ import random
 import re
 
 
-class JudgeType(Enum):
-    STANDARD = 1
-    PREFERENCE = 2
-
-
 class Judge(Agent):
     def __init__(
         self,
@@ -30,7 +25,6 @@ class Judge(Agent):
         num_speeches: int,
         speech_format: Optional[SpeechFormat] = None,
         speech_structure: SpeechStructure = SpeechStructure.DECISION,
-        judge_type: JudgeType = JudgeType.STANDARD,
         expected_saver: str = constants.DEFAULT_JUDGE_NAME,
         chain_of_thought: bool = True,
     ):
@@ -44,7 +38,6 @@ class Judge(Agent):
             num_speeches: The number of speeches each debater is expected to deliver
             speech_format: the order of speeches the judge expects to hear
             speech_structure: the default way the judge is to supposed to generate text
-            judge_type: whether the judge is a preference judge or not
             expected_saver: whether the judge or the debater is in charge of saving the transcript
             chain_of_thought: whether the judge gets to use chain-of-thought before generating the response
         """
@@ -62,7 +55,6 @@ class Judge(Agent):
         )
         self.logger = LoggerUtils.get_default_logger(__name__)
         self.speech_structure = speech_structure
-        self.judge_type = judge_type
         self.expected_saver = expected_saver
         self.chain_of_thought = chain_of_thought
         self.num_speeches = num_speeches
@@ -115,72 +107,12 @@ class Judge(Agent):
             num_speeches=self.num_speeches,
             speech_format=self.speech_format,
             speech_structure=self.speech_structure,
-            judge_type=self.judge_type,
             expected_saver=self.expected_saver,
             chain_of_thought=self.chain_of_thought,
         )
         if transcripts:
             judge.transcripts = [transcript.copy() for transcript in transcripts]
         return judge
-
-
-class PreferenceJudge(Judge):
-    def __init__(self, judge: Judge, n: int, debater_a: bool):
-        """
-        Abstraction for a judge that generates preferences between different versions of the same speech.
-
-        Params:
-            judge: The underlying judge object that is being converted to a preference judge
-            n: The expected number of samples of each speech
-            debater_a: Boolean indicating whether the judge is to judge multiple versions of Debater_A or Debater_B's speech.
-        """
-
-        super().__init__(
-            name=judge.name,
-            prompt=[copy.deepcopy(judge.prompts[0]) for i in range(n)],
-            model=judge.model,
-            num_speeches=1,
-            speech_format=JudgeUtils.get_preference_speech_format(debater_a=debater_a),
-            speech_structure=SpeechStructure.PREFERENCE,
-            judge_type=JudgeType.PREFERENCE,
-            expected_saver=constants.DEFAULT_DEBATER_A_NAME if debater_a else constants.DEFAULT_DEBATER_B_NAME,
-        )
-        self.internal_results = []
-        self.debater_a = debater_a
-
-    def validate_responses(self, responses: list[ModelResponse]) -> list[str]:
-        """Verifies that the response is of the correct format"""
-        validated_responses = []
-        for i, response in enumerate(responses):
-            if not response.preference:
-                self.logger.warn(f'Response of "{response.preference}" was invalid. Must be a number.')
-                response.preference = -1
-            validated_responses.append(response)
-        return validated_responses
-
-    def process_responses(self, responses: list[ModelResponse]) -> list[Any]:
-        """Converts the string response to a scale of [0-10] where 0 is bad and 10 is good"""
-        scores = [
-            (response.preference if self.debater_a else (constants.MAX_SCORE - response.preference))
-            for response in responses
-        ]
-        speeches = [transcript.get_last_external_speech() for transcript in self.transcripts]
-        self.internal_results.append(
-            [
-                {"speaker": speech.speaker, "content": speech.content, "score": score}
-                for speech, score in zip(speeches, scores)
-            ]
-        )
-        return scores
-
-    def save(self, save_file_path_prefix: str) -> None:
-        """Saves the model to the specified path"""
-        idx = 0
-        while os.path.exists(f"{save_file_path_prefix}_{idx}.txt"):
-            idx += 1
-
-        with open(f"{save_file_path_prefix}_{idx}.txt", "w") as f:
-            json.dump(self.internal_results, f)
 
 
 class JudgeUtils:
@@ -225,27 +157,11 @@ class JudgeUtils:
 
     @classmethod
     def get_default_speech_format(cls, num_speeches: int, chain_of_thought: bool):
-        """Gets the speech order for non-preference judges"""
+        """Gets the speech order for the judge"""
         return (
             SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
             .add_format(speech_format=JudgeUtils.pre_debate_speech_format)
             .add_format(speech_format=JudgeUtils.opening_speech_speech_format)
             .add_format(speech_format=JudgeUtils.argument_speech_format, repeats=(num_speeches - 1))
             .add_format(speech_format=JudgeUtils.get_decision_speech_format(chain_of_thought=chain_of_thought))
-        )
-
-    @classmethod
-    def get_preference_speech_format(cls, debater_a: bool):
-        """Gets the speech order for preference judges"""
-        preference_speech_format = (
-            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-            .add(prompt_tag=PromptTag.PREFERENCE_JUDGE_INSTRUCTION)
-            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
-            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
-        )
-        return (
-            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-            .add_format(speech_format=JudgeUtils.pre_debate_speech_format)
-            .add_format(speech_format=JudgeUtils.opening_speech_speech_format)
-            .add_format(speech_format=preference_speech_format)
         )

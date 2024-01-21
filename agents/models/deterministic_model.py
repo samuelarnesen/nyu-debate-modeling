@@ -39,8 +39,7 @@ class DeterministicModel(Model):
             max_new_tokens: The total number of new tokens to generate. The canned line will be repeated
                 until it reaches that limit.
             speech_structure: The format that the answer is expected to be in. Option includes "open-ended"
-                (which is just free text), "preference" (which means a number is expected), and "decision"
-                (which means a boolean is expected)
+                (which is just free text), and "decision" (which means a boolean is expected)
             num_return_sequences: The number of responses that the model is expected to generate. If a batch
                 size of >1 is passed in, then this value will be overridden by the batch size (so you cannot
                 have both num_return_sequences > 1 and len(inputs) > 1)
@@ -59,8 +58,6 @@ class DeterministicModel(Model):
 
         if speech_structure == SpeechStructure.DECISION:
             return [ModelResponse(decision=constants.DEFAULT_DEBATER_A_NAME) for i in range(len(inputs))]
-        elif speech_structure == SpeechStructure.PREFERENCE:
-            return [ModelResponse(preference=5.0) for i in range(len(inputs))]
         text_to_repeat = "\n".join([self.text for i in range(int(max_new_tokens / self.text_length))])
 
         num_return_sequences = len(inputs) if len(inputs) > 1 else num_return_sequences

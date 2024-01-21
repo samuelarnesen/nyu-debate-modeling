@@ -53,7 +53,9 @@ class Debater(Agent):
             quotes_require_validation=quotes_require_validation,
             speech_format=speech_format
             if speech_format
-            else DebaterUtils.get_default_speech_format(name, num_speeches, scratchpad_config.use_scratchpad),
+            else DebaterUtils.get_speech_format(
+                name=name, num_speeches=num_speeches, use_scratchpad=scratchpad_config.use_scratchpad
+            ),
         )
         self.scratchpad_config = scratchpad_config
         self.quotes_require_validation = quotes_require_validation
@@ -166,13 +168,9 @@ class BestOfNDebater(Debater):
         best_model_response = model_responses[selection_idx]
 
         for i, (model_response, score) in enumerate(zip(model_responses, scores)):
-            if i == selection_idx:
-                self.logger.debug("Chosen Speech (Score of {}):\n{}\n".format(round(score, 2), model_response.speech))
-            else:
-                self.logger.debug("Rejected Speech (Score of {}):\n{}\n".format(round(score, 2), model_response.speech))
-
-        for opposing_response in opposing_debater_responses:
-            self.logger.debug("Opponent Speech:\n{}\n".format(opposing_response.speech))
+            model_response.preference = score
+            if i != selection_idx:
+                best_model_response.rejected_responses.append(model_response)
 
         return [best_model_response.speech], [best_model_response]
 
@@ -186,65 +184,13 @@ class BestOfNDebater(Debater):
         )
 
 
-class PreferenceDebater(Debater):
-    def __init__(self, debater: Debater, n: int, prompts: Optional[list[Prompt]] = None, evaluated: bool = True):
-        """
-        A debater model that generates multiple versions of the same speech for preference judgment comparisons.
-
-        Params:
-            debater: The underlying debater that is to be converted to a PreferenceDebater
-            n: The number of speeches to generate for each input.
-            prompts: The Prompt structure that controls the inputs to the models. A list is passed in for batch processing.
-            evaluated: indicates whether the round has already been judged.
-        """
-        super().__init__(
-            name=debater.name,
-            prompt=PreferenceDebater.construct_prompts(debater=debater, n=n if evaluated else 1, prompts=prompts),
-            model=debater.model,
-            num_speeches=debater.num_speeches,
-            speech_format=DebaterUtils.get_preference_speech_format(
-                debater.name, debater.num_speeches, debater.scratchpad_config.use_scratchpad
-            ),
-        )
-        self.n = n
-        self.evaluated = evaluated
-
-    @classmethod
-    def construct_prompts(cls, debater: Debater, n: int, prompts: Optional[list[Prompt]]):
-        """Copies the prompts from the existing debater"""
-        prompts = prompts if prompts else debater.prompts
-        return [copy.deepcopy(prompts[i % len(prompts)]) for i in range(n)]
-
-    def copy(
-        self, transcripts: Optional[list[Transcript]] = None, prompts: Optional[list[Prompt] | Prompt] = None
-    ) -> Debater:
-        """Deepcopies the debater (except for the model, which is a shallow copy)"""
-        debater = super().copy(transcripts=self.transcripts, prompts=prompts)
-        return PreferenceDebater(debater=debater, n=self.n, prompts=self.prompts, evaluated=self.evaluated)
-
-    def generate(self, max_new_tokens=300) -> Optional[list[str]]:
-        """Generates new text based on the pre-existing transcripts"""
-        prediction = []
-        for transcript in self.transcripts:
-            prediction.extend(
-                self.model.predict(
-                    inputs=[transcript.to_model_input()],
-                    max_new_tokens=max_new_tokens,
-                    debater_name=self.name,
-                )
-            )
-        if not self.evaluated and self.n > len(prediction):
-            prediction.extend([copy.deepcopy(prediction[0]) for i in range(self.n - len(prediction))])
-        return prediction
-
-
 class HumanDebater(Debater):
     def __init__(self, debater: Debater, speeches: list[SpeechData]):
         """
         A separate abstraction for a debater that uses a HumanModel.
 
         Params:
-            debater: The undelrying debater that is to be converted to a HumanDebater.
+            debater: The underlying debater that is to be converted to a HumanDebater.
             speeches: The list of speeches from the dataset that are to be delivered when text is generated
         """
         super().__init__(
@@ -261,7 +207,7 @@ class HumanDebater(Debater):
 
 class DebaterUtils:
     @classmethod
-    def get_speech_format(cls, name: str, num_speeches: int, use_scratchpad: bool, preference: bool = False):
+    def get_speech_format(cls, name: str, num_speeches: int, use_scratchpad: bool):
         """Generates the order of speeches that the debater expects to receive"""
         opponent_name = (
             constants.DEFAULT_DEBATER_A_NAME
@@ -301,11 +247,11 @@ class DebaterUtils:
         )
 
         opening_statements = (
-            SpeechFormat(name).add(prompt_tag=PromptTag.PRE_OPENING_SPEECH).add_format(speech_format=own_speech)
+            SpeechFormat(name)
+            .add(prompt_tag=PromptTag.PRE_OPENING_SPEECH)
+            .add_format(speech_format=own_speech)
+            .add_format(speech_format=opponent_speech)
         )
-
-        if not preference:
-            opening_statements = opening_statements.add_format(speech_format=opponent_speech)
 
         later_arguments = (
             SpeechFormat(name)
@@ -326,18 +272,4 @@ class DebaterUtils:
             .add_format(speech_format=opening_statements)
             .add_format(speech_format=later_arguments, repeats=(num_speeches - 1))
             .add_format(speech_format=decision)
-        )
-
-    @classmethod
-    def get_default_speech_format(cls, name: str, num_speeches: int, use_scratchpad: bool):
-        """Gets the speech orders for a normal (non-Preference) debater"""
-        return DebaterUtils.get_speech_format(
-            name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad, preference=False
-        )
-
-    @classmethod
-    def get_preference_speech_format(cls, name: str, num_speeches: int, use_scratchpad: bool):
-        """Gets the speech order for a Preference debater"""
-        return DebaterUtils.get_speech_format(
-            name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad, preference=True
         )

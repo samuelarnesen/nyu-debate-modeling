@@ -11,8 +11,6 @@ import os
 
 
 class OfflineModel(Model):
-    DEFAULT_FILE_PATH_PREFIX = os.environ[constants.SRC_ROOT] + "outputs/transcripts"
-
     def __init__(self, alias: str, speeches: list[str], **kwargs):
         """
         An offline model returns the text that was previously generated during an earlier run. This is useful if you
@@ -31,7 +29,7 @@ class OfflineModel(Model):
 
         speech = self.speeches[self.speech_idx]
         self.speech_idx += 1
-        return [ModelResponse(speech=speech)]
+        return [ModelResponse(speech=speech, prompt="\n".join(model_input.content for model_input in inputs[0]))]
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> OfflineModel:
         """Generates a deepcopy of this model"""
@@ -48,11 +46,6 @@ class OfflineModelHelper:
                 the timestamp of the files
             dataset: The dataset that was used to generate the original prompts
         """
-        file_path_prefix = (
-            file_path_prefix
-            if "/" in file_path_prefix
-            else "/".join([OfflineModel.DEFAULT_FILE_PATH_PREFIX, file_path_prefix])
-        )
         self.data = [json.loads(text) for text in InputUtils.read_file_texts(base_path=file_path_prefix, extension="json")]
         self.dataset = dataset
 

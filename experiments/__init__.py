@@ -4,7 +4,6 @@ from .experiment_loader import (
     AgentsConfig,
     ExperimentConfig,
     ExperimentLoader,
-    PreferenceConfig,
     PromptLoadingConfig,
 )
 from .quotes_collector import QuotesCollector, QuoteStats
