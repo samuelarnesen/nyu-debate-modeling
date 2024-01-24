@@ -11,12 +11,14 @@ import numpy as np
 import torch.nn as nn
 import torch
 
+from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Union, Type
 import base64
 import copy
 import io
 import math
+import random
 import re
 
 
@@ -49,17 +51,20 @@ class LLModel(Model):
         instruction_prefix: str = "",
         instruction_suffix: str = "",
         linear_idxs: Optional[list[int]] = None,
+        requires_file_path: bool = True,
     ):
         """
         An LLModel uses a large language model (currently Llama 2 or Mistral) to generate text.
 
         Args:
             alias: String that identifies the model for metrics and deduplication
+            file_path: the name of the huggingface model to load
             is_debater: Boolean indicating whether the model is a debater (true) or judge (false)
             nucleus: Whether nucleus sampling (true) or beam_search (false) should be used.
             instruction_prefix: the prefix to use before the instructions that get passed to the model
             instruction_suffix: the suffix to use after the instructions that get passed to the model
             linear_idxs: when judging, these are the hidden dimensions to use as input to the linear probe
+            requires_file_path: whether one needs to input a file_path for the model to be instantiated
         """
         super().__init__(alias=alias, is_debater=is_debater)
         torch.cuda.empty_cache()
@@ -67,26 +72,11 @@ class LLModel(Model):
         self.instruction_prefix = instruction_prefix
         self.instruction_suffix = instruction_suffix
         self.instantiated_model = False
-        if file_path:
+        if file_path or not requires_file_path:
             self.instantiated_model = True
             self.is_debater = is_debater
-            self.tokenizer = AutoTokenizer.from_pretrained(file_path)
-            self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
-            bnb_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.bfloat16,
-            )
-            self.model = AutoModelForCausalLM.from_pretrained(
-                file_path,
-                device_map="auto",
-                quantization_config=bnb_config,
-                trust_remote_code=True,
-                use_flash_attention_2=True,
-            )
-
+            self.tokenizer, self.model = self.instantiate_tokenizer_and_hf_model(file_path=file_path)
             self.generation_config = GenerationConfig(
                 max_new_tokens=LLModel.DEFAULT_GENERATION_PARAMS.max_new_tokens,
                 temperature=LLModel.DEFAULT_GENERATION_PARAMS.temperature,
@@ -116,6 +106,28 @@ class LLModel(Model):
             self.generation_config = None
 
     @classmethod
+    def instantiate_tokenizer_and_hf_model(self, file_path: str) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
+        """Constructs the tokenizer and huggingface model at the specified filepath"""
+        tokenizer = AutoTokenizer.from_pretrained(file_path)
+        tokenizer.pad_token_id = self.tokenizer.eos_token_id
+
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16,
+        )
+        model = AutoModelForCausalLM.from_pretrained(
+            file_path,
+            device_map="auto",
+            quantization_config=bnb_config,
+            trust_remote_code=True,
+            use_flash_attention_2=True,
+        )
+
+        return tokenizer, model
+
+    @classmethod
     def generate_llm_input_from_model_inputs(cls, input_list: list[ModelInput], extra_suffix: str = "") -> LLMInput:
         """Converts a ModelInput into the LLMInput that's expected by the model"""
         return LLMInput(
@@ -136,6 +148,10 @@ class LLModel(Model):
             instruction_suffix,
             (" " + llm_input.extra_suffix) if llm_input.extra_suffix else "",
         )
+
+    def instantiate_tokenizer_and_hf_model(self, file_path: str) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
+        """Constructs the tokenizer and huggingface model at the specified filepath"""
+        return LLModel.instantiate_tokenizer_and_hf_model(file_path=file_path)
 
     def generate_input_strs(
         self, inputs: list[list[ModelInput]], speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED
@@ -213,8 +229,9 @@ class LLModel(Model):
 
         validate()
         self.model.eval()
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         input_strs = self.generate_input_strs(inputs=inputs, speech_structure=speech_structure)
-        inputs = self.tokenizer(input_strs, return_tensors="pt", padding=True).to("cuda")
+        inputs = self.tokenizer(input_strs, return_tensors="pt", padding=True).to(device)
         outputs = self.model.generate(**inputs, generation_config=create_new_generation_config())
         input_lengths = (inputs.input_ids != self.tokenizer.pad_token_id).sum(axis=1)
 
@@ -283,6 +300,7 @@ class LlamaModel(LLModel):
             nucleus=nucleus,
             instruction_prefix="instruction:",
             instruction_suffix="output:",
+            requires_file_path=True,
         )
 
         if self.model:
@@ -319,6 +337,7 @@ class MistralModel(LLModel):
             instruction_prefix="[INST]",
             instruction_suffix="[/INST]",
             linear_idxs=[31, 16],
+            requires_file_path=True,
         )
 
         if self.model:
@@ -332,6 +351,34 @@ class MistralModel(LLModel):
         copy.model = self.model
         copy.generation_config = self.generation_config
         return copy
+
+
+class StubLLModel(LLModel):
+    def __init__(
+        self,
+        alias: str,
+        file_path: Optional[str] = None,
+        is_debater: bool = True,
+        nucleus: bool = True,
+    ):
+        super().__init__(
+            alias=alias,
+            file_path=file_path,
+            is_debater=is_debater,
+            nucleus=nucleus,
+            instruction_prefix="",
+            instruction_suffix="",
+            linear_idxs=[],
+            requires_file_path=False,
+        )
+
+    def copy(self, alias: str, is_debater: Optional[bool] = None, nucleus: bool = False) -> LLModel:
+        """Generates a deepcopy of this model"""
+        return StubLLModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, nucleus=nucleus)
+
+    def instantiate_tokenizer_and_hf_model(self, file_path: str) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
+        """Constructs the stub tokenizer and stub model"""
+        return TokenizerStub(), ModelStub()
 
 
 class LLModuleWithLinearProbe(nn.Module):
@@ -387,3 +434,77 @@ class LLMType(Enum):
             return MistralModel
         else:
             raise Exception(f"Model type {self} not recognized")
+
+
+@dataclass
+class ModelConfigStub:
+    max_position_embeddings: int = 0
+
+
+class TokenizerOutputStub:
+    def __init__(self, input_ids: np.ndarray):
+        self.input_ids = input_ids
+        self.__data = {"input_ids": self.input_ids}
+
+    def __iter__(self):
+        return iter(self.__data)
+
+    def keys(self):
+        return self.__data.keys()
+
+    def __getitem__(self, key):
+        return self.__data[key]
+
+    def to(self, device: str):
+        return self
+
+
+class TokenizerStub:
+    def __init__(self):
+        self.pad_token_id = 0
+        self.eos_token_id = 1
+        self.alphabet = "abcdefghijklmnopqrstuvwxyz"
+
+    def __call__(self, inputs: list[str], **kwargs) -> dict[str, np.ndarray]:
+        batch_size = len(inputs)
+        max_sequence_length = max(len(seq) for seq in inputs)
+        return TokenizerOutputStub(input_ids=np.random.randint(0, 10_000, [batch_size, max_sequence_length]))
+
+    def decode(self, tokens: np.ndarray) -> str | list[str]:
+        if len(tokens.shape) == 1:
+            batch_size = 1
+            sequence_length = tokens.shape[0]
+        else:
+            batch_size, sequence_length = tokens.shape
+        outputs = [
+            " ".join(["".join(random.choices(self.alphabet, k=random.randrange(1, 8))) for i in range(sequence_length)])
+            for _ in range(batch_size)
+        ]
+        if len(outputs) == 1:
+            return outputs[0]
+        else:
+            return outputs
+
+
+@dataclass
+class ModelOutputStub:
+    sequences: np.ndarray
+
+
+class ModelStub:
+    def __init__(self):
+        self.config = ModelConfigStub()
+
+    def train(self):
+        pass
+
+    def eval(self):
+        pass
+
+    def generate(self, input_ids: np.ndarray, generation_config: GenerationConfig, **kwargs):
+        return self(input_ids=input_ids, generation_config=generation_config, **kwargs)
+
+    def __call__(self, input_ids: np.ndarray, generation_config: GenerationConfig, **kwargs):
+        batch_size, sequence_length = input_ids.shape
+        output_sequence_length = sequence_length + generation_config.max_new_tokens
+        return ModelOutputStub(sequences=np.random.randint(0, 10_000, [batch_size, output_sequence_length]))

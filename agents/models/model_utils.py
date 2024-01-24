@@ -1,6 +1,6 @@
 from agents.models.model import Model, ModelSettings
 from agents.models.deterministic_model import DeterministicModel
-from agents.models.llm_model import LlamaModel, MistralModel
+from agents.models.llm_model import LlamaModel, MistralModel, StubLLModel
 from agents.models.openai_model import OpenAIModel
 from agents.models.random_model import RandomModel
 from agents.models.served_model import ServedModel
@@ -19,6 +19,7 @@ class ModelType(Enum):
     OFFLINE = 5
     HUMAN = 6
     MISTRAL = 7
+    STUB_LLM = 8
 
 
 class ModelUtils:
@@ -59,6 +60,8 @@ class ModelUtils:
                 is_debater=is_debater,
                 nucleus=model_settings.nucleus,
             )
+        elif model_type == ModelType.STUB_LLM:
+            model = StubLLModel(alias=model_settings.alias)
         elif model_type == ModelType.DETERMINISTIC:
             model = DeterministicModel(alias=model_settings.alias, is_debater=is_debater)
         elif model_type == ModelType.OPENAI:

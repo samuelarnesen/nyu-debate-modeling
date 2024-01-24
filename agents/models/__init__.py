@@ -1,6 +1,15 @@
 from .deterministic_model import DeterministicModel
 from .human_model import HumanModel
-from .llm_model import GenerationParams, LlamaModel, LLModel, LLModuleWithLinearProbe, LLMInput, LLMType, MistralModel
+from .llm_model import (
+    GenerationParams,
+    LlamaModel,
+    LLModel,
+    LLModuleWithLinearProbe,
+    LLMInput,
+    LLMType,
+    MistralModel,
+    StubLLModel,
+)
 from .model_utils import ModelType, ModelUtils
 from .model import Model, ModelInput, ModelResponse, ModelSettings, SpeechStructure
 from .offline_model import OfflineModel, OfflineModelHelper
