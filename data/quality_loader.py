@@ -143,6 +143,7 @@ class QualityDataset(RawDataset):
         if len(rows) == 0:
             return rows
 
+        random.shuffle(rows)
         story_to_rows = {}
         for row in rows:
             if row.story_title not in story_to_rows:

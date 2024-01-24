@@ -21,12 +21,12 @@ class RowConverter:
         """Generates a dynamic prompt using the speech. See PromptParser.get_dynamic_prompt() for a more detailed explanation
         on what a dynamic prompt is."""
         return DynamicPromptParser.convert_to_dynamic_prompt(
-            dynamic_prompt_file_path=config.prompt_config.dynamic_prompts_file_path,
+            dynamic_prompt_file_path=config.prompt_config.dynamic_prompts_config.dynamic_prompts_file_path,
             prompt=prompt,
             prompt_config=PromptParser.convert_data_row_to_default_prompt_config(row=row, position=speech.position),
             dataset=dataset,
             row=row,
-            dynamic_prompt_name=config.prompt_config.dynamic_prompt_name,
+            dynamic_prompt_name=config.prompt_config.dynamic_prompts_config.dynamic_prompt_name,
         )
 
     @classmethod
@@ -47,8 +47,8 @@ class RowConverter:
         )
         prompt = PromptParser.parse(
             prompt_config=prompt_config,
-            prompts_file_path=config.prompt_config.prompts_file_path,
-            name=config.prompt_config.prompt_name,
+            prompts_file_path=config.prompt_config.file_path,
+            name=config.prompt_config.default_prompt_name,
         )
 
         if RowConverter.is_dynamic_prompt(config=config, dataset=dataset):
@@ -155,7 +155,7 @@ class RowConverter:
                 prompt=prompt,
                 speech_format=(
                     DebaterUtils.get_default_speech_format(
-                        name=name, num_speeches=rounds, use_scratchpad=config.prompt_config.use_scratchpad
+                        name=name, num_speeches=rounds, use_scratchpad=config.scratchpad_config.use_scratchpad
                     )
                     if is_debater
                     else JudgeUtils.get_default_speech_format(num_speeches=(rounds - 1))
@@ -166,7 +166,7 @@ class RowConverter:
                 for previous_speech in speeches_so_far:
                     speaker = RowConverter.get_speaker_from_speech(speech=previous_speech)
                     dummy_text = RowConverter.get_dummy_name_for_speaker(name=speaker)
-                    if config.prompt_config.use_scratchpad and speaker == name:
+                    if config.scratchpad_config.use_scratchpad and speaker == name:
                         transcript.add_speech(
                             speaker=speaker, content=previous_speech.scratchpad if not use_dummy else (dummy_text + "\n")
                         )
@@ -174,7 +174,7 @@ class RowConverter:
                         speaker=speaker, content=previous_speech.text if not use_dummy else (dummy_text + "\n")
                     )
 
-            if config.prompt_config.use_scratchpad:
+            if config.scratchpad_config.use_scratchpad:
                 llm_inputs.append(
                     llm_class.generate_llm_input_from_model_inputs(
                         input_list=transcript.to_model_input(), extra_suffix=speech.scratchpad

@@ -1,19 +1,22 @@
-from data.dataset import DataRow, DatasetType, JudgePreferenceDataRow, RawDataLoader, RawDataset, SplitType
+from data.dataset import DataRow, DatasetType, JudgingProbeDataRow, RawDataLoader, RawDataset, SplitType
 from data.quality_loader import QualityLoader
 from utils import InputUtils
 import utils.constants as constants
 
+import torch
+
 from typing import Any, Optional
+import base64
+import io
 import json
 
 
-class JudgePreferencesDataset(RawDataset):
+class QualityJudgingDataset(RawDataset):
     def __init__(self, train_data: list[str, Any], val_data: list[str, Any], test_data: list[str, Any]):
         """
-        A dataset of judge preferences from a previous best-of-n run. Each row is a pair of speeches with one
-        labelled as the chosen speech and the other as the rejected speech.
+        A dataset of judge internal representations, mapped to a target (whether it corresponds to the correct side).
         """
-        super().__init__(DatasetType.JUDGE_PREFERENCES)
+        super().__init__(DatasetType.JUDGING_PROBE)
         self.data = {
             SplitType.TRAIN: self.__convert_batch_to_rows(train_data),
             SplitType.VAL: self.__convert_batch_to_rows(val_data),
@@ -21,13 +24,13 @@ class JudgePreferencesDataset(RawDataset):
         }
         self.idxs = {SplitType.TRAIN: 0, SplitType.VAL: 0, SplitType.TEST: 0}
 
-    def get_data(self, split: SplitType = SplitType.TRAIN) -> list[JudgePreferenceDataRow]:
+    def get_data(self, split: SplitType = SplitType.TRAIN) -> list[JudgingProbeDataRow]:
         """Returns all the data for a given split"""
         if split not in self.data:
             raise ValueError(f"Split type {split} is not recognized. Only TRAIN, VAL, and TEST are recognized")
         return self.data[split]
 
-    def get_batch(self, split: SplitType = SplitType.TRAIN, batch_size: int = 1) -> list[JudgePreferenceDataRow]:
+    def get_batch(self, split: SplitType = SplitType.TRAIN, batch_size: int = 1) -> list[JudgingProbeDataRow]:
         """Returns a subset of the data for a given split"""
         if batch_size < 1:
             raise ValueError(f"Batch size must be >= 1. Inputted batch size was {batch_size}")
@@ -35,36 +38,35 @@ class JudgePreferencesDataset(RawDataset):
         self.idxs[split] = self.idxs[split] + batch_size if self.idxs[split] + batch_size < len(self.data[split]) else 0
         return data_to_return
 
-    def get_example(self, split: SplitType = SplitType.TRAIN, idx: int = 0) -> JudgePreferenceDataRow:
+    def get_example(self, split: SplitType = SplitType.TRAIN, idx: int = 0) -> JudgingProbeDataRow:
         """Returns an individual row in the dataset"""
         return self.data[split][idx % len(self.data[split])]
 
-    def __convert_batch_to_rows(self, train_data: list[tuple[str, str, str]]):
+    def __convert_batch_to_rows(self, train_data: list[tuple[torch.tensor, torch.tensor]]):
         return [
-            JudgePreferenceDataRow(prompt=instruction, chosen=chosen, rejected=rejected)
-            for instruction, chosen, rejected in train_data
+            JudgingProbeDataRow(internal_representation=internal_representation, target=target)
+            for internal_representation, target in train_data
         ]
 
 
-class JudgePreferencesLoader(RawDataLoader):
-    MIN_GAP = 0.10
-
+class QualityJudgingLoader(RawDataLoader):
     @classmethod
     def load(
         cls, full_dataset_filepath: str, supplemental_file_paths: Optional[dict[str, str]] = None, **kwargs
-    ) -> JudgePreferencesDataset:
+    ) -> QualityJudgingDataset:
         """
-        Constructs a JudgePreferencesDataset.
+        Constructs a QualityJudgingDataset.
 
         Params:
-            full_dataset_filepath: This is the *prefix* of the files with all the Best-of-N generations.
+            full_dataset_filepath: This is the *prefix* of the files with all the stored internal representations
             supplemental_file_paths: An optional dictionary of paths that could be used to support the creation
                 of the dataset. In this case, the relevant one would be quality_file_path.
 
         Returns:
-            A JudgePreferencesDataset where each row has a chosen and a rejected speech.
+            A QualityJudgingDataset where each row has an internal representation tensor and a target winning percentage
         """
 
+        # move this to the quality dataset
         def get_original_data_row(data: dict[Any, Any], dataset: RawDataset) -> DataRow:
             debate_identifier = data["metadata"]["debate_identifier"]
             question = data["metadata"]["question"]
@@ -77,22 +79,26 @@ class JudgePreferencesLoader(RawDataLoader):
         quality_filepath = (supplemental_file_paths or {}).get("quality_file_path", QualityLoader.DEFAULT_TRAIN_PATH)
         quality_dataset = QualityLoader.load(full_dataset_filepath=quality_filepath)
 
-        train_data = []
+        data = []
         input_texts = InputUtils.read_file_texts(base_path=full_dataset_filepath, extension="json")
         for text in input_texts:
             data = json.loads(text)
             row = get_original_data_row(data=data, dataset=quality_dataset)
-            for selected in filter(
-                lambda x: x["speaker"] in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME],
+            for speech in filter(
+                lambda x: x["speaker"] == constants.DEFAULT_JUDGE_NAME and x["supplemental"]["internal_representations"],
                 data["speeches"],
             ):
-                instruction = selected["supplemental"]["prompt"]
-                rejected = sorted(selected["supplemental"]["rejected_responses"], key=lambda x: x["preference"])[0]
-                if selected["supplemental"]["preference"] - rejected["preference"] > JudgePreferencesLoader.MIN_GAP:
-                    train_data.append((instruction, selected["content"], rejected["speech"]))
+                internal_representations = speech["supplemental"]["internal_representations"]
+                relevant_internal_representations = [internal_representations[-16], internal_representations[-1]]
+                decoded_tensors = [base64.b64decode(rep) for rep in relevant_internal_representations]
+                buffers = [io.BytesIO(decoded_tensor) for decoded_tensor in decoded_tensors]
+                loaded_tensors = [torch.load(buffer) for buffer in buffers]
+                x = torch.cat(loaded_tensors, dim=0)
+                y = torch.tensor([1, 0] if row.correct_index == 0 else [0, 1]).float()
+                data.append(x, y)
 
-        return JudgePreferencesDataset(
-            train_data=train_data,
-            val_data=[],
+        return QualityJudgingDataset(
+            train_data=data[0 : int(0.8 * len(data))],
+            val_data=data[int(0.8 * len(data)) :],
             test_data=[],
         )

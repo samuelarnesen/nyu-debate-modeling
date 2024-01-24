@@ -17,10 +17,10 @@ Default - Local:
     logging_and_saving_config:
         logging_steps: 10
         output_dir: /vast/spa9663/models/trained_models/Llama-2-Memorized-4/
-    prompt_config:
-        use_scratchpad: True
     dataset:
         dataset_type: quote_relevance
+    scratchpad_config:
+        use_scratchpad: True
 Train - 13B - Alpaca:
     model_name: Yukang/LongAlpaca-13B
     target: debater
@@ -63,6 +63,29 @@ Train - Mixtral:
         merge_output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-merged
     dataset:
         dataset_type: quality_debates
+Train - Mixtral - Unified:
+    model_name: /vast/spa9663/models/base_models/mixtral-8x7b
+    llm_type: mistral
+    target: debater
+    opening_speeches_only: False
+    max_length: 32986
+    training_hyperparameters:
+        num_train_epochs: 3
+        per_device_train_batch_size: 4
+        gradient_accumulation_steps: 4
+        optim: paged_adamw_32bit
+        learning_rate: 2e-4
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+    logging_and_saving_config:
+        logging_steps: 10
+        output_dir: /vast/spa9663/models/trained_models/mixtral-mega-adapter
+        merge_output_dir: /vast/spa9663/models/trained_models/mixtral-mega
+    dataset:
+        dataset_type: quality_debates
+        full_dataset_file_path: /home/spa9663/debate-data/mega_human_and_gpt4_debates.jsonl
 Quote Relevance - Mixtral:
     model_name: /vast/spa9663/models/base_models/mixtral-8x7b
     llm_type: mistral
@@ -83,7 +106,7 @@ Quote Relevance - Mixtral:
         logging_steps: 10
         output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-scratchpad
         merge_output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-scratchpad-merged
-    prompt_config:
-        use_scratchpad: True
     dataset:
         dataset_type: quote_relevance
+    scratchpad_config:
+        use_scratchpad: True

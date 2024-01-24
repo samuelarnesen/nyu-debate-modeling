@@ -5,6 +5,7 @@ from agents.models import (
     LlamaModel,
     LLModel,
     LLMInput,
+    LLModuleWithLinearProbe,
     LLMType,
     MistralModel,
     Model,

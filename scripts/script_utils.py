@@ -29,6 +29,7 @@ class TrainType(Enum):
     DPO = 1
     PPO = 2
     PRETRAIN = 3
+    PROBE = 4
 
 
 class ScriptUtils:
@@ -48,8 +49,6 @@ class ScriptUtils:
         parser.add_argument("--load_only", action="store_true", default=False)
         parser.add_argument("--suppress_graphs", action="store_true", default=False)
         parser.add_argument("--local_rank", type=int, default=0)  # needed for multi-GPU training
-        parser.add_argument("--bon", action="store_true", default=False)  # needed for best-of-n
-        parser.add_argument("--train_type", type=str, default="")  # needed for dpo training
         parser.add_argument("--dataset", type=str, default="")  # needed for dpo training
         args = parser.parse_args()
         ScriptUtils.set_log_level(args)
@@ -85,9 +84,6 @@ class ScriptUtils:
         else:
             experiment_name = args.configuration
             experiment_file_path = f"{root}experiments/configs/standard_experiment.yaml"
-        if args.bon:
-            transcript_path = f"{root}/outputs/bon"
-            experiment_file_path = f"{root}experiments/configs/bon_experiment.yaml"
         return DebateRoundScriptConfig(
             experiment_name=experiment_name,
             experiment_file_path=experiment_file_path,

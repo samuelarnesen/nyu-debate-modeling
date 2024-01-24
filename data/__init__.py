@@ -7,6 +7,7 @@ from .dataset import (
     DatasetConfig,
     DatasetType,
     JudgePreferenceDataRow,
+    JudgingProbeDataRow,
     RawDataLoader,
     RawDataset,
     SpeakerType,
@@ -16,6 +17,7 @@ from .dataset import (
 from .judge_preferences_loader import JudgePreferencesDataset, JudgePreferencesLoader
 from .loader_utils import LoaderUtils
 from .quality_debates_loader import QualityDebatesDataset, QualityDebatesLoader
+from .quality_judging_loader import QualityJudgingDataset, QualityJudgingLoader
 from .quality_loader import QualityDataset, QualityLoader
 from .quote_relevance_loader import (
     QuoteRelevanceDataset,

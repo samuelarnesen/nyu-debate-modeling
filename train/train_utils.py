@@ -1,5 +1,6 @@
-from agents import LLMType
+from agents import LLMType, ScratchpadConfig
 from data import DatasetConfig, DatasetType, LoaderUtils, RawDataset
+from prompts import PromptLoadingConfig
 import utils.constants as constants
 
 from peft import LoraConfig, PeftConfig, PeftType, PromptTuningInit, PromptTuningConfig, TaskType
@@ -17,16 +18,6 @@ import os
 class TrainingTarget(Enum):
     DEBATER = 1
     JUDGE = 2
-
-
-class PromptConfig(BaseModel):
-    prompts_file_path: Optional[str] = None
-    prompt_name: Optional[str] = None
-    use_dynamic_prompt: bool = False
-    dynamic_prompts_file_path: Optional[str] = None
-    dynamic_prompt_name: Optional[str] = None
-    use_scratchpad: bool = False
-    is_memorized: bool = False
 
 
 class LoggingAndSavingConfig(BaseModel):
@@ -52,7 +43,7 @@ class TrainingConfig(BaseModel):
     model_name: str
     reference_model_name: Optional[str]
     llm_type: str = "llama"
-    prompt_config: PromptConfig = PromptConfig()
+    prompt_config: PromptLoadingConfig = PromptLoadingConfig()
     logging_and_saving_config: Optional[LoggingAndSavingConfig]
     training_hyperparameters: Optional[TrainingHyperParameterConfig]
     target: Optional[str | TrainingTarget] = None
@@ -60,6 +51,7 @@ class TrainingConfig(BaseModel):
     opening_speeches_only: bool = False
     requires_token: bool = False
     max_length: int = constants.MAX_LENGTH
+    scratchpad_config: ScratchpadConfig = ScratchpadConfig()
 
 
 class TrainUtils:

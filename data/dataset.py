@@ -1,8 +1,10 @@
 from abc import ABC
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional, Union
 
 from pydantic import BaseModel
+import torch
 
 
 class DatasetConfig(BaseModel):
@@ -28,6 +30,7 @@ class DatasetType(Enum):
     ANNOTATED_QUALITY_DEBATES = 4
     SCRATCHPAD_QUALITY_DEBATES = 5
     QUOTE_RELEVANCE = 6
+    JUDGING_PROBE = 7
 
 
 class SpeakerType(Enum):
@@ -85,6 +88,12 @@ class JudgePreferenceDataRow(BaseModel):
     prompt: str
     chosen: str
     rejected: str
+
+
+@dataclass
+class JudgingProbeDataRow:
+    internal_representation: torch.tensor
+    target: torch.tensor
 
 
 class RawDataset(ABC):

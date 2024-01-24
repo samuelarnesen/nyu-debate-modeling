@@ -8,11 +8,14 @@ import utils.constants as constants
 from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig
 import numpy as np
+import torch.nn as nn
 import torch
 
 from enum import Enum
 from typing import Optional, Union, Type
+import base64
 import copy
+import io
 import math
 import re
 
@@ -45,6 +48,7 @@ class LLModel(Model):
         nucleus: bool = True,
         instruction_prefix: str = "",
         instruction_suffix: str = "",
+        linear_idxs: Optional[list[int]] = None,
     ):
         """
         An LLModel uses a large language model (currently Llama 2 or Mistral) to generate text.
@@ -55,13 +59,16 @@ class LLModel(Model):
             nucleus: Whether nucleus sampling (true) or beam_search (false) should be used.
             instruction_prefix: the prefix to use before the instructions that get passed to the model
             instruction_suffix: the suffix to use after the instructions that get passed to the model
+            linear_idxs: when judging, these are the hidden dimensions to use as input to the linear probe
         """
         super().__init__(alias=alias, is_debater=is_debater)
         torch.cuda.empty_cache()
         self.logger = LoggerUtils.get_default_logger(__name__)
         self.instruction_prefix = instruction_prefix
         self.instruction_suffix = instruction_suffix
+        self.instantiated_model = False
         if file_path:
+            self.instantiated_model = True
             self.is_debater = is_debater
             self.tokenizer = AutoTokenizer.from_pretrained(file_path)
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
@@ -98,6 +105,9 @@ class LLModel(Model):
                 self.generation_config.do_sample = False
                 self.generation_config.top_p = None
                 self.generation_config.temperature = None
+
+            if not is_debater:
+                self.model = LLModuleWithLinearProbe(base_model=self.model, linear_idxs=linear_idxs)
 
         else:
             self.is_debater = False
@@ -204,7 +214,7 @@ class LLModel(Model):
         validate()
         self.model.eval()
         input_strs = self.generate_input_strs(inputs=inputs, speech_structure=speech_structure)
-        inputs = self.tokenizer(input_strs, return_tensors="pt", padding=True)
+        inputs = self.tokenizer(input_strs, return_tensors="pt", padding=True).to("cuda")
         outputs = self.model.generate(**inputs, generation_config=create_new_generation_config())
         input_lengths = (inputs.input_ids != self.tokenizer.pad_token_id).sum(axis=1)
 
@@ -213,15 +223,19 @@ class LLModel(Model):
             if self.is_debater or speech_structure != SpeechStructure.DECISION:
                 decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[min(i, len(input_lengths) - 1)] :])
                 new_tokens = decoded.split(constants.INSTRUCTION_SUFFIX)[-1]
-                decoded_outputs.append(ModelResponse(speech=StringUtils.clean_string(new_tokens)))
+                decoded_outputs.append(ModelResponse(speech=StringUtils.clean_string(new_tokens), prompt=input_strs[i]))
             else:
-                tokenized_debater_a = self.tokenizer(constants.DEFAULT_DEBATER_A_NAME)
-                tokenized_debater_b = self.tokenizer(constants.DEFAULT_DEBATER_B_NAME)
-                decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[i] :])
-                a_score = get_string_log_prob(constants.DEFAULT_DEBATER_A_NAME, outputs.scores, i)
-                b_score = get_string_log_prob(constants.DEFAULT_DEBATER_B_NAME, outputs.scores, i)
-                normalized_a_score, normalized_b_score = normalize_log_probs(a_score, b_score)
+                internal_representations = []
+                if isinstance(self.model, LLModuleWithLinearProbe):
+                    (a_score, b_score), internal_representations = outputs[i]
+                else:
+                    tokenized_debater_a = self.tokenizer(constants.DEFAULT_DEBATER_A_NAME)
+                    tokenized_debater_b = self.tokenizer(constants.DEFAULT_DEBATER_B_NAME)
+                    decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[i] :])
+                    a_score = get_string_log_prob(constants.DEFAULT_DEBATER_A_NAME, outputs.scores, i)
+                    b_score = get_string_log_prob(constants.DEFAULT_DEBATER_B_NAME, outputs.scores, i)
 
+                normalized_a_score, normalized_b_score = normalize_log_probs(a_score, b_score)
                 decoded_outputs.append(
                     ModelResponse(
                         decision=(
@@ -232,6 +246,7 @@ class LLModel(Model):
                             constants.DEFAULT_DEBATER_B_NAME: normalized_b_score,
                         },
                         prompt=input_strs[i],
+                        internal_representations=internal_representations,
                     )
                 )
 
@@ -287,6 +302,7 @@ class MistralModel(LLModel):
     INSTRUCTION_PREFIX = "[INST]"
     INSTRUCTION_SUFFIX = "[/INST]"
     TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj"]
+    LINEAR_IDXS = [31, 16]
 
     def __init__(
         self,
@@ -302,6 +318,7 @@ class MistralModel(LLModel):
             nucleus=nucleus,
             instruction_prefix="[INST]",
             instruction_suffix="[/INST]",
+            linear_idxs=[31, 16],
         )
 
         if self.model:
@@ -315,6 +332,48 @@ class MistralModel(LLModel):
         copy.model = self.model
         copy.generation_config = self.generation_config
         return copy
+
+
+class LLModuleWithLinearProbe(nn.Module):
+    def __init__(self, base_model: LLModel, linear_idxs: Optional[list[int]] = None):
+        super().__init__()
+        self.linear_idxs = linear_idxs or [-1]
+        self.base_model = base_model.model
+        self.base_model.eval()
+        self.probe = nn.Sequential(
+            nn.Linear(self.base_model.config.hidden_size * len(self.linear_idxs), 2), nn.Softmax(dim=1)
+        )
+
+    def encode_representation(self, representation: torch.tensor) -> str:
+        buffer = io.BytesIO()
+        torch.save(x, buffer)
+        buffer.seek(0)
+        return base64.b64encode(buffer.read()).decode("utf-8")
+
+    def forward(self, input_ids: Optional[torch.tensor] = None) -> list[tuple(tuple(float, float), torch.tensor)]:
+        batch_size = input_ids.shape[0]
+
+        base_model_output = self.base_model(
+            input_ids=input_ids,
+        )
+
+        hidden_states = [[] for i in range(batch_size)]
+        for i, layer in enumerate(base_model_output.hidden_states):
+            for j in range(batch_size):
+                hidden_states[j].append(layer[j, -1, :])
+
+        input_vecs = torch.stack(
+            [torch.cat([hidden_states[i][idx] for idx in self.linear_idxs], dim=0) for i in range(batch_size)]
+        )
+
+        outputs = self.probe(input_vecs)
+        reformatted_outputs = [(output[0].item(), output[1].item()) for output in outputs]
+        encoded_hidden_states = [self.encode_representation(hs) for hs in hidden_states]
+
+        return [(ro, ehs) for ro, ehs in zip(reformatted_outputs, encoded_hidden_states)]
+
+    def parameters(self):
+        return self.probe.parameters()
 
 
 class LLMType(Enum):

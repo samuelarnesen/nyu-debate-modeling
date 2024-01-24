@@ -19,7 +19,6 @@ class ModelType(Enum):
     OFFLINE = 5
     HUMAN = 6
     MISTRAL = 7
-    SERVED = 8
 
 
 class ModelUtils:
@@ -67,9 +66,7 @@ class ModelUtils:
         elif model_type == ModelType.OFFLINE:
             model = None  # offline models aren't directly instantiated
         elif model_type == ModelType.HUMAN:
-            raise Exception("Human model cannot be directly instantiated")
-        elif model_type == ModelType.SERVED:
-            raise Exception("Served model cannot be directly instantiated")
+            model = None  # offline models aren't directly instantiated
         else:
             raise Exception(f"Model {model_type} not found")
 

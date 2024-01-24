@@ -31,5 +31,5 @@ for i, debate_round in enumerate(debate_rounds):
     summary = debate_round(save_file_path_prefix=save_file_path_prefix)
     results_collector.record_result(summary)
 
-if not args.suppress_graphs and not args.bon:
+if not args.suppress_graphs:
     results_collector.graph_results()

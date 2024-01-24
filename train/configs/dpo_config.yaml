@@ -15,9 +15,6 @@
         logging_steps: 1
         output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-1/
         merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
-    prompt_config:
-        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-        prompt_name: Base Prompt
 13B - Alpaca - Updated:
     model_name: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
     target: debater
@@ -35,6 +32,21 @@
         logging_steps: 10
         output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-2/
         merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
-    prompt_config:
-        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-        prompt_name: Base Prompt
+Mixtral:
+    model_name: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-1
+    target: debater
+    llm_type: mistral
+    training_hyperparameters:
+        num_train_epochs: 1
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 8
+        optim: paged_adamw_32bit
+        learning_rate: 5e-4
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-2
+        merge_output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-merged
