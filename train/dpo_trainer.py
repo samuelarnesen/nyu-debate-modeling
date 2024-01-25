@@ -11,6 +11,8 @@ from trl import DPOTrainer
 import pandas as pd
 import torch
 
+from typing import Optional
+
 try:
     from utils.flash_attn_utils import (
         replace_attn_with_flash_attn,
@@ -36,11 +38,8 @@ class DirectPreferenceTrainer:
 
     @classmethod
     def get_trainer(
-        cls,
-        config: TrainingConfig,
-        raw_dataset: RawDataset,
-        is_local: bool = False,
-    ) -> DPOTrainer:
+        cls, config: TrainingConfig, raw_dataset: RawDataset, is_local: bool = False, is_test: bool = False
+    ) -> Optional[DPOTrainer]:
         """
         Generates a Trainer object.
 
@@ -48,6 +47,7 @@ class DirectPreferenceTrainer:
             config: configuration specifying the prompt setup and hyperparameters for the training run.
             raw_dataset: dataset to use for training
             is_local: whether this is being run on a cpu
+            is_test: whether to actually instantiate the trainer (if true, do not instantiate)
 
         Returns:
             dpo_trainer: One can call dpo_trainer.train() to then run the training loop.
@@ -55,7 +55,7 @@ class DirectPreferenceTrainer:
 
         if FLASH_ATTENTION_AVAILABLE:
             replace_attn_with_flash_attn()
-        tokenizer = TrainUtils.get_tokenizer(config=config)
+        tokenizer = TrainUtils.get_tokenizer(config=config, is_local=is_local)
         model = TrainUtils.load_model(config=config, is_local=is_local)
 
         training_args = TrainingArguments(
@@ -81,20 +81,22 @@ class DirectPreferenceTrainer:
         if FLASH_ATTENTION_AVAILABLE:
             model = upcast_layer_for_flash_attention(model, torch.bfloat16)
 
-        trainer = DPOTrainer(
-            model=model,
-            ref_model=None,
-            max_length=16384,
-            max_prompt_length=16384,
-            beta=0.1,
-            args=training_args,
-            train_dataset=train_dataset,
-            tokenizer=tokenizer,
-            peft_config=peft_config,
-            callbacks=[LoggingCallback],
-            loss_type="ipo",
-        )
+        if not is_test:
+            trainer = DPOTrainer(
+                model=model,
+                ref_model=None,
+                max_length=16384,
+                max_prompt_length=16384,
+                beta=0.1,
+                args=training_args,
+                train_dataset=train_dataset,
+                tokenizer=tokenizer,
+                peft_config=peft_config,
+                callbacks=[LoggingCallback],
+                loss_type="dpo",
+            )
 
-        torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
+            return trainer
 
-        return trainer
+        return None

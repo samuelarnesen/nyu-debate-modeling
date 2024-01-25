@@ -59,11 +59,8 @@ class SupervisedTrainer:
 
     @classmethod
     def get_trainer(
-        cls,
-        config: TrainingConfig,
-        raw_dataset: Optional[RawDataset] = None,
-        is_local: bool = False,
-    ) -> SFTTrainer:
+        cls, config: TrainingConfig, raw_dataset: Optional[RawDataset] = None, is_local: bool = False, is_test: bool = False
+    ) -> Optional[SFTTrainer]:
         """
         Generates a Trainer object.
 
@@ -71,6 +68,7 @@ class SupervisedTrainer:
             config: configuration specifying the prompt setup and hyperparameters for the training run.
             raw_dataset: dataset to use for training
             is_local: whether this is being run on a cpu
+            is_test: whether to actually instantiate the trainer (if true, do not instantiate)
 
         Returns:
             sft_trainer: One can call dpo_trainer.train() to then run the training loop.
@@ -81,7 +79,7 @@ class SupervisedTrainer:
         if not raw_dataset:
             raw_dataset = TrainUtils.create_dataset(config=config)
 
-        tokenizer = TrainUtils.get_tokenizer(config=config)
+        tokenizer = TrainUtils.get_tokenizer(config=config, is_local=is_local)
         model = TrainUtils.load_model(config=config, is_local=is_local)
 
         training_args = TrainingArguments(
@@ -116,23 +114,26 @@ class SupervisedTrainer:
             target=target,
         )
 
-        peft_config = TrainUtils.get_peft_config(config)
-        model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
-        if FLASH_ATTENTION_AVAILABLE:
-            model = upcast_layer_for_flash_attention(model, torch.bfloat16).to("cuda")
+        peft_config = TrainUtils.get_peft_config(config) if not is_local else None
+        if peft_config:
+            model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
+            if FLASH_ATTENTION_AVAILABLE:
+                model = upcast_layer_for_flash_attention(model, torch.bfloat16).to("cuda")
 
-        trainer = SFTTrainer(
-            model=model,
-            train_dataset=train_dataset,
-            peft_config=peft_config if not is_local else None,
-            tokenizer=tokenizer,
-            data_collator=collator,
-            formatting_func=lambda x: SupervisedTrainer.format_instruction(x, llm_class),
-            max_seq_length=config.max_length,
-            callbacks=[LoggingCallback],
-            args=training_args,
-        )
+        if not is_test:
+            trainer = SFTTrainer(
+                model=model,
+                train_dataset=train_dataset,
+                peft_config=peft_config,
+                tokenizer=tokenizer,
+                data_collator=collator,
+                formatting_func=lambda x: SupervisedTrainer.format_instruction(x, llm_class),
+                max_seq_length=config.max_length,
+                callbacks=[LoggingCallback],
+                args=training_args,
+            )
 
-        torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
 
-        return trainer
+            return trainer
+        return None

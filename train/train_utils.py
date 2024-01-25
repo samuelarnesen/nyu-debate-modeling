@@ -1,4 +1,4 @@
-from agents import LLMType, ScratchpadConfig
+from agents import LLMType, LLModel, ModelStub, ScratchpadConfig, TokenizerStub
 from data import DatasetConfig, DatasetType, LoaderUtils, RawDataset
 from prompts import PromptLoadingConfig
 import utils.constants as constants
@@ -129,30 +129,13 @@ class TrainUtils:
             model: a model loaded from huggingface
         """
 
-        local_rank = int(os.environ.get("LOCAL_RANK", "0"))
-        device_map = {"": local_rank}
         if not is_local:
-            bnb_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.float16,
+            model = LLModel.instantiate_hf_model(
+                file_path=config.model_name, requires_token=config.requires_token, use_cache=False
             )
-
-            model = AutoModelForCausalLM.from_pretrained(
-                pretrained_model_name_or_path=config.model_name,
-                quantization_config=bnb_config,
-                use_cache=False,
-                device_map=device_map,
-                trust_remote_code=True,
-                use_flash_attention_2=True,
-                token=os.getenv("META_ACCESS_TOKEN") if config.requires_token else None,
-            )
-
             model.config.max_position_embeddings = config.max_length
             model.config.transformers_version = "4.34.0"
             model.generation_config.transformers_version = "4.34.0"
-
             if requires_value_head:
                 peft_config = TrainUtils.get_peft_config(config=config)
                 return AutoModelForCausalLMWithValueHead.from_pretrained(
@@ -164,26 +147,17 @@ class TrainUtils:
                     use_flash_attention_2=True,
                     peft_config=peft_config,
                 )
-            else:
-                return model
+            return model
         else:
-            return AutoModelForCausalLM.from_pretrained(
-                pretrained_model_name_or_path=config.model_name,
-                torch_dtype=torch.float16,
-                device_map="auto",
-                revision="main",
-            )
+            return ModelStub()
 
     @classmethod
-    def get_tokenizer(cls, config: TrainingConfig) -> AutoTokenizer:
+    def get_tokenizer(cls, config: TrainingConfig, is_local: bool = False) -> AutoTokenizer:
         """Gets the tokenizer associated with the specified model"""
-        tokenizer = AutoTokenizer.from_pretrained(
-            config.model_name,
-            token=os.getenv("META_ACCESS_TOKEN") if config.requires_token else None,
-        )
-        tokenizer.pad_token = tokenizer.eos_token
-        tokenizer.padding_side = "right"
-        return tokenizer
+        if not is_local:
+            return LLModel.instantiate_tokenizer(file_path=config.model_name, requires_token=config.requires_token)
+        else:
+            return TokenizerStub()
 
     @classmethod
     def get_llm_class(cls, config: TrainingConfig):

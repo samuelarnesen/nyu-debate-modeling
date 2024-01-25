@@ -18,6 +18,7 @@ import base64
 import copy
 import io
 import math
+import os
 import random
 import re
 
@@ -106,26 +107,38 @@ class LLModel(Model):
             self.generation_config = None
 
     @classmethod
-    def instantiate_tokenizer_and_hf_model(self, file_path: str) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
-        """Constructs the tokenizer and huggingface model at the specified filepath"""
-        tokenizer = AutoTokenizer.from_pretrained(file_path)
-        tokenizer.pad_token_id = self.tokenizer.eos_token_id
+    def instantiate_tokenizer(
+        self, file_path: str, requires_token: bool = False
+    ) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
+        tokenizer = AutoTokenizer.from_pretrained(
+            file_path,
+            token=os.getenv("META_ACCESS_TOKEN") if requires_token else None,
+        )
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.padding_side = "right"
+        return tokenizer
 
+    @classmethod
+    def instantiate_hf_model(
+        self, file_path: str, requires_token: bool = False, use_cache: bool = True
+    ) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
+        local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+        device_map = {"": local_rank}
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_use_double_quant=True,
             bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.bfloat16,
         )
-        model = AutoModelForCausalLM.from_pretrained(
-            file_path,
-            device_map="auto",
+        return AutoModelForCausalLM.from_pretrained(
+            pretrained_model_name_or_path=file_path,
+            device_map=device_map,
             quantization_config=bnb_config,
             trust_remote_code=True,
             use_flash_attention_2=True,
+            use_cache=use_cache,
+            token=os.getenv("META_ACCESS_TOKEN") if requires_token else None,
         )
-
-        return tokenizer, model
 
     @classmethod
     def generate_llm_input_from_model_inputs(cls, input_list: list[ModelInput], extra_suffix: str = "") -> LLMInput:
@@ -149,9 +162,13 @@ class LLModel(Model):
             (" " + llm_input.extra_suffix) if llm_input.extra_suffix else "",
         )
 
-    def instantiate_tokenizer_and_hf_model(self, file_path: str) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
+    def instantiate_tokenizer_and_hf_model(
+        self, file_path: str, requires_token: bool = False
+    ) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
         """Constructs the tokenizer and huggingface model at the specified filepath"""
-        return LLModel.instantiate_tokenizer_and_hf_model(file_path=file_path)
+        tokenizer = LLModel.instantiate_tokenizer(file_path=file_path, requires_token=requires_token)
+        hf_model = LLModel.instantiate_hf_model(file_path=file_path, requires_token=requires_token)
+        return tokenizer, hf_model
 
     def generate_input_strs(
         self, inputs: list[list[ModelInput]], speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED
@@ -426,12 +443,15 @@ class LLModuleWithLinearProbe(nn.Module):
 class LLMType(Enum):
     LLAMA = 0
     MISTRAL = 1
+    STUB_LLM = 2
 
     def get_llm_class(self) -> Type[LLModel]:
         if self == LLMType.LLAMA:
             return LlamaModel
         elif self == LLMType.MISTRAL:
             return MistralModel
+        elif self == LLMType.STUB_LLM:
+            return StubLLModel
         else:
             raise Exception(f"Model type {self} not recognized")
 
@@ -468,7 +488,19 @@ class TokenizerStub:
     def __call__(self, inputs: list[str], **kwargs) -> dict[str, np.ndarray]:
         batch_size = len(inputs)
         max_sequence_length = max(len(seq) for seq in inputs)
-        return TokenizerOutputStub(input_ids=np.random.randint(0, 10_000, [batch_size, max_sequence_length]))
+        return TokenizerOutputStub(input_ids=np.random.randint(0, 100, [batch_size, max_sequence_length]))
+
+    def encode(self, input_string: str | list[str], **kwargs):
+        if isinstance(input_string, np.ndarray):
+            return input_string
+
+        length = len(input_string)
+        if isinstance(input_string, str):
+            input_string = [input_string]
+        input_ids = self(input_string).input_ids
+        if len(input_string) == 1:
+            return input_ids[0, :]
+        return input_ids
 
     def decode(self, tokens: np.ndarray) -> str | list[str]:
         if len(tokens.shape) == 1:
@@ -507,4 +539,4 @@ class ModelStub:
     def __call__(self, input_ids: np.ndarray, generation_config: GenerationConfig, **kwargs):
         batch_size, sequence_length = input_ids.shape
         output_sequence_length = sequence_length + generation_config.max_new_tokens
-        return ModelOutputStub(sequences=np.random.randint(0, 10_000, [batch_size, output_sequence_length]))
+        return ModelOutputStub(sequences=np.random.randint(0, 100, [batch_size, output_sequence_length]))

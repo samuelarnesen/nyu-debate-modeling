@@ -1,5 +1,6 @@
 from .dpo_trainer import DirectPreferenceTrainer
-from .linear_trainer import LinearTrainer
+
+# from .linear_trainer import LinearTrainer
 from .ppo_trainer import PPOTrainerWrapper
 from .pretrain_trainer import PretrainTrainer
 from .row_converter import RowConverter

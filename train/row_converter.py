@@ -154,7 +154,7 @@ class RowConverter:
                 name=name,
                 prompt=prompt,
                 speech_format=(
-                    DebaterUtils.get_default_speech_format(
+                    DebaterUtils.get_speech_format(
                         name=name, num_speeches=rounds, use_scratchpad=config.scratchpad_config.use_scratchpad
                     )
                     if is_debater

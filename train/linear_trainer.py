@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from agents import LLModuleWithLinearProbe, ModelSettings, ModelUtils
-from data import QualityJudgingDataset, QualityJudgingDataRow, RawDataset, SplitType
+from data import JudgingProbeDataRow, QualityJudgingDataset, RawDataset, SplitType
 from train.train_utils import TrainingConfig, TrainUtils
 
 from peft import prepare_model_for_kbit_training, get_peft_model
@@ -9,14 +11,6 @@ import torch.optim as optim
 import torch
 
 from typing import Optional, Type
-
-try:
-    from utils.flash_attn_utils import replace_attn_with_flash_attn, upcast_layer_for_flash_attention
-
-    FLASH_ATTENTION_AVAILABLE = True
-except ImportError as e:
-    print("Running without flash attention")
-    FLASH_ATTENTION_AVAILABLE = False
 
 
 class LinearTrainer:

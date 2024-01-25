@@ -1,9 +1,10 @@
-Default - Local:
-    model_name: meta-llama/Llama-2-13b-hf
+Test:
+    model_name: stub_model
     target: debater
     max_length: 4096
     requires_token: True
     opening_speeches_only: False
+    llm_type: stub_llm
     training_hyperparameters:
         num_train_epochs: 4
         per_device_train_batch_size: 4
@@ -16,15 +17,14 @@ Default - Local:
         peft_type: lora
     logging_and_saving_config:
         logging_steps: 10
-        output_dir: /vast/spa9663/models/trained_models/Llama-2-Memorized-4/
+        output_dir: stub_model
     dataset:
-        dataset_type: quote_relevance
-    scratchpad_config:
-        use_scratchpad: True
+        dataset_type: quality_debates
 Train - 13B - Alpaca:
     model_name: Yukang/LongAlpaca-13B
     target: debater
     opening_speeches_only: False
+    llm_type: llama
     training_hyperparameters:
         num_train_epochs: 4
         per_device_train_batch_size: 4
