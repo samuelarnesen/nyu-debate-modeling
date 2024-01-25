@@ -127,36 +127,149 @@ class ResultsCollector:
 
     def __graph_judge(self) -> dict[str, float]:
         """Graphs the judge accuracy statistics"""
+        aggregated_matchups_to_stats = {}
+        binary_matchups_to_stats = {}
         matchup_to_stats = {}
-        for summary in self.summaries:
+        for i, summary in enumerate(self.summaries):
             pair = "_v_".join(sorted([summary.first_debater_alias, summary.second_debater_alias]))
             if pair not in matchup_to_stats:
                 matchup_to_stats[pair] = JudgeStats()
+                binary_matchups_to_stats[pair] = JudgeStats()
             matchup_to_stats[pair].matches += 1
             matchup_to_stats[pair].correct_calls += (
                 summary.first_debater_win_prob if summary.metadata.first_debater_correct else summary.second_debater_win_prob
             )
+            binary_matchups_to_stats[pair].matches += 1
+            binary_correct = (summary.metadata.first_debater_correct and summary.first_debater_win_prob > 0.5) or (
+                not summary.metadata.first_debater_correct and summary.first_debater_win_prob < 0.5
+            )
+            binary_matchups_to_stats[pair].correct_calls += 1 if binary_correct else 0
+            binary_matchups_to_stats[pair].first_calls += 1 if summary.first_debater_wins else 0
             matchup_to_stats[pair].first_calls += summary.first_debater_win_prob
+            if i % 2 == 0 and self.experiment.flip and self.num_debaters > 1:
+                if pair not in aggregated_matchups_to_stats:
+                    aggregated_matchups_to_stats[pair] = JudgeStats()
+                aggregated_matchups_to_stats[pair].matches += 1
+                first_debater_win_prob = (summary.first_debater_win_prob + self.summaries[i + 1].first_debater_win_prob) / 2
+                second_debater_win_prob = (
+                    summary.second_debater_win_prob + self.summaries[i + 1].second_debater_win_prob
+                ) / 2
+                binary_correct = (summary.metadata.first_debater_correct and first_debater_win_prob > 0.5) or (
+                    not summary.metadata.first_debater_correct and second_debater_win_prob < 0.5
+                )
+                aggregated_matchups_to_stats[pair].correct_calls += 1 if binary_correct else 0
+                aggregated_matchups_to_stats[pair].first_calls += 1 if first_debater_win_prob > 0.5 else 0
 
-        fig, axs = plt.subplots(1, 2)
+        fig, axs = plt.subplots(1, 3)
 
-        axs[0].bar(matchup_to_stats.keys(), [val.correct_calls / val.matches for _, val in matchup_to_stats.items()])
-        axs[0].set_xticklabels(matchup_to_stats.keys(), rotation="vertical")
-        axs[0].xaxis.set_major_locator(ticker.FixedLocator(range(len(matchup_to_stats))))
-        axs[0].set_title("Percent Correct")
-        axs[0].set_ylim(0, 1)
+        if self.experiment.flip and self.num_debaters > 1:
+            group_width = 0.3
+            spacing = 0.025
+            bar_width = (group_width - spacing) / len(matchup_to_stats.keys())
+            for i, matchup in enumerate(matchup_to_stats):
+                axs[0].bar(
+                    (np.arange(len(matchup_to_stats)) * group_width) + (i * bar_width),
+                    [
+                        matchup_to_stats[matchup].correct_calls / matchup_to_stats[matchup].matches,
+                        binary_matchups_to_stats[matchup].correct_calls / binary_matchups_to_stats[matchup].matches,
+                        aggregated_matchups_to_stats[matchup].correct_calls / aggregated_matchups_to_stats[matchup].matches,
+                    ],
+                    bar_width,
+                    label=matchup,
+                )
+            axs[0].set_xticks((np.arange(3) * group_width) + (group_width / 2) - (bar_width / 2))
+            axs[0].set_xticklabels(["Probabilistic", "Binary", "Aggregated"])
+            axs[0].set_title("Percent Correct")
+            axs[0].set_ylim(0, 1)
+            axs[0].legend()
 
-        axs[1].bar(matchup_to_stats.keys(), [val.first_calls / val.matches for _, val in matchup_to_stats.items()])
-        axs[1].set_xticklabels(matchup_to_stats.keys(), rotation="vertical")
-        axs[1].xaxis.set_major_locator(ticker.FixedLocator(range(len(matchup_to_stats))))
-        axs[1].set_title("Percent Chose First Debater")
-        axs[1].set_ylim(0, 1)
+            for i, matchup in enumerate(matchup_to_stats):
+                axs[1].bar(
+                    (np.arange(len(matchup_to_stats)) * group_width) + (i * bar_width),
+                    [
+                        matchup_to_stats[matchup].first_calls / matchup_to_stats[matchup].matches,
+                        aggregated_matchups_to_stats[matchup].first_calls / aggregated_matchups_to_stats[matchup].matches,
+                        binary_matchups_to_stats[matchup].first_calls / binary_matchups_to_stats[matchup].matches,
+                    ],
+                    bar_width,
+                    label=matchup,
+                )
+            axs[1].set_xticks((np.arange(3) * group_width) + (group_width / 2) - (bar_width / 2))
+            axs[1].set_xticklabels(["Probabilistic", "Aggregated", "Binary"])
+            axs[1].set_title("Percent First")
+            axs[1].set_ylim(0, 1)
+            axs[1].legend()
+        else:
+            axs[0].bar(matchup_to_stats.keys(), [val.correct_calls / val.matches for _, val in matchup_to_stats.items()])
+            axs[0].set_xticklabels(matchup_to_stats.keys(), rotation="vertical")
+            axs[0].xaxis.set_major_locator(ticker.FixedLocator(range(len(matchup_to_stats))))
+            axs[0].set_title("Percent Correct")
+            axs[0].set_ylim(0, 1)
+
+            axs[1].bar(matchup_to_stats.keys(), [val.first_calls / val.matches for _, val in matchup_to_stats.items()])
+            axs[1].set_xticklabels(matchup_to_stats.keys(), rotation="vertical")
+            axs[1].xaxis.set_major_locator(ticker.FixedLocator(range(len(matchup_to_stats))))
+            axs[1].set_title("Percent Chose First Debater")
+            axs[1].set_ylim(0, 1)
+
+        bucket_bottoms = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1.0]
+        buckets = [(0, 0) for i in range(len(bucket_bottoms))]
+        agg_buckets = [(0, 0) for i in range(len(bucket_bottoms))]
+        for i, summary in enumerate(self.summaries):
+            max_prob = max(summary.first_debater_win_prob, summary.second_debater_win_prob)
+            binary_correct = (summary.metadata.first_debater_correct and summary.first_debater_win_prob > 0.5) or (
+                not summary.metadata.first_debater_correct and summary.first_debater_win_prob < 0.5
+            )
+            for j in range(len(bucket_bottoms) - 1):
+                if max_prob >= bucket_bottoms[j] and max_prob < bucket_bottoms[j + 1]:
+                    buckets[j] = (buckets[j][0] + (1 if binary_correct else 0), buckets[j][1] + 1)
+                    break
+
+            if self.experiment.flip and i % 2 == 0 and self.num_debaters > 1:
+                agg_first_win_prob = (
+                    self.summaries[i].first_debater_win_prob + self.summaries[i + 1].first_debater_win_prob
+                ) / 2
+                agg_second_win_prob = (
+                    self.summaries[i].second_debater_win_prob + self.summaries[i + 1].second_debater_win_prob
+                ) / 2
+                agg_max_prob = max(agg_first_win_prob, agg_second_win_prob)
+                binary_correct = (summary.metadata.first_debater_correct and agg_first_win_prob > 0.5) or (
+                    not summary.metadata.first_debater_correct and agg_second_win_prob < 0.5
+                )
+                for j in range(len(bucket_bottoms) - 1):
+                    if agg_max_prob >= bucket_bottoms[j] and agg_max_prob < bucket_bottoms[j + 1]:
+                        agg_buckets[j] = (
+                            agg_buckets[j][0] + (1 if binary_correct else 0),
+                            agg_buckets[j][1] + 1,
+                        )
+                        break
+
+        xs = [bottom for i, bottom in filter(lambda x: buckets[x[0]][1] > 0, enumerate(bucket_bottoms[:-1]))]
+        ys = [wins / count for (wins, count) in filter(lambda x: x[1] > 0, buckets)]
+        max_count = max([count for (_, count) in buckets])
+        sizes = [(count / max_count) * 100 for (_, count) in filter(lambda x: x[1] > 0, buckets)]
+
+        axs[2].scatter(xs, ys, sizes=sizes, label="Individual")
+        if self.experiment.flip and self.num_debaters > 1:
+            agg_xs = [bottom for i, bottom in filter(lambda x: agg_buckets[x[0]][1] > 0, enumerate(bucket_bottoms[:-1]))]
+            agg_ys = [wins / count for (wins, count) in filter(lambda x: x[1] > 0, agg_buckets)]
+            agg_max_count = max([count for (_, count) in agg_buckets])
+            agg_sizes = [(count / max_count) * 100 for (_, count) in filter(lambda x: x[1] > 0, agg_buckets)]
+            axs[2].scatter(agg_xs, agg_ys, sizes=agg_sizes, label="Aggregated")
+
+        axs[2].plot(bucket_bottoms, bucket_bottoms, color="black", label="Expected")
+
+        axs[2].set_title("Calibration")
+        axs[2].set_ylim(0, 1.1)
+        axs[2].set_xticks([i / 10 for i in range(5, 11)])
+        axs[2].legend()
 
         fig.suptitle("Judge Metrics")
         plt.tight_layout()
         self.__save_graph("Judge")
         plt.show()
-        return matchup_to_stats
+
+        return {"standard": matchup_to_stats, "aggregated": aggregated_matchups_to_stats}
 
     def __graph_wins(self) -> dict[str, float]:
         def bayesian_credible_interval(wins: int, games: int, confidence: float = 0.95):
@@ -494,7 +607,9 @@ class ResultsCollector:
 
         plt.clf()
         judge_results = self.__graph_judge()
-        converted_judge_results = {key: value.dict() for key, value in judge_results.items()}
+        converted_judge_results = {
+            key: {k: v.dict() for k, v in minigraph.items()} for key, minigraph in judge_results.items()
+        }
         all_stats.append(converted_judge_results)
         self.logger.info(judge_results)
 
