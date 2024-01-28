@@ -21,7 +21,7 @@ class ModelResponse(BaseModel):
     probabilistic_decision: Optional[dict[str, float]] = None
     preference: Optional[float] = None
     rejected_responses: list[ModelResponse] = []
-    internal_representations: list[str] = []
+    internal_representations: str = ""
     prompt: str = ""
 
     @validator("probabilistic_decision")

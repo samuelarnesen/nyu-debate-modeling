@@ -89,6 +89,7 @@ class LLModel(Model):
                 do_sample=LLModel.DEFAULT_GENERATION_PARAMS.do_sample,
                 use_cache=True,
                 pad_token_id=self.tokenizer.eos_token_id,
+                output_hidden_states=not is_debater,
             )
 
             if not nucleus:
@@ -236,7 +237,7 @@ class LLModel(Model):
 
         def normalize_log_probs(a_prob: float, b_prob: float) -> tuple[float, float]:
             exponentiated = [math.exp(logprob) for logprob in [a_prob, b_prob]]
-            return prob[0] / sum(exponentiated), prob[1] / sum(exponentiated)
+            return exponentiated[0] / sum(exponentiated), exponentiated[1] / sum(exponentiated)
 
         def create_new_generation_config():
             config_to_use = copy.deepcopy(self.generation_config)
@@ -251,9 +252,10 @@ class LLModel(Model):
         inputs = self.tokenizer(input_strs, return_tensors="pt", padding=True).to(device)
         outputs = self.model.generate(**inputs, generation_config=create_new_generation_config())
         input_lengths = (inputs.input_ids != self.tokenizer.pad_token_id).sum(axis=1)
+        sequences = outputs.sequences if not isinstance(self.model, LLModuleWithLinearProbe) else outputs
 
         decoded_outputs = []
-        for i, row in enumerate(outputs.sequences):
+        for i, row in enumerate(sequences):
             if self.is_debater or speech_structure != SpeechStructure.DECISION:
                 decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[min(i, len(input_lengths) - 1)] :])
                 new_tokens = decoded.split(constants.INSTRUCTION_SUFFIX)[-1]
@@ -402,24 +404,26 @@ class LLModuleWithLinearProbe(nn.Module):
     def __init__(self, base_model: LLModel, linear_idxs: Optional[list[int]] = None):
         super().__init__()
         self.linear_idxs = linear_idxs or [-1]
-        self.base_model = base_model.model
+        self.base_model = base_model.model.to("cuda")
         self.base_model.eval()
+        self.config = self.base_model.config
         self.probe = nn.Sequential(
             nn.Linear(self.base_model.config.hidden_size * len(self.linear_idxs), 2), nn.Softmax(dim=1)
-        )
+        ).to("cuda")
 
     def encode_representation(self, representation: torch.tensor) -> str:
         buffer = io.BytesIO()
-        torch.save(x, buffer)
+        torch.save(representation, buffer)
         buffer.seek(0)
         return base64.b64encode(buffer.read()).decode("utf-8")
+
+    def generate(self, input_ids: torch.tensor, **kwargs) -> list[tuple(tuple(float, float), torch.tensor)]:
+        return self.forward(input_ids=input_ids)
 
     def forward(self, input_ids: Optional[torch.tensor] = None) -> list[tuple(tuple(float, float), torch.tensor)]:
         batch_size = input_ids.shape[0]
 
-        base_model_output = self.base_model(
-            input_ids=input_ids,
-        )
+        base_model_output = self.base_model(input_ids=input_ids.to("cuda"), output_hidden_states=True)
 
         hidden_states = [[] for i in range(batch_size)]
         for i, layer in enumerate(base_model_output.hidden_states):
@@ -430,7 +434,7 @@ class LLModuleWithLinearProbe(nn.Module):
             [torch.cat([hidden_states[i][idx] for idx in self.linear_idxs], dim=0) for i in range(batch_size)]
         )
 
-        outputs = self.probe(input_vecs)
+        outputs = self.probe(input_vecs.float())
         reformatted_outputs = [(output[0].item(), output[1].item()) for output in outputs]
         encoded_hidden_states = [self.encode_representation(hs) for hs in hidden_states]
 

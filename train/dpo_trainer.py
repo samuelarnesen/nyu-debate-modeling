@@ -93,7 +93,6 @@ class DirectPreferenceTrainer:
                 tokenizer=tokenizer,
                 peft_config=peft_config,
                 callbacks=[LoggingCallback],
-                loss_type="dpo",
             )
 
             torch.cuda.empty_cache()

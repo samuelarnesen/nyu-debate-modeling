@@ -89,7 +89,12 @@ class JudgePreferencesLoader(RawDataLoader):
                 instruction = selected["supplemental"]["prompt"]
                 rejected = sorted(selected["supplemental"]["rejected_responses"], key=lambda x: x["preference"])[0]
                 if selected["supplemental"]["preference"] - rejected["preference"] > JudgePreferencesLoader.MIN_GAP:
-                    train_data.append((instruction, selected["content"], rejected["speech"]))
+                    selected_speech = (
+                        selected["content"]
+                        .replace(constants.INVALID_QUOTE_TAG, constants.QUOTE_TAG)
+                        .replace(constants.INVALID_UNQUOTE_TAG, constants.UNQUOTE_TAG)
+                    )
+                    train_data.append((instruction, selected_speech, rejected["speech"]))
 
         return JudgePreferencesDataset(
             train_data=train_data,

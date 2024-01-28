@@ -102,6 +102,7 @@ class TrainUtils:
                 bias="none",
                 task_type=TaskType.CAUSAL_LM,
                 target_modules=llm_class.TARGET_MODULES,
+                init_lora_weights="gaussian",
             )
         elif peft_type == PeftType.PROMPT_TUNING:
             return PromptTuningConfig(

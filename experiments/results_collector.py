@@ -269,7 +269,7 @@ class ResultsCollector:
         self.__save_graph("Judge")
         plt.show()
 
-        return {"standard": matchup_to_stats, "aggregated": aggregated_matchups_to_stats}
+        return {"standard": matchup_to_stats, "aggregated": aggregated_matchups_to_stats, "binary": binary_matchups_to_stats}
 
     def __graph_wins(self) -> dict[str, float]:
         def bayesian_credible_interval(wins: int, games: int, confidence: float = 0.95):

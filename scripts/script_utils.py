@@ -74,10 +74,11 @@ class ScriptUtils:
     @classmethod
     def get_debate_round_script_config(cls, args) -> DebateRoundScriptConfig:
         root = os.environ["SRC_ROOT"]
-        transcript_path = f"{root}outputs/transcripts"
-        graphs_path = f"{root}outputs/graphs"
-        stats_path = f"{root}outputs/stats"
-        full_record_path = f"{root}outputs/runs"
+        output_root = os.environ["OUTPUT_ROOT"] if "OUTPUT_ROOT" in os.environ else root
+        transcript_path = f"{output_root}outputs/transcripts"
+        graphs_path = f"{output_root}outputs/graphs"
+        stats_path = f"{output_root}outputs/stats"
+        full_record_path = f"{output_root}outputs/runs"
         if args.test:
             experiment_name = args.configuration
             experiment_file_path = f"{root}experiments/configs/test_experiment.yaml"
