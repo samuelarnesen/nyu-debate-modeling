@@ -53,9 +53,10 @@ class QualityJudgingLoader(RawDataLoader):
     @classmethod
     def load(
         cls,
-        full_dataset_filepath: str,
+        full_dataset_filepath: str | list[str],
         supplemental_file_paths: Optional[dict[str, str]] = None,
         linear_idxs: Optional[list[int]] = None,
+        combine_train_and_val: bool = False,
         **kwargs,
     ) -> QualityJudgingDataset:
         """
@@ -65,7 +66,9 @@ class QualityJudgingLoader(RawDataLoader):
             full_dataset_filepath: This is the *prefix* of the files with all the stored internal representations
             supplemental_file_paths: An optional dictionary of paths that could be used to support the creation
                 of the dataset. In this case, the relevant one would be quality_file_path.
-
+            linear_idxs: list of layer indexes that should be used for the linear probes
+            combine_train_and_val: if the validation set should be merged into the training set (for when one is done
+                with validation and just wants to train on the whole dataset)
         Returns:
             A QualityJudgingDataset where each row has an internal representation tensor and a target winning percentage
         """
@@ -102,8 +105,14 @@ class QualityJudgingLoader(RawDataLoader):
                 y = torch.tensor([1, 0] if row.correct_index == 0 else [0, 1]).float()
                 data_list.append((x, y))
 
+        train_data = data_list[0 : int(0.8 * len(data_list))]
+        val_data = data_list[int(0.8 * len(data_list)) :]
+        if combine_train_and_val:
+            train_data = data_list
+            val_data = []
+
         return QualityJudgingDataset(
-            train_data=data_list[0 : int(0.8 * len(data_list))],
-            val_data=data_list[int(0.8 * len(data_list)) :],
+            train_data=train_data,
+            val_data=val_data,
             test_data=[],
         )

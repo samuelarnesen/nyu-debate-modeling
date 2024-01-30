@@ -38,7 +38,7 @@ class DirectPreferenceTrainer:
 
     @classmethod
     def get_trainer(
-        cls, config: TrainingConfig, raw_dataset: RawDataset, is_local: bool = False, is_test: bool = False
+        cls, config: TrainingConfig, raw_dataset: Optional[RawDataset] = None, is_local: bool = False, is_test: bool = False
     ) -> Optional[DPOTrainer]:
         """
         Generates a Trainer object.
@@ -73,6 +73,9 @@ class DirectPreferenceTrainer:
             lr_scheduler_type=config.training_hyperparameters.lr_scheduler_type,
             use_cpu=is_local,
         )
+
+        if not raw_dataset:
+            raw_dataset = TrainUtils.create_dataset(config=config)
 
         train_dataset = DirectPreferenceTrainer.convert_dataset(raw_dataset=raw_dataset)
 

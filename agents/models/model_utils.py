@@ -52,7 +52,7 @@ class ModelUtils:
                 file_path=model_settings.model_file_path,
                 is_debater=is_debater,
                 nucleus=model_settings.nucleus,
-                probe_hyperparams=model_settings.probe_hyperparams
+                probe_hyperparams=model_settings.probe_hyperparams,
             )
         elif model_type == ModelType.MISTRAL:
             model = MistralModel(
@@ -60,7 +60,7 @@ class ModelUtils:
                 file_path=model_settings.model_file_path,
                 is_debater=is_debater,
                 nucleus=model_settings.nucleus,
-                probe_hyperparams=model_settings.probe_hyperparams
+                probe_hyperparams=model_settings.probe_hyperparams,
             )
         elif model_type == ModelType.STUB_LLM:
             model = StubLLModel(alias=model_settings.alias)

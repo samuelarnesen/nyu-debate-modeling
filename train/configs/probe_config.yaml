@@ -1,7 +1,7 @@
 Basic:
     model_name: ""
     training_hyperparameters:
-        num_train_epochs: 25
+        num_train_epochs: 100
         per_device_train_batch_size: 16
         learning_rate: 10e-5
         supplemental:
@@ -13,4 +13,6 @@ Basic:
         output_dir: /vast/spa9663/models/trained_models/mixtral-linear-probe
     dataset:
         dataset_type: judging_probe
-        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-01-27_22:52:19.226386
+        full_dataset_file_path: 
+            - /vast/spa9663/outputs/transcripts/2024-01-27_22:52:19.226386
+            - /vast/spa9663/outputs/transcripts/2024-01-30_01:17:56.251526

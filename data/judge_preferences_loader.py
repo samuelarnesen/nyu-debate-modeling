@@ -51,7 +51,7 @@ class JudgePreferencesLoader(RawDataLoader):
 
     @classmethod
     def load(
-        cls, full_dataset_filepath: str, supplemental_file_paths: Optional[dict[str, str]] = None, **kwargs
+        cls, full_dataset_filepath: str | list[str], supplemental_file_paths: Optional[dict[str, str]] = None, **kwargs
     ) -> JudgePreferencesDataset:
         """
         Constructs a JudgePreferencesDataset.

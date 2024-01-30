@@ -2,7 +2,7 @@ from script_utils import ScriptUtils, TrainType
 
 ScriptUtils.setup_script()
 
-from data import RawDataset, JudgePreferencesLoader
+from data import RawDataset
 from train import DirectPreferenceTrainer, TrainUtils
 from utils import SaveUtils
 
@@ -10,11 +10,8 @@ args = ScriptUtils.get_args()
 script_config = ScriptUtils.get_training_run_script_config(args, train_type=TrainType.DPO)
 
 config = TrainUtils.parse_config(config_name=script_config.config_name, config_filepath=script_config.config_filepath)
-judge_preferences_dataset = JudgePreferencesLoader.load(full_dataset_filepath=script_config.full_dataset_filepath)
+trainer = DirectPreferenceTrainer.get_trainer(config=config, is_local=args.local, is_test=args.test)
 
-trainer = DirectPreferenceTrainer.get_trainer(
-    config=config, raw_dataset=judge_preferences_dataset, is_local=args.local, is_test=args.test
-)
 if not args.load_only:
     trainer.train()
 if not args.test:

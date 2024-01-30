@@ -9,12 +9,13 @@ import torch
 
 class DatasetConfig(BaseModel):
     dataset_type: str
-    full_dataset_file_path: Optional[str] = None
+    full_dataset_file_path: Optional[str | list[str]] = None
     train_file_path: Optional[str] = None
     val_file_path: Optional[str] = None
     test_file_path: Optional[str] = None
     supplemental_file_paths: dict[str, str] = {}
     split_type: str = "train"
+    combine_train_and_val: bool = False
 
 
 class SplitType(Enum):
@@ -126,6 +127,7 @@ class RawDataLoader(ABC):
         validation_filepath: Optional[str] = None,
         test_filepath: Optional[str] = None,
         supplemental_file_paths: Optional[str] = None,
+        combine_train_and_val: bool = False,
     ) -> RawDataset:
         """Constructs a dataset"""
         pass

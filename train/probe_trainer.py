@@ -14,7 +14,7 @@ from typing import Optional, Type
 import os
 
 
-class LinearTrainer:
+class ProbeTrainer:
     """Class for training a linear probe on top of a model"""
 
     def __init__(self, model: nn.Module, dataset: QualityJudgingDataset, config: TrainingConfig):
@@ -34,7 +34,7 @@ class LinearTrainer:
                 optimizer=optimizer,
             )
             val_loss = self.validate_batch(batch=self.dataset.get_data(split=SplitType.VAL))
-            self.logger.info(val_loss)
+            self.logger.info(val_loss if not self.config.dataset.combine_train_and_val else train_loss)
 
         for name, param in self.probe.named_parameters():
             self.logger.info(f"Name: {name}, Param: {param}")
@@ -67,7 +67,7 @@ class LinearTrainer:
     @classmethod
     def get_trainer(
         cls, config: TrainingConfig, raw_dataset: Optional[RawDataset] = None, is_local: bool = False, **kwargs
-    ) -> LinearTrainer:
+    ) -> ProbeTrainer:
         if not raw_dataset:
             raw_dataset = TrainUtils.create_dataset(config=config)
         probe_hyperparams = ProbeHyperparams(**config.training_hyperparameters.supplemental)
@@ -76,4 +76,4 @@ class LinearTrainer:
             linear_idxs=probe_hyperparams.linear_idxs,
             hidden_size=probe_hyperparams.hidden_size,
         )
-        return LinearTrainer(model=model, dataset=raw_dataset, config=config)
+        return ProbeTrainer(model=model, dataset=raw_dataset, config=config)

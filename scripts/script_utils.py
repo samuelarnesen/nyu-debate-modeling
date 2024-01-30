@@ -20,7 +20,6 @@ class DebateRoundScriptConfig(BaseModel):
 
 class ModelRunScriptConfig(BaseModel):
     config_filepath: str
-    full_dataset_filepath: Optional[str] = None
     config_name: str
 
 
@@ -49,7 +48,6 @@ class ScriptUtils:
         parser.add_argument("--load_only", action="store_true", default=False)
         parser.add_argument("--suppress_graphs", action="store_true", default=False)
         parser.add_argument("--local_rank", type=int, default=0)  # needed for multi-GPU training
-        parser.add_argument("--dataset", type=str, default="")  # needed for dpo training
         args = parser.parse_args()
         ScriptUtils.set_log_level(args)
         return args
@@ -113,9 +111,6 @@ class ScriptUtils:
 
     @classmethod
     def get_training_run_script_config(cls, args, train_type: TrainType) -> ModelRunScriptConfig:
-        config_filepath = ScriptUtils.get_config_filepath(train_type=train_type)
-        full_dataset_filepath = args.dataset
-        config_name = args.configuration
         return ModelRunScriptConfig(
-            config_filepath=config_filepath, full_dataset_filepath=full_dataset_filepath, config_name=config_name
+            config_filepath=ScriptUtils.get_config_filepath(train_type=train_type), config_name=args.configuration
         )
