@@ -169,6 +169,7 @@ class ExperimentLoader:
         if debater_two_model:
             model_cache[debater_two_model_id] = debater_two_model
 
+
         judge_model = (
             ModelUtils.instantiate_model(
                 model_settings=experiment.agents.judge.model_settings,

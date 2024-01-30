@@ -18,6 +18,7 @@ from agents.models import (
     OfflineModel,
     OfflineModelHelper,
     OpenAIModel,
+    ProbeHyperparams,
     RandomModel,
     ServedModel,
     SpeechStructure,

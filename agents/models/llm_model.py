@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.models.model import Model, ModelInput, ModelResponse, SpeechStructure
+from agents.models.model import Model, ModelInput, ModelResponse, ProbeHyperparams, SpeechStructure
 from prompts import RoleType
 from utils import LoggerUtils, StringUtils, timer
 import utils.constants as constants
@@ -51,8 +51,8 @@ class LLModel(Model):
         nucleus: bool = True,
         instruction_prefix: str = "",
         instruction_suffix: str = "",
-        linear_idxs: Optional[list[int]] = None,
         requires_file_path: bool = True,
+        probe_hyperparams: Optional[ProbeHyperparams] = None,
     ):
         """
         An LLModel uses a large language model (currently Llama 2 or Mistral) to generate text.
@@ -64,8 +64,8 @@ class LLModel(Model):
             nucleus: Whether nucleus sampling (true) or beam_search (false) should be used.
             instruction_prefix: the prefix to use before the instructions that get passed to the model
             instruction_suffix: the suffix to use after the instructions that get passed to the model
-            linear_idxs: when judging, these are the hidden dimensions to use as input to the linear probe
-            requires_file_path: whether one needs to input a file_path for the model to be instantiated
+            requires_file_path: whether a file path is needed to instantiate the model
+            probe_hyperparams: configuration for a linear probe judge
         """
         super().__init__(alias=alias, is_debater=is_debater)
         torch.cuda.empty_cache()
@@ -98,8 +98,15 @@ class LLModel(Model):
                 self.generation_config.top_p = None
                 self.generation_config.temperature = None
 
-            if not is_debater:
-                self.model = LLModuleWithLinearProbe(base_model=self.model, linear_idxs=linear_idxs)
+            if probe_hyperparams:
+                if not is_debater:
+                    self.model = LLModuleWithLinearProbe(
+                        base_model=self.model,
+                        linear_idxs=probe_hyperparams.linear_idxs,
+                        file_path=probe_hyperparams.file_path,
+                    )
+                else:
+                    self.logger.warn("Probe hyperparameters were passed in for a debater model. This is not supported.")
 
         else:
             self.is_debater = False
@@ -311,6 +318,7 @@ class LlamaModel(LLModel):
         file_path: Optional[str] = None,
         is_debater: bool = True,
         nucleus: bool = True,
+        probe_hyperparams: Optional[ProbeHyperparams] = None,
     ):
         super().__init__(
             alias=alias,
@@ -320,6 +328,7 @@ class LlamaModel(LLModel):
             instruction_prefix="instruction:",
             instruction_suffix="output:",
             requires_file_path=True,
+            probe_hyperparams=probe_hyperparams,
         )
 
         if self.model:
@@ -347,6 +356,7 @@ class MistralModel(LLModel):
         file_path: Optional[str] = None,
         is_debater: bool = True,
         nucleus: bool = True,
+        probe_hyperparams: Optional[ProbeHyperparams] = None,
     ):
         super().__init__(
             alias=alias,
@@ -355,8 +365,8 @@ class MistralModel(LLModel):
             nucleus=nucleus,
             instruction_prefix="[INST]",
             instruction_suffix="[/INST]",
-            linear_idxs=[31, 16],
             requires_file_path=True,
+            probe_hyperparams=probe_hyperparams,
         )
 
         if self.model:
@@ -387,7 +397,6 @@ class StubLLModel(LLModel):
             nucleus=nucleus,
             instruction_prefix="",
             instruction_suffix="",
-            linear_idxs=[],
             requires_file_path=False,
         )
 
@@ -401,15 +410,24 @@ class StubLLModel(LLModel):
 
 
 class LLModuleWithLinearProbe(nn.Module):
-    def __init__(self, base_model: LLModel, linear_idxs: Optional[list[int]] = None):
+    def __init__(self, base_model: LLModel, linear_idxs: Optional[list[int]] = None, file_path: str = ""):
         super().__init__()
         self.linear_idxs = linear_idxs or [-1]
         self.base_model = base_model.model.to("cuda")
         self.base_model.eval()
         self.config = self.base_model.config
-        self.probe = nn.Sequential(
-            nn.Linear(self.base_model.config.hidden_size * len(self.linear_idxs), 2), nn.Softmax(dim=1)
-        ).to("cuda")
+        self.probe = LLModuleWithLinearProbe.instantiate_probe(
+            file_path=file_path, linear_idxs=self.linear_idxs, hidden_size=self.base_model.config.hidden_size
+        )
+        self.softmax = nn.Softmax(dim=1)
+
+    @classmethod
+    def instantiate_probe(cls, file_path: str, linear_idxs: list[int], hidden_size: int) -> nn.Module:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        probe = nn.Linear(in_features=hidden_size * len(linear_idxs), out_features=2)
+        if file_path:
+            probe.load_state_dict(torch.load(file_path))
+        return probe.to(device)
 
     def encode_representation(self, representation: torch.tensor) -> str:
         buffer = io.BytesIO()
@@ -434,7 +452,8 @@ class LLModuleWithLinearProbe(nn.Module):
             [torch.cat([hidden_states[i][idx] for idx in self.linear_idxs], dim=0) for i in range(batch_size)]
         )
 
-        outputs = self.probe(input_vecs.float())
+        unnormalized_outputs = self.probe(input_vecs.float())
+        outputs = self.softmax(unnormalized_outputs)
         reformatted_outputs = [(output[0].item(), output[1].item()) for output in outputs]
         encoded_hidden_states = [self.encode_representation(hs) for hs in hidden_states]
 

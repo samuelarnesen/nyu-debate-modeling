@@ -52,7 +52,11 @@ class QualityJudgingDataset(RawDataset):
 class QualityJudgingLoader(RawDataLoader):
     @classmethod
     def load(
-        cls, full_dataset_filepath: str, supplemental_file_paths: Optional[dict[str, str]] = None, **kwargs
+        cls,
+        full_dataset_filepath: str,
+        supplemental_file_paths: Optional[dict[str, str]] = None,
+        linear_idxs: Optional[list[int]] = None,
+        **kwargs,
     ) -> QualityJudgingDataset:
         """
         Constructs a QualityJudgingDataset.
@@ -76,10 +80,11 @@ class QualityJudgingLoader(RawDataLoader):
                     return row
             raise Exception(f"A row with title {story_title} and question {question} could not be found in the dataset")
 
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         quality_filepath = (supplemental_file_paths or {}).get("quality_file_path", QualityLoader.DEFAULT_TRAIN_PATH)
         quality_dataset = QualityLoader.load(full_dataset_filepath=quality_filepath)
 
-        data = []
+        data_list = []
         input_texts = InputUtils.read_file_texts(base_path=full_dataset_filepath, extension="json")
         for text in input_texts:
             data = json.loads(text)
@@ -89,16 +94,16 @@ class QualityJudgingLoader(RawDataLoader):
                 data["speeches"],
             ):
                 internal_representations = speech["supplemental"]["internal_representations"]
-                relevant_internal_representations = [internal_representations[-16], internal_representations[-1]]
-                decoded_tensors = [base64.b64decode(rep) for rep in relevant_internal_representations]
-                buffers = [io.BytesIO(decoded_tensor) for decoded_tensor in decoded_tensors]
-                loaded_tensors = [torch.load(buffer) for buffer in buffers]
-                x = torch.cat(loaded_tensors, dim=0)
+                decoded_representation = base64.b64decode(internal_representations)
+                big_buffer = io.BytesIO(decoded_representation)
+                decoded_list = torch.load(big_buffer, map_location=device)
+                relevant_entries = [decoded_list[int(idx)] for idx in (linear_idxs or [-1])]  # relevant parts to concat
+                x = torch.cat(relevant_entries, dim=0)
                 y = torch.tensor([1, 0] if row.correct_index == 0 else [0, 1]).float()
-                data.append(x, y)
+                data_list.append((x, y))
 
         return QualityJudgingDataset(
-            train_data=data[0 : int(0.8 * len(data))],
-            val_data=data[int(0.8 * len(data)) :],
+            train_data=data_list[0 : int(0.8 * len(data_list))],
+            val_data=data_list[int(0.8 * len(data_list)) :],
             test_data=[],
         )

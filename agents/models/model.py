@@ -43,6 +43,12 @@ class ModelResponse(BaseModel):
         return v
 
 
+class ProbeHyperparams(BaseModel):
+    file_path: str = ""
+    hidden_size: Optional[int] = None
+    linear_idxs: list[int] = [-1]
+
+
 class ModelSettings(BaseModel):
     model_type: Optional[str] = None
     model_file_path: Optional[str] = None
@@ -52,6 +58,7 @@ class ModelSettings(BaseModel):
     is_human: bool = False
     offline_file_path: Optional[str] = None
     served: bool = False
+    probe_hyperparams: Optional[ProbeHyperparams] = None
 
     @root_validator
     def verify_custom_settings(cls, values):

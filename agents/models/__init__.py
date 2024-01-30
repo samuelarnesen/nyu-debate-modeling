@@ -9,6 +9,7 @@ from .llm_model import (
     LLMType,
     MistralModel,
     ModelStub,
+    ProbeHyperparams,
     StubLLModel,
     TokenizerStub,
 )

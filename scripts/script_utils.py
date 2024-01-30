@@ -97,14 +97,17 @@ class ScriptUtils:
     @classmethod
     def get_config_filepath(cls, train_type: TrainType) -> str:
         root = os.environ["SRC_ROOT"]
+        default_config_dir = "train/configs"
         if train_type == TrainType.SFT:
-            return f"{root}/train/configs/sft_config.yaml"
+            return f"{root}/{default_config_dir}/sft_config.yaml"
         elif train_type == TrainType.DPO:
-            return f"{root}/train/configs/dpo_config.yaml"
+            return f"{root}/{default_config_dir}/dpo_config.yaml"
         elif train_type == TrainType.PPO:
-            return f"{root}/train/configs/ppo_config.yaml"
+            return f"{root}/{default_config_dir}/ppo_config.yaml"
         elif train_type == TrainType.PRETRAIN:
-            return f"{root}/train/configs/pretrain_config.yaml"
+            return f"{root}/{default_config_dir}/pretrain_config.yaml"
+        elif train_type == TrainType.PROBE:
+            return f"{root}/{default_config_dir}/probe_config.yaml"
         else:
             raise Exception(f"Train type {train_type} is not recognized")
 

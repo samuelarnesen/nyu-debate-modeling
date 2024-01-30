@@ -1,51 +1,79 @@
 from __future__ import annotations
 
-from agents import LLModuleWithLinearProbe, ModelSettings, ModelUtils
+from agents import LLModuleWithLinearProbe, ProbeHyperparams
 from data import JudgingProbeDataRow, QualityJudgingDataset, RawDataset, SplitType
 from train.train_utils import TrainingConfig, TrainUtils
+from utils import LoggerUtils
 
-from peft import prepare_model_for_kbit_training, get_peft_model
-from transformers import TrainingArguments
-from trl import DataCollatorForCompletionOnlyLM
+from pydantic import BaseModel
+import torch.nn as nn
 import torch.optim as optim
 import torch
 
 from typing import Optional, Type
+import os
 
 
 class LinearTrainer:
     """Class for training a linear probe on top of a model"""
 
-    def __init__(self, model: LLModuleWithLinearProbe, dataset: QualityJudgingDataset, config: TrainingConfig):
-        self.probe = model.probe
+    def __init__(self, model: nn.Module, dataset: QualityJudgingDataset, config: TrainingConfig):
+        self.probe = model
         self.dataset = dataset
         self.config = config
+        self.logger = LoggerUtils.get_default_logger(__name__)
+        self.loss_func = nn.CrossEntropyLoss()
 
     def train(self):
-        optim = optim.AdamW(params=probe_model.parameters(), lr=config.training_hyperparameters.learning_rate)
-        for epoch in range(config.training_hyperparameters.num_train_epochs):
-            self.train_epoch(optimizer=optimizer)
-
-    def train_epoch(self, optimizer: optim.Optimizer):
-        data_length = len(self.dataset.get_data(SplitType.TRAIN))
-        for i in range(0, data_length, config.training_hyperparameters.per_device_train_batch_size):
-            self.train_batch(
-                batch=self.dataset.get_batch(config.training_hyperparameters.per_device_train_batch_size),
+        for name, param in self.probe.named_parameters():
+            self.logger.info(f"Name: {name}, Param: {param}")
+        optimizer = optim.AdamW(params=self.probe.parameters(), lr=self.config.training_hyperparameters.learning_rate)
+        for epoch in range(self.config.training_hyperparameters.num_train_epochs):
+            train_loss = self.train_batch(
+                batch=self.dataset.get_data(split=SplitType.TRAIN),
                 optimizer=optimizer,
             )
+            val_loss = self.validate_batch(batch=self.dataset.get_data(split=SplitType.VAL))
+            self.logger.info(val_loss)
+
+        for name, param in self.probe.named_parameters():
+            self.logger.info(f"Name: {name}, Param: {param}")
 
     def train_batch(self, batch: list[JudgingProbeDataRow], optimizer: optim.Optimizer):
-        loss_func = nn.MSELoss()
-        optim.zero_grad()
-        pred = self.probe(torch.stack([row.internal_representation for row in batch]))
-        target = self.probe(torch.stack([row.target for row in batch]))
-        loss = loss_func(pred, target)
+        optimizer.zero_grad()
+        loss = self.get_loss(batch)
         loss.backward()
-        optim.step()
+        optimizer.step()
+        return loss.item()
+
+    def validate_batch(self, batch: list[JudgingProbeDataRow]):
+        with torch.no_grad():
+            self.probe.eval()
+            loss = self.get_loss(batch)
+            self.probe.train()
+        return loss.item()
+
+    def get_loss(self, batch: list[JudgingProbeDataRow]) -> torch.tensor:
+        input_tensor = torch.stack([row.internal_representation.float() for row in batch])
+        pred = self.probe(input_tensor)
+        target = torch.stack([row.target for row in batch])
+        return self.loss_func(pred, target)
+
+    def save_model(self):
+        if not os.path.exists(self.config.logging_and_saving_config.output_dir):
+            os.makedirs(self.config.logging_and_saving_config.output_dir)
+        torch.save(self.probe.state_dict(), f"{self.config.logging_and_saving_config.output_dir}/probe.pth")
 
     @classmethod
-    def get_trainer(cls, config: TrainingConfig, raw_dataset: Optional[RawDataset] = None, **kwargs) -> LinearTrainer:
+    def get_trainer(
+        cls, config: TrainingConfig, raw_dataset: Optional[RawDataset] = None, is_local: bool = False, **kwargs
+    ) -> LinearTrainer:
         if not raw_dataset:
             raw_dataset = TrainUtils.create_dataset(config=config)
-        model = TrainUtils.load_model(config=config, is_local=is_local)
+        probe_hyperparams = ProbeHyperparams(**config.training_hyperparameters.supplemental)
+        model = LLModuleWithLinearProbe.instantiate_probe(
+            file_path=probe_hyperparams.file_path,
+            linear_idxs=probe_hyperparams.linear_idxs,
+            hidden_size=probe_hyperparams.hidden_size,
+        )
         return LinearTrainer(model=model, dataset=raw_dataset, config=config)

@@ -11,7 +11,7 @@ import torch
 import yaml
 
 from enum import Enum
-from typing import Optional, Type, Union
+from typing import Any, Optional, Type, Union
 import os
 
 
@@ -29,14 +29,15 @@ class LoggingAndSavingConfig(BaseModel):
 class TrainingHyperParameterConfig(BaseModel):
     num_train_epochs: int
     per_device_train_batch_size: int
-    gradient_accumulation_steps: int
-    optim: str
+    gradient_accumulation_steps: int = 1
+    optim: Optional[str]
     learning_rate: float
-    max_grad_norm: float
-    warmup_ratio: float
-    lr_scheduler_type: str
-    peft_type: PeftType | str
+    max_grad_norm: float = float("inf")
+    warmup_ratio: float = 0
+    lr_scheduler_type: str = ""
+    peft_type: PeftType | str = ""
     steps: Optional[int]
+    supplemental: Optional[dict[str, Any]]
 
 
 class TrainingConfig(BaseModel):
@@ -56,7 +57,7 @@ class TrainingConfig(BaseModel):
 
 class TrainUtils:
     @classmethod
-    def create_dataset(cls, config: TrainingConfig, deduplicate: bool = False) -> RawDataset:
+    def create_dataset(cls, config: TrainingConfig, deduplicate: bool = False, **kwargs) -> RawDataset:
         """
         Constructs a dataset that will later be converted into a training dataset.
 
@@ -77,6 +78,7 @@ class TrainUtils:
             test_filepath=dataset_config.test_file_path,
             supplemental_file_paths=dataset_config.supplemental_file_paths,
             deduplicate=deduplicate,
+            **kwargs
         )
 
     @classmethod
