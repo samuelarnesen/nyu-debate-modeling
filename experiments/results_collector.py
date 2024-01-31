@@ -88,6 +88,7 @@ class ResultsCollector:
         self.graphs_path_prefix = graphs_path_prefix
         self.full_record_path_prefix = full_record_path_prefix
         self.stats_path_prefix = stats_path_prefix
+        self.is_offline = any([debater.model_settings.offline_file_path for debater in experiment.agents.debaters])
         self.should_save = should_save
         self.experiment = experiment
         self.summaries = []
@@ -146,7 +147,7 @@ class ResultsCollector:
             binary_matchups_to_stats[pair].correct_calls += 1 if binary_correct else 0
             binary_matchups_to_stats[pair].first_calls += 1 if summary.first_debater_wins else 0
             matchup_to_stats[pair].first_calls += summary.first_debater_win_prob
-            if i % 2 == 0 and self.experiment.flip and self.num_debaters > 1:
+            if i % 2 == 0 and self.experiment.flip and not self.is_offline and self.num_debaters > 1:
                 if pair not in aggregated_matchups_to_stats:
                     aggregated_matchups_to_stats[pair] = JudgeStats()
                 aggregated_matchups_to_stats[pair].matches += 1
@@ -162,7 +163,7 @@ class ResultsCollector:
 
         fig, axs = plt.subplots(1, 3)
 
-        if self.experiment.flip and self.num_debaters > 1:
+        if self.experiment.flip and not self.is_offline and self.num_debaters > 1:
             group_width = 0.3
             spacing = 0.025
             bar_width = (group_width - spacing) / len(matchup_to_stats.keys())
@@ -225,7 +226,7 @@ class ResultsCollector:
                     buckets[j] = (buckets[j][0] + (1 if binary_correct else 0), buckets[j][1] + 1)
                     break
 
-            if self.experiment.flip and i % 2 == 0 and self.num_debaters > 1:
+            if self.experiment.flip and not self.is_offline and i % 2 == 0 and self.num_debaters > 1:
                 agg_first_win_prob = (
                     self.summaries[i].first_debater_win_prob + self.summaries[i + 1].first_debater_win_prob
                 ) / 2
@@ -250,7 +251,7 @@ class ResultsCollector:
         sizes = [(count / max_count) * 100 for (_, count) in filter(lambda x: x[1] > 0, buckets)]
 
         axs[2].scatter(xs, ys, sizes=sizes, label="Individual")
-        if self.experiment.flip and self.num_debaters > 1:
+        if self.experiment.flip and not self.is_offline and self.num_debaters > 1:
             agg_xs = [bottom for i, bottom in filter(lambda x: agg_buckets[x[0]][1] > 0, enumerate(bucket_bottoms[:-1]))]
             agg_ys = [wins / count for (wins, count) in filter(lambda x: x[1] > 0, agg_buckets)]
             agg_max_count = max([count for (_, count) in agg_buckets])

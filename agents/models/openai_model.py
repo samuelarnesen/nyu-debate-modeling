@@ -4,6 +4,7 @@ from agents.models.model import Model, ModelInput, ModelResponse, RoleType, Spee
 from utils import LoggerUtils
 import utils.constants as constants
 
+import backoff
 import openai
 
 from concurrent.futures import ThreadPoolExecutor
@@ -134,21 +135,7 @@ class OpenAIModel(Model):
         if speech_structure == SpeechStructure.DECISION:
             add_addendum(messages=messages, addendum=OpenAIModel.decision_addendum)
 
-        try:
-            completion = openai.ChatCompletion.create(
-                model="gpt-4-1106-preview",
-                messages=messages,
-                max_tokens=max_new_tokens,
-                logprobs=(speech_structure != SpeechStructure.OPEN_ENDED),
-                top_logprobs=5 if (speech_structure != SpeechStructure.OPEN_ENDED) else None,
-            )
-        except Exception as e:
-            self.logger.warn(f"Received an error while calling OpenAI: {e}")
-            completion = openai.ChatCompletion.create(
-                model="gpt-4-1106-preview",
-                messages=messages,
-                max_tokens=max_new_tokens,
-            )
+        completion = self.call_openai(messages=messages, max_new_tokens=max_new_tokens, speech_structure=speech_structure)
 
         message = completion.choices[0].message["content"]
 
@@ -174,6 +161,18 @@ class OpenAIModel(Model):
             )
 
         return ModelResponse(speech=message, prompt="\n".join(model_input.content for model_input in model_input_list))
+
+    @backoff.on_exception(backoff.expo, backoff.on_exception, max_tries=8)
+    def call_openai(
+        self, messages: list[dict[str, str]], speech_structure: SpeechStructure, max_new_tokens: int
+    ) -> openai.ChatCompletion:
+        return openai.ChatCompletion.create(
+            model="gpt-4-0125-preview",
+            messages=messages,
+            max_tokens=max_new_tokens,
+            logprobs=(speech_structure != SpeechStructure.OPEN_ENDED),
+            top_logprobs=5 if (speech_structure != SpeechStructure.OPEN_ENDED) else None,
+        )
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> HumanModel:
         """Generates a deepcopy of this model"""

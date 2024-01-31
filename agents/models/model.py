@@ -10,6 +10,12 @@ from enum import Enum
 from typing import Literal, Optional
 
 
+class BestOfNConfig(BaseModel):
+    n: int
+    opponent_n: int
+    maxmin: bool
+
+
 class ModelInput(BaseModel):
     role: RoleType
     content: str

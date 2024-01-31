@@ -13,7 +13,7 @@ import torch
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Union, Type
+from typing import Any, Optional, Union, Type
 import base64
 import copy
 import io
@@ -42,6 +42,7 @@ class LLModel(Model):
     INSTRUCTION_SUFFIX = ""
     TARGET_MODULES = []
     DEFAULT_GENERATION_PARAMS = GenerationParams()
+    MAX_MINI_BATCH_SIZE = 8
 
     def __init__(
         self,
@@ -252,19 +253,33 @@ class LLModel(Model):
             config_to_use.num_return_sequences = num_return_sequences
             return config_to_use
 
+        def generate_output(input_strs: list[str]):
+            sequences = []
+            scores = []
+            input_lengths = []
+            minibatches = [
+                input_strs[i : i + LLModel.MAX_MINI_BATCH_SIZE]
+                for i in range(0, len(input_strs), LLModel.MAX_MINI_BATCH_SIZE)
+            ]
+            for minibatch in minibatches:
+                inputs = self.tokenizer(minibatch, return_tensors="pt", padding=True).to(device)
+                outputs = self.model.generate(**inputs, generation_config=create_new_generation_config())
+                mini_sequences = outputs.sequences if not isinstance(self.model, LLModuleWithLinearProbe) else outputs
+                sequences += [row for row in mini_sequences]
+                scores += [row for row in outputs.scores] if hasattr(outputs, "scores") else []
+                input_lengths += [elem for elem in (inputs.input_ids != self.tokenizer.pad_token_id).sum(axis=1)]
+            return torch.stack(sequences), torch.stack(input_lengths), torch.stack(scores) if scores else None
+
         validate()
         self.model.eval()
         device = "cuda" if torch.cuda.is_available() else "cpu"
         input_strs = self.generate_input_strs(inputs=inputs, speech_structure=speech_structure)
-        inputs = self.tokenizer(input_strs, return_tensors="pt", padding=True).to(device)
-        outputs = self.model.generate(**inputs, generation_config=create_new_generation_config())
-        input_lengths = (inputs.input_ids != self.tokenizer.pad_token_id).sum(axis=1)
-        sequences = outputs.sequences if not isinstance(self.model, LLModuleWithLinearProbe) else outputs
+        sequences, input_lengths, scores = generate_output(input_strs=input_strs)
 
         decoded_outputs = []
         for i, row in enumerate(sequences):
             if self.is_debater or speech_structure != SpeechStructure.DECISION:
-                decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[min(i, len(input_lengths) - 1)] :])
+                decoded = self.tokenizer.decode(sequences[i, input_lengths[min(i, len(input_lengths) - 1)] :])
                 new_tokens = decoded.split(constants.INSTRUCTION_SUFFIX)[-1]
                 decoded_outputs.append(ModelResponse(speech=StringUtils.clean_string(new_tokens), prompt=input_strs[i]))
             else:
@@ -274,9 +289,9 @@ class LLModel(Model):
                 else:
                     tokenized_debater_a = self.tokenizer(constants.DEFAULT_DEBATER_A_NAME)
                     tokenized_debater_b = self.tokenizer(constants.DEFAULT_DEBATER_B_NAME)
-                    decoded = self.tokenizer.decode(outputs.sequences[i, input_lengths[i] :])
-                    a_score = get_string_log_prob(constants.DEFAULT_DEBATER_A_NAME, outputs.scores, i)
-                    b_score = get_string_log_prob(constants.DEFAULT_DEBATER_B_NAME, outputs.scores, i)
+                    decoded = self.tokenizer.decode(sequences[i, input_lengths[i] :])
+                    a_score = get_string_log_prob(constants.DEFAULT_DEBATER_A_NAME, scores, i)
+                    b_score = get_string_log_prob(constants.DEFAULT_DEBATER_B_NAME, scores, i)
 
                 normalized_a_score, normalized_b_score = normalize_log_probs(a_score, b_score)
                 decoded_outputs.append(
@@ -419,14 +434,17 @@ class LLModuleWithLinearProbe(nn.Module):
         self.probe = LLModuleWithLinearProbe.instantiate_probe(
             file_path=file_path, linear_idxs=self.linear_idxs, hidden_size=self.base_model.config.hidden_size
         )
-        self.softmax = nn.Softmax(dim=1)
+        # self.softmax = nn.Softmax(dim=1)
+        self.sigmoid = nn.Sigmoid(dim=1)
 
     @classmethod
     def instantiate_probe(cls, file_path: str, linear_idxs: list[int], hidden_size: int) -> nn.Module:
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        probe = nn.Linear(in_features=hidden_size * len(linear_idxs), out_features=2)
+        probe = nn.Linear(in_features=hidden_size * len(linear_idxs), out_features=1)
         if file_path:
             probe.load_state_dict(torch.load(file_path))
+        else:
+            raise Exception(f"File path ({file_path}) not loaded")
         return probe.to(device)
 
     def encode_representation(self, representation: torch.tensor) -> str:
@@ -453,7 +471,9 @@ class LLModuleWithLinearProbe(nn.Module):
         )
 
         unnormalized_outputs = self.probe(input_vecs.float())
-        outputs = self.softmax(unnormalized_outputs)
+        # outputs = self.softmax(unnormalized_outputs)
+        a_odds = self.sigmoid(unnormalized_outputs)
+        outputs = [a_odds, 1 - a_odds]
         reformatted_outputs = [(output[0].item(), output[1].item()) for output in outputs]
         encoded_hidden_states = [self.encode_representation(hs) for hs in hidden_states]
 
@@ -485,7 +505,7 @@ class ModelConfigStub:
 
 
 class TokenizerOutputStub:
-    def __init__(self, input_ids: np.ndarray):
+    def __init__(self, input_ids: torch.tensor):
         self.input_ids = input_ids
         self.__data = {"input_ids": self.input_ids}
 
@@ -508,13 +528,13 @@ class TokenizerStub:
         self.eos_token_id = 1
         self.alphabet = "abcdefghijklmnopqrstuvwxyz"
 
-    def __call__(self, inputs: list[str], **kwargs) -> dict[str, np.ndarray]:
+    def __call__(self, inputs: list[str], **kwargs) -> dict[str, torch.tensor]:
         batch_size = len(inputs)
         max_sequence_length = max(len(seq) for seq in inputs)
-        return TokenizerOutputStub(input_ids=np.random.randint(0, 100, [batch_size, max_sequence_length]))
+        return TokenizerOutputStub(input_ids=torch.tensor(np.random.randint(0, 100, [batch_size, max_sequence_length])))
 
     def encode(self, input_string: str | list[str], **kwargs):
-        if isinstance(input_string, np.ndarray):
+        if not isinstance(input_string, str) or not isinstance(input_string, list):
             return input_string
 
         length = len(input_string)
@@ -525,7 +545,7 @@ class TokenizerStub:
             return input_ids[0, :]
         return input_ids
 
-    def decode(self, tokens: np.ndarray) -> str | list[str]:
+    def decode(self, tokens: torch.tensor) -> str | list[str]:
         if len(tokens.shape) == 1:
             batch_size = 1
             sequence_length = tokens.shape[0]
@@ -543,7 +563,7 @@ class TokenizerStub:
 
 @dataclass
 class ModelOutputStub:
-    sequences: np.ndarray
+    sequences: Any  # should be a torch tensor
 
 
 class ModelStub:
@@ -556,10 +576,10 @@ class ModelStub:
     def eval(self):
         pass
 
-    def generate(self, input_ids: np.ndarray, generation_config: GenerationConfig, **kwargs):
+    def generate(self, input_ids: torch.tensor, generation_config: GenerationConfig, **kwargs):
         return self(input_ids=input_ids, generation_config=generation_config, **kwargs)
 
-    def __call__(self, input_ids: np.ndarray, generation_config: GenerationConfig, **kwargs):
+    def __call__(self, input_ids: torch.tensor, generation_config: GenerationConfig, **kwargs):
         batch_size, sequence_length = input_ids.shape
         output_sequence_length = sequence_length + generation_config.max_new_tokens
-        return ModelOutputStub(sequences=np.random.randint(0, 100, [batch_size, output_sequence_length]))
+        return ModelOutputStub(sequences=torch.tensor(np.random.randint(0, 100, [batch_size, output_sequence_length])))

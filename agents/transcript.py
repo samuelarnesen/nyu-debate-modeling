@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.models import ModelInput
+from agents.models import ModelInput, ModelResponse
 from prompts import Prompt, PromptTag, RoleType
 import utils.constants as constants
 
@@ -15,7 +15,7 @@ import json
 class Speech(BaseModel):
     speaker: str
     content: str
-    supplemental: Optional[dict[Any, Any] | list[dict[Any, Any]]]
+    supplemental: Optional[ModelResponse | list[ModelResponse]]
 
 
 class SpeechType(Enum):
@@ -135,7 +135,7 @@ class Transcript:
         self.speeches = []
 
     def add_speech(
-        self, speaker: str, content: str, supplemental: Optional[dict[Any, Any] | list[dict[Any, Any]]] = None
+        self, speaker: str, content: str, supplemental: Optional[ModelResponse | list[ModelResponse]] = None
     ) -> None:
         """
         Adds an agent-generated speech to the transcript

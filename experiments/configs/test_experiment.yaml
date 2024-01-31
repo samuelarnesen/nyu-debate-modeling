@@ -248,17 +248,48 @@ Operational_Test:
   agents:
     debaters:
       - model_settings:
-          alias: first-debater
-          model_type: random
+          alias: 1
+          model_type: offline
+          offline_file_path: 2024-01-31_12:26:11.205202
+        best_of_n:
+          n: 1
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: 2
+          model_type: offline
+          offline_file_path: 2024-01-31_12:26:11.205202
+        best_of_n:
+          n: 2
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: 4
+          model_type: offline
+          offline_file_path: 2024-01-31_12:26:11.205202
         best_of_n:
           n: 4
-          opponent_n: 1
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: 8
+          model_type: offline
+          offline_file_path: 2024-01-31_12:26:11.205202
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: 16
+          model_type: offline
+          offline_file_path: 2024-01-31_12:26:11.205202
+        best_of_n:
+          n: 16
+          opponent_n: 0
           maxmin: True
     judge:
       model_settings:
         model_type: random
-        alias: random-judge
-      scratchpad:
-        use_scratchpad: True
+        alias: random_judge
   dataset:
     dataset_type: quality

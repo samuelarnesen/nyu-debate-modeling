@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from agents.agent import Agent, BestOfNConfig, ScratchpadConfig
+from agents.agent import Agent, ScratchpadConfig
 from agents.judge import JudgeUtils
-from agents.models import HumanModel, Model, ModelResponse, OfflineModel, SpeechStructure
+from agents.models import BestOfNConfig, HumanModel, Model, ModelResponse, OfflineModel, SpeechStructure
 from agents.transcript import SpeechFormat, Transcript
 from prompts import Prompt, PromptTag
 from utils import LoggerUtils, QuoteUtils

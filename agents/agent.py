@@ -1,4 +1,4 @@
-from agents.models import Model, ModelSettings
+from agents.models import BestOfNConfig, Model, ModelSettings
 from agents.transcript import SpeechFormat, Transcript
 from prompts import Prompt
 from utils import LoggerUtils
@@ -6,12 +6,6 @@ from utils import LoggerUtils
 from pydantic import BaseModel, root_validator
 
 from typing import Any, Optional, Union
-
-
-class BestOfNConfig(BaseModel):
-    n: int
-    opponent_n: int
-    maxmin: bool
 
 
 class ScratchpadConfig(BaseModel):

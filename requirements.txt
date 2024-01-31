@@ -1,3 +1,4 @@
+backoff==2.2.1
 datasets
 einops==0.6.1
 matplotlib==3.7.1

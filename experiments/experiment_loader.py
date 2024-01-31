@@ -169,7 +169,6 @@ class ExperimentLoader:
         if debater_two_model:
             model_cache[debater_two_model_id] = debater_two_model
 
-
         judge_model = (
             ModelUtils.instantiate_model(
                 model_settings=experiment.agents.judge.model_settings,
@@ -372,25 +371,29 @@ class ExperimentLoader:
                     alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
                     debater_name=debate_round.first_debater.name,
                     idx=(i * 2) if experiment.flip else i,
+                    best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                 )
                 flipped_round.second_debater.model = offline_model_helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
                     debater_name=debate_round.second_debater.name,
                     idx=((i * 2) + 1) if experiment.flip else (i + 1),
+                    best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                 )
             if second_offline_file_path:
                 debate_round.second_debater.model = offline_model_helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
                     debater_name=flipped_round.second_debater.name,
                     idx=(i * 2) if experiment.flip else i,
+                    best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                 )
                 flipped_round.first_debater.model = offline_model_helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
                     debater_name=flipped_round.first_debater.name,
                     idx=((i * 2) + 1) if experiment.flip else (i + 1),
+                    best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                 )
 
-            if experiment.agents.debaters[debater_idxs[0]].best_of_n:
+            if experiment.agents.debaters[debater_idxs[0]].best_of_n and not first_offline_file_path:
                 debate_round.set_first_debater(
                     BestOfNDebater(
                         debater=debate_round.first_debater,
@@ -407,7 +410,7 @@ class ExperimentLoader:
                         best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                     )
                 )
-            if experiment.agents.debaters[debater_idxs[1]].best_of_n:
+            if experiment.agents.debaters[debater_idxs[1]].best_of_n and not second_offline_file_path:
                 debate_round.set_second_debater(
                     BestOfNDebater(
                         debater=debate_round.second_debater,

@@ -1,4 +1,4 @@
-13B Validation - Quality Debates:
+Quality Debates:
   word_limit: 500
   batch_size: 1
   num_speeches: 1
@@ -44,7 +44,7 @@ Served Test:
   dataset:
     dataset_type: quality
     split_type: train
-13B Validation - Normal Quality:
+Quality:
   word_limit: 500
   batch_size: 1
   num_speeches: 1
@@ -54,23 +54,45 @@ Served Test:
       - model_settings:
           model_type: mistral
           model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-          alias: "mixtral-old"
+          alias: sft
       - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-mega
-          alias: "mixtral-new"
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-5
+          alias: dpo
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+Best of N:
+  word_limit: 500
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-4/checkpoint-10
+          alias: "mixtral-4"
+        best_of_n:
+          n: 4
+          opponent_n: 1
+          maxmin: True
     judge:
       model_settings:
         model_type: openai
         alias: "openai-judge"
   dataset:
     dataset_type: quality
-    split_type: val
-13B Validation - Best of N Test:
+    split_type: train
+Tournament:
   word_limit: 500
   batch_size: 1
   num_speeches: 1
-  flip: True
+  flip: False
   agents:
     debaters:
       - model_settings:
@@ -78,21 +100,36 @@ Served Test:
           model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
           alias: "mixtral-4"
         best_of_n:
-          n: 4
-          opponent_n: 1
-          maxmin: True
-      - model_settings:
-          model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified/checkpoint-313
-          alias: "mixtral-2"
-        best_of_n:
-          n: 4
-          opponent_n: 1
+          n: 16
+          opponent_n: 4
           maxmin: True
     judge:
       model_settings:
         model_type: openai
         alias: "openai-judge"
+  dataset:
+    dataset_type: quality
+    split_type: val
+Judge:
+  word_limit: 500
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+          alias: sft
+    judge:
+      model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/base_models/mixtral-8x7b
+          alias: mistral-judge
+          probe_hyperparams:
+            file_path: /vast/spa9663/models/trained_models/mixtral-linear-probe/probe.pth
+            linear_idxs:
+              - -1
   dataset:
     dataset_type: quality
     split_type: val

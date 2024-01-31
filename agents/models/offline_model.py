@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.models.model import Model, ModelInput, ModelResponse
+from agents.models.model import BestOfNConfig, Model, ModelInput, ModelResponse
 from data import DataRow, RawDataset, SplitType
 from utils import InputUtils
 import utils.constants as constants
@@ -8,6 +8,8 @@ import utils.constants as constants
 from typing import Optional
 import json
 import os
+import random
+import sys  # TODO: remove
 
 
 class OfflineModel(Model):
@@ -26,7 +28,6 @@ class OfflineModel(Model):
 
     def predict(self, inputs: list[list[ModelInput] | str], **kwargs) -> ModelResponse:
         """Generates a list of texts in response to the given input."""
-
         speech = self.speeches[self.speech_idx]
         self.speech_idx += 1
         return [ModelResponse(speech=speech, prompt="\n".join(model_input.content for model_input in inputs[0]))]
@@ -68,7 +69,9 @@ class OfflineModelHelper:
                 return row
         raise Exception(f"A row with title {story_title} and question {question} could not be found in the dataset")
 
-    def create_offline_model(self, alias: str, debater_name: str, idx: int) -> OfflineModel:
+    def create_offline_model(
+        self, alias: str, debater_name: str, idx: int, best_of_n_config: Optional[BestOfNConfig] = None
+    ) -> OfflineModel:
         """
         Generates an OfflineModel
 
@@ -77,14 +80,32 @@ class OfflineModelHelper:
             debater_name: The name of the debater (Debater_A, Debater_B) that will use the model since
                 OfflineModels are single use
             idx: The index of the original round that was used (not the datsset index)
+            best_of_n_config: an optional config if one wants to resample from the multiple generated speeches.
+                For example, let's say you generated 16 speeches as part of a best-of-n generation but now want to check
+                how the model would've performed if you only sampled 4 speeches, you would pass in a best_of_n config
+                that specifies that 4 speeches are to be sampled. Please be careful to (a) avoid passing in an
+                n that is greater than the original n and (b) to avoid doing this for multi-stage debate rounds
+                [since debaters may be responding to a speech that was not selected]
 
         Returns:
             An offline model that can be used once
         """
+        all_speeches = self.data[idx % len(self.data)]["speeches"]
+        relevant_speeches = [speech for speech in filter(lambda x: x["speaker"] == debater_name, all_speeches)]
+        selected_speeches = []
+        if best_of_n_config:
+            for speech in relevant_speeches:
+                supplemental = speech["supplemental"]
+                contenders = [(supplemental["speech"], supplemental["preference"])]
+                for rejected_speech in supplemental["rejected_responses"]:
+                    contenders.append((rejected_speech["speech"], rejected_speech["preference"]))
+                options = random.choices(contenders, k=best_of_n_config.n)
+                best_option = sorted(options, key=lambda x: float(x[1]), reverse=True)[0][0]
+                selected_speeches.append(best_option)
+        else:
+            selected_speeches = [speech["content"] for speech in relevant_speeches]
+
         return OfflineModel(
             alias=alias,
-            speeches=[
-                speech["content"]
-                for speech in filter(lambda x: x["speaker"] == debater_name, self.data[idx % len(self.data)]["speeches"])
-            ],
+            speeches=selected_speeches,
         )
