@@ -25,7 +25,7 @@ class InputUtils:
         def list_files_with_prefix(directory: str, prefix: str):
             files = os.listdir(directory)
             matching_files = [
-                f"{directory}/{file}" for file in files if file.startswith(prefix) and file.endswith(extension)
+                f"{directory}/{file}" for file in filter(lambda x: x.startswith(prefix) and x.endswith(extension), files)
             ]
             return matching_files
 
@@ -36,7 +36,7 @@ class InputUtils:
             return input_texts
 
         directory = InputUtils.DEFAULT_FILE_PATH_PREFIX if "/" not in base_path else "/".join(base_path.split("/")[:-1])
-        prefix = base_path if "/" not in base_path else base_path.split("/")[:-1]
+        prefix = base_path if "/" not in base_path else base_path.split("/")[-1]
         eligible_files = list_files_with_prefix(directory=directory, prefix=prefix)
 
         file_texts = []

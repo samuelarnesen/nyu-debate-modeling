@@ -19,6 +19,7 @@ from typing import Optional, Union, Any
 import json
 import math
 import os
+import re
 import uuid
 
 
@@ -84,7 +85,10 @@ class ResultsCollector:
         self.num_debaters = (
             len(set([debater.model_settings.alias for debater in experiment.agents.debaters])) if experiment else 2
         )
-        self.aliases = sorted(list(set([debater.model_settings.alias for debater in experiment.agents.debaters])))
+        self.aliases = sorted(
+            list(set([debater.model_settings.alias for debater in experiment.agents.debaters])),
+            key=lambda x: self.__clean_alias(x),
+        )
         self.graphs_path_prefix = graphs_path_prefix
         self.full_record_path_prefix = full_record_path_prefix
         self.stats_path_prefix = stats_path_prefix
@@ -111,6 +115,11 @@ class ResultsCollector:
     def reset(self) -> None:
         """removes all the records of previous debate rounds"""
         self.summaries = []
+
+    def __clean_alias(self, alias: str):
+        if re.match("\d+", alias):
+            return int(alias)
+        return alias
 
     def __save_graph(self, name: str):
         if self.graphs_path_prefix and self.should_save:
@@ -513,21 +522,25 @@ class ResultsCollector:
         common_tags = ["statement", "summary", "analysis", "quote", "q_context"]
         rare_tags = ["flourish", "framing", "refutation", "promise", "logic", "reply"]
 
-        aliases = list(average.keys())
-
         fig, axs = plt.subplots(2, 1, figsize=(12, 8))
 
         for i in range(2):
             tags = common_tags if i == 0 else rare_tags
             index = np.arange(len(tags))
             bar_width = 4 / (self.num_debaters * len(tags))
-            for j, alias in enumerate(aliases):
+            for j, alias in enumerate(self.aliases):
                 average_values = [average[alias][feature] for feature in tags]
                 lower_errors = [max(average[alias][feature] - lower[alias][feature], 0) for feature in tags]
                 upper_errors = [max(upper[alias][feature] - average[alias][feature], 0) for feature in tags]
-                axs[i].bar(index + j * bar_width, average_values, bar_width, label=alias, yerr=[lower_errors, upper_errors])
+                axs[i].bar(
+                    index + j * bar_width,
+                    average_values,
+                    bar_width,
+                    label=alias,
+                    yerr=[lower_errors, upper_errors],
+                )
             axs[i].set_ylabel("Frequency")
-            axs[i].set_xticks(index + (bar_width * (len(aliases) - 1) / 2))
+            axs[i].set_xticks(index + (bar_width * (len(self.aliases) - 1) / 2))
             axs[i].set_xticklabels(tags)
             axs[i].set_ylim(0)
             if i == 0:

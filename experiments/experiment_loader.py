@@ -41,6 +41,7 @@ class ExperimentConfig(BaseModel):
     agents: AgentsConfig
     dataset: DatasetConfig
     annotations_classifier_file_path: Optional[str]
+    enable_self_debate: bool = False
 
 
 class ExperimentLoader:
@@ -436,7 +437,7 @@ class ExperimentLoader:
                 flipped_round.set_first_debater(HumanDebater(debater=flipped_round.first_debater, speeches=speeches))
 
             rounds.append(debate_round)
-            if experiment.flip:
+            if experiment.flip and flipped_round.first_debater.model.alias != flipped_round.second_debater.model.alias:
                 rounds.append(flipped_round)
 
         if len(rounds) <= 1:
@@ -471,7 +472,10 @@ class ExperimentLoader:
         if not experiment.agents or not experiment.agents.debaters or len(experiment.agents.debaters) < 1:
             raise Exception("At least 1 debater must be defined")
         all_idxs = [i for i in range(len(experiment.agents.debaters))] if len(experiment.agents.debaters) > 1 else [0, 0]
-        return [elem for elem in itertools.combinations(all_idxs, r=2)]
+        all_debater_idxs = [elem for elem in itertools.combinations(all_idxs, r=2)]
+        if experiment.enable_self_debate and len(experiment.agents.debaters) > 1:
+            all_debater_idxs += [(idx, idx) for idx in all_idxs]
+        return all_debater_idxs
 
     @classmethod
     def generate_debate_rounds(
