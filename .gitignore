@@ -1,5 +1,4 @@
 .env
 .DS_Store
 datasets/
-outputs/*
 **/__pycache__/*

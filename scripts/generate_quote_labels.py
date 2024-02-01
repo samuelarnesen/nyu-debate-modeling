@@ -161,7 +161,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     model = OpenAIModel(alias="relevance-judge", is_debater=False) if not args.test else FakeOpenAIModel()
-    input_texts = InputUtils.read_file_texts(base_path=f"{root}outputs/transcripts/{args.timestamp}", group_by_batch=False)
+    input_texts = InputUtils.read_file_texts(base_path=f"{root}outputs/transcripts/{args.timestamp}")
 
     results = []
     current_batch = []
