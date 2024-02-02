@@ -1,5 +1,4 @@
 Quality Debates:
-  word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
@@ -21,7 +20,6 @@ Quality Debates:
     dataset_type: quality_debates
     split_type: val
 Served Test:
-  word_limit: 500
   batch_size: 4
   num_speeches: 1
   flip: True
@@ -45,7 +43,6 @@ Served Test:
     dataset_type: quality
     split_type: train
 Quality:
-  word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
@@ -67,7 +64,6 @@ Quality:
     dataset_type: quality
     split_type: val
 Best of N:
-  word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: False
@@ -89,7 +85,6 @@ Best of N:
     dataset_type: quality
     split_type: train
 Tournament:
-  word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: False
@@ -110,8 +105,65 @@ Tournament:
   dataset:
     dataset_type: quality
     split_type: val
+Tournament:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          alias: 16
+          model_type: offline
+          offline_file_path: 2024-01-30_18:00:30.899060
+        best_of_n:
+          n: 16
+          opponent_n: 1
+          maxmin: True
+      - model_settings:
+          model_type: mistral
+          alias: 8
+          model_type: offline
+          offline_file_path: 2024-01-30_18:00:30.899060
+        best_of_n:
+          n: 8
+          opponent_n: 1
+          maxmin: True
+      - model_settings:
+          model_type: mistral
+          alias: 4
+          model_type: offline
+          offline_file_path: 2024-01-30_18:00:30.899060
+        best_of_n:
+          n: 4
+          opponent_n: 1
+          maxmin: True
+      - model_settings:
+          model_type: mistral
+          alias: 2
+          model_type: offline
+          offline_file_path: 2024-01-30_18:00:30.899060
+        best_of_n:
+          n: 2
+          opponent_n: 1
+          maxmin: True
+      - model_settings:
+          model_type: mistral
+          alias: 1
+          model_type: offline
+          offline_file_path: 2024-01-30_18:00:30.899060
+        best_of_n:
+          n: 1
+          opponent_n: 1
+          maxmin: True
+    judge:
+      model_settings:
+        model_type: random
+        alias: random-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
 Judge:
-  word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: False

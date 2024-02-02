@@ -96,7 +96,6 @@ class Prompt(BaseModel):
 class PromptConfig(BaseModel):
     name: str
     opponent_name: str
-    word_limit: int
     position: str
     opponent_position: str
     topic: str
@@ -165,7 +164,6 @@ class PromptParser:
         return PromptConfig(
             name=config.opponent_name,
             opponent_name=config.name,
-            word_limit=config.word_limit,
             position=config.opponent_position,
             opponent_position=config.position,
             topic=config.topic,
@@ -180,7 +178,6 @@ class PromptParser:
         return PromptConfig(
             name=constants.DEFAULT_DEBATER_A_NAME if position == 0 else constants.DEFAULT_DEBATER_B_NAME,
             opponent_name=constants.DEFAULT_DEBATER_B_NAME if position == 0 else constants.DEFAULT_DEBATER_A_NAME,
-            word_limit=constants.DEFAULT_WORD_LIMIT,
             position=row.positions[position],
             opponent_position=row.positions[(position - 1) * -1],
             topic=row.question,

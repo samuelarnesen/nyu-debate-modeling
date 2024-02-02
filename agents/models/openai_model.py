@@ -174,6 +174,6 @@ class OpenAIModel(Model):
             top_logprobs=5 if (speech_structure != SpeechStructure.OPEN_ENDED) else None,
         )
 
-    def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> HumanModel:
+    def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> OpenAIModel:
         """Generates a deepcopy of this model"""
-        return self(alias=alias, is_debater=is_debater)
+        return OpenAIModel(alias=alias, is_debater=is_debater)

@@ -1,5 +1,4 @@
 Hardcoded_Test:
-  word_limit: 500
   batch_size: 8
   num_speeches: 1
   flip: True
@@ -26,7 +25,6 @@ Hardcoded_Test:
     dataset_type: quality
     split_type: val
 Simple_Test:
-  word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: False
@@ -46,7 +44,6 @@ Simple_Test:
     dataset_type: quality_debates
     split_type: val
 Batched_Test:
-  word_limit: 500
   batch_size: 8
   num_speeches: 3
   flip: False
@@ -66,7 +63,6 @@ Batched_Test:
     dataset_type: quality_debates
     split_type: val
 Single_Test:
-  word_limit: 500
   batch_size: 1
   num_speeches: 3
   flip: True
@@ -85,7 +81,6 @@ Single_Test:
   dataset:
     dataset_type: quality_debates
 Offline_Test:
-  word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
@@ -104,7 +99,6 @@ Offline_Test:
   dataset:
     dataset_type: quality
 Quality_Test:
-  word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: False
@@ -124,7 +118,6 @@ Quality_Test:
     dataset_type: quality
     split_type: train
 Human_Test:
-  word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
@@ -145,7 +138,6 @@ Human_Test:
   dataset:
     dataset_type: quality_debates
 Dynamic_Test:
-  word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
@@ -165,7 +157,6 @@ Dynamic_Test:
     dataset_type: annotated_quality_debates
     split_type: train
 Dynamic_Override_Test:
-  word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
@@ -187,7 +178,6 @@ Dynamic_Override_Test:
     dataset_type: annotated_quality_debates
     split_type: train
 Labelled_Scratchpad_Test:
-  word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: False
@@ -215,7 +205,6 @@ Labelled_Scratchpad_Test:
     dataset_type: scratchpad_quality_debates
     split_type: train
 BoN_Test:
-  word_limit: 500
   batch_size: 1
   num_speeches: 1
   flip: True
@@ -240,56 +229,83 @@ BoN_Test:
   dataset:
     dataset_type: quality_debates
     split_type: train
-Operational_Test:
-  word_limit: 500
+Tournament:
   batch_size: 1
   num_speeches: 1
   flip: True
+  enable_self_debate: True
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          alias: 16
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
+        best_of_n:
+          n: 16
+          opponent_n: 1
+          maxmin: True
+      - model_settings:
+          model_type: mistral
+          alias: 8
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
+        best_of_n:
+          n: 8
+          opponent_n: 1
+          maxmin: True
+      - model_settings:
+          model_type: mistral
+          alias: 4
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
+        best_of_n:
+          n: 4
+          opponent_n: 1
+          maxmin: True
+      - model_settings:
+          model_type: mistral
+          alias: 2
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
+        best_of_n:
+          n: 2
+          opponent_n: 1
+          maxmin: True
+      - model_settings:
+          model_type: mistral
+          alias: 1
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
+        best_of_n:
+          n: 1
+          opponent_n: 1
+          maxmin: True
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+Operational_Test:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  previous_run_to_replicate_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
   agents:
     debaters:
       - model_settings:
           alias: 1
-          model_type: offline
-          offline_file_path: 2024-01-31_12:26:11.205202
-        best_of_n:
-          n: 1
-          opponent_n: 0
-          maxmin: True
+          model_type: random
       - model_settings:
           alias: 2
-          model_type: offline
-          offline_file_path: 2024-01-31_12:26:11.205202
-        best_of_n:
-          n: 2
-          opponent_n: 0
-          maxmin: True
-      - model_settings:
-          alias: 4
-          model_type: offline
-          offline_file_path: 2024-01-31_12:26:11.205202
-        best_of_n:
-          n: 4
-          opponent_n: 0
-          maxmin: True
-      - model_settings:
-          alias: 8
-          model_type: offline
-          offline_file_path: 2024-01-31_12:26:11.205202
-        best_of_n:
-          n: 8
-          opponent_n: 0
-          maxmin: True
-      - model_settings:
-          alias: 16
-          model_type: offline
-          offline_file_path: 2024-01-31_12:26:11.205202
-        best_of_n:
-          n: 16
-          opponent_n: 0
-          maxmin: True
+          model_type: random
     judge:
       model_settings:
         model_type: random
         alias: random_judge
   dataset:
     dataset_type: quality
+    split_type: val

@@ -1,5 +1,4 @@
 MyExperiment: # The name of your experiment
-  word_limit: 500 # Number of words that can be generated per speech
   batch_size: 1 # Number of rounds to be processed simultaneously
   num_speeches: 1 # Number of speeches that each debater will give per round
   flip: True # Whether each debater will debate each side of the debate

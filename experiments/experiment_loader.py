@@ -33,7 +33,6 @@ class AgentsConfig(BaseModel):
 
 
 class ExperimentConfig(BaseModel):
-    word_limit: int
     batch_size: int
     num_speeches: int
     flip: bool = False
@@ -42,6 +41,7 @@ class ExperimentConfig(BaseModel):
     dataset: DatasetConfig
     annotations_classifier_file_path: Optional[str]
     enable_self_debate: bool = False
+    previous_run_to_replicate_path: Optional[str]
 
 
 class ExperimentLoader:
@@ -185,14 +185,17 @@ class ExperimentLoader:
         offline_model_helper = None
         first_offline_file_path = experiment.agents.debaters[debater_idxs[0]].model_settings.offline_file_path
         second_offline_file_path = experiment.agents.debaters[debater_idxs[1]].model_settings.offline_file_path
-        is_offline = first_offline_file_path or second_offline_file_path
+        is_offline = first_offline_file_path or second_offline_file_path or experiment.previous_run_to_replicate_path
         if is_offline:
             if (first_offline_file_path and second_offline_file_path) and (
                 first_offline_file_path != second_offline_file_path
             ):
                 raise Exception("Offline file paths must be the same")
-            prefix = first_offline_file_path if first_offline_file_path else second_offline_file_path
-            offline_model_helper = OfflineModelHelper(file_path_prefix=prefix, dataset=dataset)
+            path = first_offline_file_path or second_offline_file_path
+            if path and experiment.previous_run_to_replicate_path:
+                raise Exception("Offline file paths must be the same")
+            path = path or experiment.previous_run_to_replicate_path
+            offline_model_helper = OfflineModelHelper(file_path_prefix=path, dataset=dataset)
 
         # create debate rounds
         rounds = []
@@ -208,7 +211,7 @@ class ExperimentLoader:
             else:
                 example = (
                     dataset.get_example(idx=i, split=split_type)
-                    if not is_offline
+                    if not offline_model_helper
                     else offline_model_helper.get_example(idx=i, split_type=split_type)
                 )
                 topic = example.question
@@ -223,7 +226,6 @@ class ExperimentLoader:
             config_a = PromptConfig(
                 name=constants.DEFAULT_DEBATER_A_NAME,
                 opponent_name=constants.DEFAULT_DEBATER_B_NAME,
-                word_limit=experiment.word_limit,
                 position=position,
                 opponent_position=opponent_position,
                 topic=topic,
@@ -233,7 +235,6 @@ class ExperimentLoader:
             config_b = PromptConfig(
                 name=constants.DEFAULT_DEBATER_B_NAME,
                 opponent_name=constants.DEFAULT_DEBATER_A_NAME,
-                word_limit=experiment.word_limit,
                 position=opponent_position,
                 opponent_position=position,
                 topic=topic,
@@ -371,26 +372,26 @@ class ExperimentLoader:
                 debate_round.first_debater.model = offline_model_helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
                     debater_name=debate_round.first_debater.name,
-                    idx=(i * 2) if experiment.flip else i,
+                    idx=i,
                     best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                 )
                 flipped_round.second_debater.model = offline_model_helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
                     debater_name=debate_round.second_debater.name,
-                    idx=((i * 2) + 1) if experiment.flip else (i + 1),
+                    idx=i,
                     best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                 )
             if second_offline_file_path:
                 debate_round.second_debater.model = offline_model_helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
                     debater_name=flipped_round.second_debater.name,
-                    idx=(i * 2) if experiment.flip else i,
+                    idx=i,
                     best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                 )
                 flipped_round.first_debater.model = offline_model_helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
                     debater_name=flipped_round.first_debater.name,
-                    idx=((i * 2) + 1) if experiment.flip else (i + 1),
+                    idx=i,
                     best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                 )
 
