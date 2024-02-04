@@ -1,6 +1,6 @@
 from data.dataset import DataRow, DatasetType, JudgePreferenceDataRow, RawDataLoader, RawDataset, SplitType
 from data.quality_loader import QualityLoader
-from utils import InputUtils
+from utils import InputType, InputUtils
 import utils.constants as constants
 
 from typing import Any, Optional
@@ -78,7 +78,7 @@ class JudgePreferencesLoader(RawDataLoader):
         quality_dataset = QualityLoader.load(full_dataset_filepath=quality_filepath)
 
         train_data = []
-        input_texts = InputUtils.read_file_texts(base_path=full_dataset_filepath, extension="json")
+        input_texts = InputUtils.read_file_texts(base_path=full_dataset_filepath, input_type=InputType.JSON_TRANSCRIPT)
         for text in input_texts:
             data = json.loads(text)
             row = get_original_data_row(data=data, dataset=quality_dataset)

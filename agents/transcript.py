@@ -14,7 +14,7 @@ import json
 
 class Speech(BaseModel):
     speaker: str
-    content: str
+    content: str | bool
     supplemental: Optional[ModelResponse | list[ModelResponse]]
 
 

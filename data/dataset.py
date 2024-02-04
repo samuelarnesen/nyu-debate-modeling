@@ -62,27 +62,27 @@ class AnnotationBracket(Enum):
 
 
 class AnnotationData(BaseModel):
-    percents: Optional[dict[AnnotationTag | str, float]]
-    percentiles: Optional[dict[AnnotationTag | str, float]]
+    percents: Optional[dict[AnnotationTag | str, float]] = None
+    percentiles: Optional[dict[AnnotationTag | str, float]] = None
 
 
 class SpeechData(BaseModel):
     text: str
     position: int
     speaker_type: SpeakerType
-    supplemental_file_paths: Optional[dict[str, str]]
-    scratchpad: Optional[str]
-    annotation: Optional[AnnotationData]
+    supplemental_file_paths: Optional[dict[str, str]] = None
+    scratchpad: Optional[str] = None
+    annotation: Optional[AnnotationData] = None
 
 
 class DataRow(BaseModel):
     background_text: str
-    question: Optional[str]
-    positions: Optional[tuple[str, str]]
-    speeches: Optional[list[SpeechData]]
-    correct_index: Optional[int]
-    debate_id: Optional[str]
-    story_title: Optional[str]
+    question: Optional[str] = None
+    positions: Optional[tuple[str, str]] = None
+    speeches: Optional[list[SpeechData]] = None
+    correct_index: Optional[int] = None
+    debate_id: Optional[str] = None
+    story_title: Optional[str] = None
 
 
 class JudgePreferenceDataRow(BaseModel):

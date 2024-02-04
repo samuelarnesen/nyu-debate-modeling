@@ -84,7 +84,7 @@ Best of N:
   dataset:
     dataset_type: quality
     split_type: train
-Tournament:
+Tournament - Data Generation:
   batch_size: 1
   num_speeches: 1
   flip: False
@@ -92,8 +92,8 @@ Tournament:
     debaters:
       - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-          alias: "mixtral-4"
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified/checkpoint-156
+          alias: "mixtral-1-epoch"
         best_of_n:
           n: 16
           opponent_n: 4

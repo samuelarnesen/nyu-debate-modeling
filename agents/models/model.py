@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, validator, root_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator, validator
 
 from prompts import RoleType
 import utils.constants as constants
@@ -66,7 +66,7 @@ class ModelSettings(BaseModel):
     served: bool = False
     probe_hyperparams: Optional[ProbeHyperparams] = None
 
-    @root_validator
+    @model_validator(mode="before")
     def verify_custom_settings(cls, values):
         existence_count = sum([values.get("is_human", False), values.get("served", False)]) + (
             1 if values.get("offline_file_path", None) else 0
@@ -74,6 +74,13 @@ class ModelSettings(BaseModel):
         if existence_count > 1:
             raise ValueError("One cannot set more than one of is_human, served, or offline_file_path to non-null and true")
         return values
+
+    model_config = ConfigDict(protected_namespaces=("protect_me_", "also_protect_"))
+
+    @field_validator("alias", mode="before")
+    @classmethod
+    def validate_alias(cls, alias: str | int):
+        return str(alias)
 
 
 class SpeechStructure(Enum):

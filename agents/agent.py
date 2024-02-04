@@ -3,7 +3,7 @@ from agents.transcript import SpeechFormat, Transcript
 from prompts import Prompt
 from utils import LoggerUtils
 
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from typing import Any, Optional, Union
 
@@ -13,7 +13,7 @@ class ScratchpadConfig(BaseModel):
     scratchpad_word_limit: Optional[int] = None
     scratchpad_public: bool = False
 
-    @root_validator
+    @model_validator(mode="before")
     def check_one_true_and_a_none(cls, values):
         if (
             not values.get("use_scratchpad")
@@ -28,6 +28,8 @@ class AgentConfig(BaseModel):
     model_settings: ModelSettings
     scratchpad: ScratchpadConfig = ScratchpadConfig()
     best_of_n: Optional[BestOfNConfig] = None
+
+    model_config = ConfigDict(protected_namespaces=("protect_me_", "also_protect_"))
 
 
 class Agent:

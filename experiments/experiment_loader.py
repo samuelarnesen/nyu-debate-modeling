@@ -18,7 +18,7 @@ from prompts import DynamicPromptParser, Prompt, PromptConfig, PromptLoadingConf
 from utils import LoggerUtils
 import utils.constants as constants
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator, field_validator
 import random
 import yaml
 
@@ -32,6 +32,41 @@ class AgentsConfig(BaseModel):
     judge: AgentConfig
 
 
+class PreviousRunConfig(BaseModel):
+    file_path: str
+    replicate_topics: bool = False
+    merge_results: bool = False
+
+
+class TournamentType(Enum):
+    ROUND_ROBIN = 1
+    POWER_PAIR = 2
+    CUSTOM = 3
+
+
+class TournamentConfig(BaseModel):
+    tournament_type: TournamentType = TournamentType.ROUND_ROBIN
+    custom_matchups: Optional[list[tuple[str, str]]] = None
+
+    @field_validator("tournament_type", mode="before")
+    @classmethod
+    def validate_tournament_type(cls, tournament_type: str | TournamentType):
+        if isinstance(tournament_type, str):
+            tournament_type = TournamentType[tournament_type.upper()]
+        if tournament_type == TournamentType.POWER_PAIR:
+            raise ValueError("Power paired tournaments are not supported yet")
+        return tournament_type
+
+    @model_validator(mode="after")
+    @classmethod
+    def verify_custom_settings(cls, config):
+        if config.custom_matchups and config.tournament_type != TournamentType.CUSTOM:
+            raise ValueError("One cannot set custom matchups if one does not select the custom tournament type")
+        elif not config.custom_matchups and config.tournament_type == TournamentType.CUSTOM:
+            raise ValueError("One cannot set the custom tournament type without setting custom matchups")
+        return config
+
+
 class ExperimentConfig(BaseModel):
     batch_size: int
     num_speeches: int
@@ -39,9 +74,10 @@ class ExperimentConfig(BaseModel):
     prompt_config: PromptLoadingConfig = PromptLoadingConfig()
     agents: AgentsConfig
     dataset: DatasetConfig
-    annotations_classifier_file_path: Optional[str]
+    annotations_classifier_file_path: Optional[str] = None
     enable_self_debate: bool = False
-    previous_run_to_replicate_path: Optional[str]
+    previous_run: Optional[PreviousRunConfig] = None
+    tournament: Optional[TournamentConfig] = TournamentConfig()
 
 
 class ExperimentLoader:
@@ -182,20 +218,29 @@ class ExperimentLoader:
             model_cache[judge_model_id] = judge_model
 
         # instantiates offline model helper
-        offline_model_helper = None
+        offline_model_helpers = None
         first_offline_file_path = experiment.agents.debaters[debater_idxs[0]].model_settings.offline_file_path
         second_offline_file_path = experiment.agents.debaters[debater_idxs[1]].model_settings.offline_file_path
-        is_offline = first_offline_file_path or second_offline_file_path or experiment.previous_run_to_replicate_path
-        if is_offline:
-            if (first_offline_file_path and second_offline_file_path) and (
-                first_offline_file_path != second_offline_file_path
-            ):
-                raise Exception("Offline file paths must be the same")
-            path = first_offline_file_path or second_offline_file_path
-            if path and experiment.previous_run_to_replicate_path:
-                raise Exception("Offline file paths must be the same")
-            path = path or experiment.previous_run_to_replicate_path
-            offline_model_helper = OfflineModelHelper(file_path_prefix=path, dataset=dataset)
+        if (
+            first_offline_file_path
+            or second_offline_file_path
+            or (experiment.previous_run and experiment.previous_run.replicate_topics)
+        ):
+            file_paths = [
+                file_path
+                for file_path in [
+                    first_offline_file_path,
+                    second_offline_file_path,
+                    experiment.previous_run.file_path
+                    if experiment.previous_run and experiment.previous_run.replicate_topics
+                    else None,
+                ]
+                if file_path is not None
+            ]
+            offline_model_helpers = [OfflineModelHelper(file_path_prefix=fp, dataset=dataset) for fp in file_paths]
+            for i, helper_one in enumerate(offline_model_helpers):
+                for helper_two in offline_model_helpers[i + 1 :]:
+                    OfflineModelHelper.reduce_to_common_rounds(helper_one=helper_one, helper_two=helper_two)
 
         # create debate rounds
         rounds = []
@@ -211,8 +256,8 @@ class ExperimentLoader:
             else:
                 example = (
                     dataset.get_example(idx=i, split=split_type)
-                    if not offline_model_helper
-                    else offline_model_helper.get_example(idx=i, split_type=split_type)
+                    if not offline_model_helpers
+                    else offline_model_helpers[0].get_example(idx=i, split_type=split_type)
                 )
                 topic = example.question
                 position = example.positions[0]
@@ -369,26 +414,28 @@ class ExperimentLoader:
             )
 
             if first_offline_file_path:
-                debate_round.first_debater.model = offline_model_helper.create_offline_model(
+                helper = next((x for x in offline_model_helpers if x.file_path_prefix == first_offline_file_path))
+                debate_round.first_debater.model = helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
                     debater_name=debate_round.first_debater.name,
                     idx=i,
                     best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                 )
-                flipped_round.second_debater.model = offline_model_helper.create_offline_model(
+                flipped_round.second_debater.model = helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
                     debater_name=debate_round.second_debater.name,
                     idx=i,
                     best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                 )
             if second_offline_file_path:
-                debate_round.second_debater.model = offline_model_helper.create_offline_model(
+                helper = next((x for x in offline_model_helpers if x.file_path_prefix == second_offline_file_path))
+                debate_round.second_debater.model = helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
                     debater_name=flipped_round.second_debater.name,
                     idx=i,
                     best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                 )
-                flipped_round.first_debater.model = offline_model_helper.create_offline_model(
+                flipped_round.first_debater.model = helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
                     debater_name=flipped_round.first_debater.name,
                     idx=i,
@@ -472,11 +519,25 @@ class ExperimentLoader:
         """Returns all the combinations of debaters that would need to debate each other in a round robin tournament"""
         if not experiment.agents or not experiment.agents.debaters or len(experiment.agents.debaters) < 1:
             raise Exception("At least 1 debater must be defined")
-        all_idxs = [i for i in range(len(experiment.agents.debaters))] if len(experiment.agents.debaters) > 1 else [0, 0]
-        all_debater_idxs = [elem for elem in itertools.combinations(all_idxs, r=2)]
-        if experiment.enable_self_debate and len(experiment.agents.debaters) > 1:
-            all_debater_idxs += [(idx, idx) for idx in all_idxs]
-        return all_debater_idxs
+
+        if experiment.tournament.tournament_type == TournamentType.ROUND_ROBIN:
+            all_idxs = [i for i in range(len(experiment.agents.debaters))] if len(experiment.agents.debaters) > 1 else [0, 0]
+            all_debater_idxs = [elem for elem in itertools.combinations(all_idxs, r=2)]
+            if experiment.enable_self_debate and len(experiment.agents.debaters) > 1:
+                all_debater_idxs += [(idx, idx) for idx in all_idxs]
+            return all_debater_idxs
+        elif experiment.tournament.tournament_type == TournamentType.CUSTOM:
+            matchup_idxs = []
+            aliases_to_idxs = {debater.model_settings.alias: i for i, debater in enumerate(experiment.agents.debaters)}
+            for a, b in experiment.tournament.custom_matchups:
+                if a not in aliases_to_idxs or b not in aliases_to_idxs:
+                    raise Exception(
+                        f"Custom matchup for ({a} v {b}) could not be created because one of the aliases was not recognized"
+                    )
+                matchup_idxs.append((aliases_to_idxs[a], aliases_to_idxs[b]))
+            return matchup_idxs
+        else:
+            raise Exception("Tournament type was not recognized")
 
     @classmethod
     def generate_debate_rounds(

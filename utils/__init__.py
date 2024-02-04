@@ -1,4 +1,4 @@
-from .input_utils import InputUtils
+from .input_utils import InputUtils, InputType
 from .logger_utils import LoggingCallback, LoggerUtils
 from .quote_utils import QuoteUtils
 from .save_utils import SaveUtils

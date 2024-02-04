@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from agents.models.model import BestOfNConfig, Model, ModelInput, ModelResponse
 from data import DataRow, RawDataset, SplitType
-from utils import InputUtils
+from utils import InputType, InputUtils
 import utils.constants as constants
 
 from typing import Optional
@@ -44,11 +44,31 @@ class OfflineModelHelper:
 
         Args:
             file_path_prefix: Either the full path of the transcript jsons (not including the numbers at the end) or just
-                the timestamp of the files
+                the timestamp of the files.
             dataset: The dataset that was used to generate the original prompts
         """
-        self.data = [json.loads(text) for text in InputUtils.read_file_texts(base_path=file_path_prefix, extension="json")]
+        self.file_path_prefix = file_path_prefix
+        self.data = [
+            json.loads(text)
+            for text in InputUtils.read_file_texts(base_path=file_path_prefix, input_type=InputType.JSON_TRANSCRIPT)
+        ]
         self.dataset = dataset
+
+    @classmethod
+    def reduce_to_common_rounds(cls, helper_one: OfflineModelHelper, helper_two: OfflineModelHelper) -> None:
+        """
+        This takes in two offline model helpers and trims their internal data objects to only contain topics that both
+        offline model helpers have rounds for (and so that it contains the topics in the same order.
+        This is useful in the case where you have two models that are using two different sets of transcripts and you
+        only want to select topics where both models have an example speech from.
+        """
+        title_to_entry_one = {entry["metadata"]["debate_identifier"]: entry for entry in helper_one.data}
+        title_to_entry_two = {entry["metadata"]["debate_identifier"]: entry for entry in helper_two.data}
+
+        helper_one.data = [
+            entry for entry in helper_one.data if entry["metadata"]["debate_identifier"] in title_to_entry_two
+        ]
+        helper_two.data = [title_to_entry_two[entry["metadata"]["debate_identifier"]] for entry in helper_one.data]
 
     def get_example(self, idx: int, split_type: SplitType = SplitType.TRAIN) -> DataRow:
         """
@@ -70,7 +90,7 @@ class OfflineModelHelper:
         raise Exception(f"A row with title {story_title} and question {question} could not be found in the dataset")
 
     def create_offline_model(
-        self, alias: str, debater_name: str, idx: int, best_of_n_config: Optional[BestOfNConfig] = None
+        self, alias: str, debater_name: str, idx: int, best_of_n_config: Optional[BestOfNConfig] = None, identifier: str = ""
     ) -> OfflineModel:
         """
         Generates an OfflineModel

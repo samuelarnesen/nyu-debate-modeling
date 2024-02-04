@@ -229,6 +229,30 @@ BoN_Test:
   dataset:
     dataset_type: quality_debates
     split_type: train
+Previous_Run_To_Replicate_Test:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  previous_run:
+    file_path: 2024-02-02_15:40:51.184947
+    replicate_topics: True
+    merge_results: True
+  agents:
+    debaters:
+      - model_settings:
+          alias: 1
+          model_type: random
+      - model_settings:
+          alias: 2
+          model_type: random
+    judge:
+      model_settings:
+        model_type: random
+        alias: random_judge
+  dataset:
+    dataset_type: quality
+    split_type: val
 Tournament:
   batch_size: 1
   num_speeches: 1
@@ -237,7 +261,6 @@ Tournament:
   agents:
     debaters:
       - model_settings:
-          model_type: mistral
           alias: 16
           model_type: offline
           offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
@@ -246,7 +269,6 @@ Tournament:
           opponent_n: 1
           maxmin: True
       - model_settings:
-          model_type: mistral
           alias: 8
           model_type: offline
           offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
@@ -255,7 +277,6 @@ Tournament:
           opponent_n: 1
           maxmin: True
       - model_settings:
-          model_type: mistral
           alias: 4
           model_type: offline
           offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
@@ -264,7 +285,6 @@ Tournament:
           opponent_n: 1
           maxmin: True
       - model_settings:
-          model_type: mistral
           alias: 2
           model_type: offline
           offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
@@ -273,7 +293,6 @@ Tournament:
           opponent_n: 1
           maxmin: True
       - model_settings:
-          model_type: mistral
           alias: 1
           model_type: offline
           offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
@@ -293,19 +312,51 @@ Operational_Test:
   num_speeches: 1
   flip: True
   enable_self_debate: True
-  previous_run_to_replicate_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
+  previous_run:
+    file_path: 2024-02-01_12:20:14.610274
+    replicate_topics: True
+    merge_results: True
   agents:
     debaters:
       - model_settings:
-          alias: 1
+          alias: "alice"
           model_type: random
       - model_settings:
-          alias: 2
+          alias: "bob"
           model_type: random
+      - model_settings:
+          model_type: random
+          alias: "16"
+      - model_settings:
+          model_type: random
+          alias: "8"
+      - model_settings:
+          model_type: random
+          alias: "4"
+      - model_settings:
+          model_type: random
+          alias: "2"
+      - model_settings:
+          model_type: random
+          alias: "1"
     judge:
       model_settings:
         model_type: random
         alias: random_judge
+  tournament:
+    tournament_type: custom
+    custom_matchups:
+      - ['alice', "16"]
+      - ['alice', "8"]
+      - ['alice', "4"]
+      - ['alice', "2"]
+      - ['alice', "1"]
+      - ['bob', "16"]
+      - ['bob', "8"]
+      - ['bob', "4"]
+      - ['bob', "2"]
+      - ['bob', "1"]
+      - ['alice', 'bob']
   dataset:
     dataset_type: quality
     split_type: val

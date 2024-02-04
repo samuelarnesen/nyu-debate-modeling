@@ -1,8 +1,8 @@
-from agents import DebateRoundSummary
+from agents import DebateRoundSummary, QuestionMetadata
 from experiments.annotator import Annotator
 from experiments.experiment_loader import ExperimentConfig, ExperimentLoader
 from experiments.quotes_collector import QuotesCollector
-from utils import LoggerUtils
+from utils import InputType, InputUtils, LoggerUtils
 import utils.constants as constants
 
 from pydantic import BaseModel
@@ -44,7 +44,7 @@ class ResultsRow(BaseModel):
     first_debater_settings: dict[Any, Any]
     second_debater_settings: dict[Any, Any]
     judge_settings: dict[Any, Any]
-    run_idx: int
+    run_idx: int | uuid.UUID
     debate_identifier: str
     question: str
     first_debater_answer: str
@@ -82,20 +82,24 @@ class ResultsCollector:
         self.logger = LoggerUtils.get_default_logger(__name__)
         self.quotes_collector = QuotesCollector(experiment=experiment) if experiment else None
         self.annotator = Annotator(model_path=experiment.annotations_classifier_file_path) if should_save else None
-        self.num_debaters = (
-            len(set([debater.model_settings.alias for debater in experiment.agents.debaters])) if experiment else 2
-        )
-        self.aliases = sorted(
-            list(set([debater.model_settings.alias for debater in experiment.agents.debaters])),
-            key=lambda x: self.__clean_alias(x),
-        )
+        self.experiment = experiment
         self.graphs_path_prefix = graphs_path_prefix
         self.full_record_path_prefix = full_record_path_prefix
         self.stats_path_prefix = stats_path_prefix
         self.is_offline = any([debater.model_settings.offline_file_path for debater in experiment.agents.debaters])
         self.should_save = should_save
-        self.experiment = experiment
-        self.summaries = []
+
+        self.summaries = self.initialize_summaries_list()
+        self.aliases = list(set([debater.model_settings.alias for debater in experiment.agents.debaters]))
+        for summary in self.summaries:
+            for alias in [summary.first_debater_alias, summary.second_debater_alias]:
+                if alias not in self.aliases:
+                    self.aliases.append(alias)
+        self.aliases = sorted(
+            self.aliases,
+            key=lambda x: (0, int(x)) if re.match("\d+", str(x)) else (1, x),
+        )
+        self.num_debaters = len(self.aliases)
 
         self.create_output_directories()
 
@@ -115,11 +119,6 @@ class ResultsCollector:
     def reset(self) -> None:
         """removes all the records of previous debate rounds"""
         self.summaries = []
-
-    def __clean_alias(self, alias: str):
-        if re.match("\d+", alias):
-            return int(alias)
-        return alias
 
     def __save_graph(self, name: str):
         if self.graphs_path_prefix and self.should_save:
@@ -156,9 +155,17 @@ class ResultsCollector:
             binary_matchups_to_stats[pair].correct_calls += 1 if binary_correct else 0
             binary_matchups_to_stats[pair].first_calls += 1 if summary.first_debater_wins else 0
             matchup_to_stats[pair].first_calls += summary.first_debater_win_prob
-            if i % 2 == 0 and self.experiment.flip and not self.is_offline and self.num_debaters > 1:
+            if (
+                i % 2 == 0
+                and self.num_debaters > 1
+                and i < len(self.summaries) - 1
+                and summary.metadata.debate_identifier == self.summaries[i + 1].metadata.debate_identifier
+                and summary.first_debater_alias == self.summaries[i + 1].second_debater_alias
+                and summary.second_debater_alias == self.summaries[i + 1].first_debater_alias
+            ):
                 if pair not in aggregated_matchups_to_stats:
                     aggregated_matchups_to_stats[pair] = JudgeStats()
+
                 aggregated_matchups_to_stats[pair].matches += 1
                 first_debater_win_prob = (summary.first_debater_win_prob + self.summaries[i + 1].first_debater_win_prob) / 2
                 second_debater_win_prob = (
@@ -172,7 +179,8 @@ class ResultsCollector:
 
         fig, axs = plt.subplots(1, 3)
 
-        if self.experiment.flip and not self.is_offline and self.num_debaters > 1:
+        # TODO: fix this -- doesnt work for large tournaments
+        if self.experiment.flip and not self.is_offline and self.num_debaters > 1 and False:
             group_width = 0.3
             spacing = 0.025
             bar_width = (group_width - spacing) / len(matchup_to_stats.keys())
@@ -235,7 +243,14 @@ class ResultsCollector:
                     buckets[j] = (buckets[j][0] + (1 if binary_correct else 0), buckets[j][1] + 1)
                     break
 
-            if self.experiment.flip and not self.is_offline and i % 2 == 0 and self.num_debaters > 1:
+            if (
+                i % 2 == 0
+                and self.num_debaters > 1
+                and i < len(self.summaries) - 1
+                and summary.metadata.debate_identifier == self.summaries[i + 1].metadata.debate_identifier
+                and summary.first_debater_alias == self.summaries[i + 1].second_debater_alias
+                and summary.second_debater_alias == self.summaries[i + 1].first_debater_alias
+            ):
                 agg_first_win_prob = (
                     self.summaries[i].first_debater_win_prob + self.summaries[i + 1].first_debater_win_prob
                 ) / 2
@@ -559,16 +574,19 @@ class ResultsCollector:
                 return debater.dict()
             return None
 
+        current_aliases = set([debater.model_settings.alias for debater in self.experiment.agents.debaters])
         run_idx = uuid.uuid4()
         rows = []
-        for summary in self.summaries:
+        for summary in filter(
+            lambda x: x.first_debater_alias in current_aliases and x.second_debater_alias in current_aliases, self.summaries
+        ):
             rows.append(
                 ResultsRow(
                     first_debater_alias=summary.first_debater_alias,
                     second_debater_alias=summary.second_debater_alias,
                     first_debater_settings=construct_debater_settings(summary.first_debater_alias),
                     second_debater_settings=construct_debater_settings(summary.second_debater_alias),
-                    judge_settings=self.experiment.agents.judge,
+                    judge_settings=self.experiment.agents.judge.dict(),
                     run_idx=run_idx,
                     debate_identifier=summary.metadata.debate_identifier,
                     question=summary.metadata.question,
@@ -646,3 +664,40 @@ class ResultsCollector:
         if self.should_save and self.stats_path_prefix:
             with open(f"{self.stats_path_prefix}.json", "w") as f:
                 json.dump(all_stats, f)
+
+    def initialize_summaries_list(self) -> list[DebateRoundSummary]:
+        if not self.experiment.previous_run or not self.experiment.previous_run.merge_results:
+            return []
+
+        summaries = []
+        offline_file_path_prefix = InputUtils.get_full_filepath(
+            base_path=self.experiment.previous_run.file_path, input_type=InputType.RUN
+        )
+        df = pd.read_csv(f"{offline_file_path_prefix}_run.csv")
+        for i, row in df.iterrows():
+            summary = DebateRoundSummary(
+                metadata=QuestionMetadata(
+                    first_debater_correct=row["first_debater_correct"],
+                    question_idx=-1,  # not needed,
+                    background_text="",  # not needed
+                    first_debater_answer=row["first_debater_answer"],
+                    second_debater_answer=row["second_debater_answer"],
+                    debate_identifier=row["debate_identifier"],
+                    question=row["question"],
+                ),
+                transcript="",  # not needed
+                winning_alias=str(row["first_debater_alias"])
+                if row["first_debater_wins"]
+                else str(row["second_debater_alias"]),
+                losing_alias=str(row["first_debater_alias"])
+                if not row["first_debater_wins"]
+                else str(row["second_debater_alias"]),
+                first_debater_alias=str(row["first_debater_alias"]),
+                second_debater_alias=str(row["second_debater_alias"]),
+                first_debater_wins=str(row["first_debater_wins"]),
+                judge_alias="",  # not needed,
+                winning_debater_prob=max(row["first_debater_win_prob"], row["second_debater_win_prob"]),
+                failed=False,
+            )
+            summaries.append(summary)
+        return summaries
