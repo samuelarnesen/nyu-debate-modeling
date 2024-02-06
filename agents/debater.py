@@ -169,9 +169,11 @@ class BestOfNDebater(Debater):
 
         for i, (model_response, score) in enumerate(zip(model_responses, scores)):
             model_response.preference = score
+            model_response.opposing_responses = opposing_debater_responses[
+                (i * self.config.opponent_n) : ((i + 1) * self.config.opponent_n)
+            ]
             if i != selection_idx:
                 best_model_response.rejected_responses.append(model_response)
-
         return [best_model_response.speech], [best_model_response]
 
     def copy(

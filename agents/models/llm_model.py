@@ -31,7 +31,7 @@ class LLMInput(BaseModel):
 
 class GenerationParams(BaseModel):
     max_new_tokens: int = 300
-    temperature: float = 0.5
+    temperature: float = 1.0
     top_p: float = 0.9
     repetition_penalty: float = 1.2
     do_sample: bool = True

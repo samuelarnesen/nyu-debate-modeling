@@ -165,7 +165,8 @@ class ExperimentLoader:
             dataset: the dataset from which one draws the questions and positions
             split_type: whether the quesitons/positions should be sampled from the train, val, or test sets
             debater_idxs: which pair of debaters from the experiment config should we be creating debate rounds for
-            count: the number of rounds to create
+            count: the number of rounds to create. If <0, it goes through every round in the dataset. This
+                is not recommended unless you are replaying rounds offline
             model_cache: a dictionary mapping a model alias (string) to a model. This is useful so that we do not
                 instantiate the same model multiple times if this function is called multiple times in a larger
                 tournament (it is not needed if you only invoke the function on one pair of models).
@@ -253,6 +254,15 @@ class ExperimentLoader:
             for i, helper_one in enumerate(offline_model_helpers):
                 for helper_two in offline_model_helpers[i + 1 :]:
                     OfflineModelHelper.reduce_to_common_rounds(helper_one=helper_one, helper_two=helper_two)
+
+        if count < 0:
+            if experiment.prompt_config.use_hardcoded_topics:
+                count = 1
+            elif offline_model_helpers:
+                count = offline_model_helpers[0].get_size()
+                print(f"setting count to {count}")
+            else:
+                count = len(dataset.get_data())
 
         # create debate rounds
         rounds = []
@@ -418,8 +428,8 @@ class ExperimentLoader:
                         question_idx=i,
                         background_text=background_text,
                         question=topic,
-                        first_debater_answer=opponent_position,
-                        second_debater_answer=position,
+                        first_debater_answer=position,
+                        second_debater_answer=opponent_position,
                         debate_identifier=debate_identifier,
                     )
                 ],

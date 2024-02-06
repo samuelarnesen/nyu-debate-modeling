@@ -16,6 +16,7 @@ import scipy.stats
 
 from enum import Enum
 from typing import Optional, Union, Any
+import copy
 import json
 import math
 import os
@@ -41,9 +42,9 @@ class JudgeStats(BaseModel):
 class ResultsRow(BaseModel):
     first_debater_alias: str
     second_debater_alias: str
-    first_debater_settings: dict[Any, Any]
-    second_debater_settings: dict[Any, Any]
-    judge_settings: dict[Any, Any]
+    first_debater_settings: Optional[dict[Any, Any]]
+    second_debater_settings: Optional[dict[Any, Any]]
+    judge_settings: Optional[dict[Any, Any]]
     run_idx: int | uuid.UUID
     debate_identifier: str
     question: str
@@ -100,6 +101,7 @@ class ResultsCollector:
             key=lambda x: (0, int(x)) if re.match("\d+", str(x)) else (1, x),
         )
         self.num_debaters = len(self.aliases)
+        self.previous_summary_count = len(self.summaries)
 
         self.create_output_directories()
 
@@ -575,13 +577,10 @@ class ResultsCollector:
             return None
 
         current_aliases = set([debater.model_settings.alias for debater in self.experiment.agents.debaters])
+        preloaded_run_idx = uuid.uuid4()
         run_idx = uuid.uuid4()
         rows = []
-        for summary in filter(
-            lambda x: x.first_debater_alias in current_aliases and x.second_debater_alias in current_aliases, self.summaries
-        ):
-            if summary.second_debater_win_prob == 0.5:
-                print(summary, end="\t\t")
+        for i, summary in enumerate(self.summaries):
             rows.append(
                 ResultsRow(
                     first_debater_alias=summary.first_debater_alias,
@@ -589,7 +588,7 @@ class ResultsCollector:
                     first_debater_settings=construct_debater_settings(summary.first_debater_alias),
                     second_debater_settings=construct_debater_settings(summary.second_debater_alias),
                     judge_settings=self.experiment.agents.judge.dict(),
-                    run_idx=run_idx,
+                    run_idx=run_idx if i >= self.previous_summary_count else preloaded_run_idx,
                     debate_identifier=summary.metadata.debate_identifier,
                     question=summary.metadata.question,
                     first_debater_answer=summary.metadata.first_debater_answer,
@@ -612,7 +611,7 @@ class ResultsCollector:
                 ).dict()
             )
 
-        df = pd.DataFrame.from_dict(rows)
+        df = pd.DataFrame(rows)
         if self.should_save and self.full_record_path_prefix:
             df.to_csv(f"{self.full_record_path_prefix}run.csv")
 
@@ -655,17 +654,20 @@ class ResultsCollector:
             self.logger.info(quote_results)
 
         if self.annotator:
-            plt.clf()
-            classifier_results = self.__graph_features()
-            converted_classifier_results = {key: value for key, value in classifier_results.items()}
-            all_stats.append(converted_classifier_results)
-            self.logger.info(classifier_results)
-
-        self.__organize_into_df()
+            try:
+                plt.clf()
+                classifier_results = self.__graph_features()
+                converted_classifier_results = {key: value for key, value in classifier_results.items()}
+                all_stats.append(converted_classifier_results)
+                self.logger.info(classifier_results)
+            except Exception as e:
+                self.logger.error(e)
 
         if self.should_save and self.stats_path_prefix:
             with open(f"{self.stats_path_prefix}.json", "w") as f:
                 json.dump(all_stats, f)
+
+        self.__organize_into_df()
 
     def initialize_summaries_list(self) -> list[DebateRoundSummary]:
         if not self.experiment.previous_run or not self.experiment.previous_run.merge_results:

@@ -103,6 +103,9 @@ class OfflineModelHelper:
 
         raise Exception(f"A row with title {story_title} and question {question} could not be found in the dataset")
 
+    def get_size(self):
+        return len(self.data)
+
     def create_offline_model(
         self,
         alias: str,
