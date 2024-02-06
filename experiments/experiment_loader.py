@@ -33,9 +33,16 @@ class AgentsConfig(BaseModel):
 
 
 class PreviousRunConfig(BaseModel):
-    file_path: str
+    file_path: str | list[str]
     replicate_topics: bool = False
     merge_results: bool = False
+
+    @field_validator("file_path", mode="before")
+    @classmethod
+    def validate_file_path(cls, file_path: str | list[str]):
+        if isinstance(file_path, str):
+            return [file_path]
+        return file_path
 
 
 class TournamentType(Enum):
@@ -148,7 +155,8 @@ class ExperimentLoader:
         debater_idxs: tuple[int, int],
         count: int,
         model_cache: Optional[dict[str, Model]] = None,
-    ) -> tuple[list[DebateRound], dict[str, Model]]:
+        offline_model_helper_cache: Optional[dict[str, OfflineModelHelper]] = None,
+    ) -> tuple[list[DebateRound], dict[str, Model], dict[str, OfflineModelHelper]]:
         """
         Creates a set of debate round for the specific debaters listed in debater_idxs.
 
@@ -161,7 +169,8 @@ class ExperimentLoader:
             model_cache: a dictionary mapping a model alias (string) to a model. This is useful so that we do not
                 instantiate the same model multiple times if this function is called multiple times in a larger
                 tournament (it is not needed if you only invoke the function on one pair of models).
-
+            offline_model_helper_cache: similar to the model_cache, but this is for the offline model helper.
+                In this case, it maps filepaths to models
         Returns:
             batched_rounds: a list of debate rounds based on the inputted configuration
             model_cache: a cached set of the models used in these debate rounds (useful if you invoke this
@@ -218,6 +227,7 @@ class ExperimentLoader:
             model_cache[judge_model_id] = judge_model
 
         # instantiates offline model helper
+        offline_model_helper_cache = offline_model_helper_cache or {}
         offline_model_helpers = None
         first_offline_file_path = experiment.agents.debaters[debater_idxs[0]].model_settings.offline_file_path
         second_offline_file_path = experiment.agents.debaters[debater_idxs[1]].model_settings.offline_file_path
@@ -226,18 +236,20 @@ class ExperimentLoader:
             or second_offline_file_path
             or (experiment.previous_run and experiment.previous_run.replicate_topics)
         ):
-            file_paths = [
-                file_path
-                for file_path in [
-                    first_offline_file_path,
-                    second_offline_file_path,
-                    experiment.previous_run.file_path
-                    if experiment.previous_run and experiment.previous_run.replicate_topics
-                    else None,
-                ]
-                if file_path is not None
-            ]
-            offline_model_helpers = [OfflineModelHelper(file_path_prefix=fp, dataset=dataset) for fp in file_paths]
+            file_paths = [first_offline_file_path, second_offline_file_path] + (
+                experiment.previous_run.file_path
+                if experiment.previous_run and experiment.previous_run.replicate_topics
+                else []
+            )
+            offline_model_helpers = []
+            for fp in filter(lambda x: x is not None, file_paths):
+                if fp in offline_model_helper_cache:
+                    offline_model_helpers.append(offline_model_helper_cache[fp])
+                else:
+                    helper = OfflineModelHelper(file_path_prefix=fp, dataset=dataset)
+                    offline_model_helpers.append(helper)
+                    offline_model_helper_cache[fp] = helper
+
             for i, helper_one in enumerate(offline_model_helpers):
                 for helper_two in offline_model_helpers[i + 1 :]:
                     OfflineModelHelper.reduce_to_common_rounds(helper_one=helper_one, helper_two=helper_two)
@@ -419,12 +431,14 @@ class ExperimentLoader:
                     alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
                     debater_name=debate_round.first_debater.name,
                     idx=i,
+                    positions=(position, opponent_position),
                     best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                 )
                 flipped_round.second_debater.model = helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
                     debater_name=debate_round.second_debater.name,
                     idx=i,
+                    positions=(position, opponent_position),
                     best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                 )
             if second_offline_file_path:
@@ -433,12 +447,14 @@ class ExperimentLoader:
                     alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
                     debater_name=flipped_round.second_debater.name,
                     idx=i,
+                    positions=(position, opponent_position),
                     best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                 )
                 flipped_round.first_debater.model = helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
                     debater_name=flipped_round.first_debater.name,
                     idx=i,
+                    positions=(position, opponent_position),
                     best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                 )
 
@@ -489,7 +505,7 @@ class ExperimentLoader:
                 rounds.append(flipped_round)
 
         if len(rounds) <= 1:
-            return rounds, model_cache
+            return rounds, model_cache, offline_model_helper_cache
 
         # batches the debate rounds for efficient generation
         batched_rounds = []
@@ -512,7 +528,7 @@ class ExperimentLoader:
         if current_flipped_batch:
             batched_rounds.append(ExperimentLoader.merge_debate_rounds(current_flipped_batch))
 
-        return batched_rounds, model_cache
+        return batched_rounds, model_cache, offline_model_helper_cache
 
     @classmethod
     def get_debater_combinations(cls, experiment: ExperimentConfig):
@@ -530,10 +546,10 @@ class ExperimentLoader:
             matchup_idxs = []
             aliases_to_idxs = {debater.model_settings.alias: i for i, debater in enumerate(experiment.agents.debaters)}
             for a, b in experiment.tournament.custom_matchups:
-                if a not in aliases_to_idxs or b not in aliases_to_idxs:
-                    raise Exception(
-                        f"Custom matchup for ({a} v {b}) could not be created because one of the aliases was not recognized"
-                    )
+                if a not in aliases_to_idxs:
+                    raise Exception(f"Custom matchup for ({a} v {b}) could not be created because ({a}) was not recognized")
+                if b not in aliases_to_idxs:
+                    raise Exception(f"Custom matchup for ({a} v {b}) could not be created because ({b}) was not recognized")
                 matchup_idxs.append((aliases_to_idxs[a], aliases_to_idxs[b]))
             return matchup_idxs
         else:
@@ -567,14 +583,16 @@ class ExperimentLoader:
 
         all_rounds = []
         model_cache = {}
+        offline_model_helper_cache = {}
         for combination in ExperimentLoader.get_debater_combinations(experiment=experiment):
-            rounds, model_cache = ExperimentLoader.create_debate_rounds_for_combination(
+            rounds, model_cache, offline_model_helper_cache = ExperimentLoader.create_debate_rounds_for_combination(
                 experiment=experiment,
                 dataset=dataset,
                 split_type=split_type,
                 debater_idxs=combination,
                 count=count,
                 model_cache=model_cache,
+                offline_model_helper_cache=offline_model_helper_cache,
             )
             all_rounds.extend(rounds)
 

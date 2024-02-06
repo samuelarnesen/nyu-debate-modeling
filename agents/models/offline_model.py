@@ -6,10 +6,10 @@ from utils import InputType, InputUtils
 import utils.constants as constants
 
 from typing import Optional
+import copy
 import json
 import os
 import random
-import sys  # TODO: remove
 
 
 class OfflineModel(Model):
@@ -62,13 +62,21 @@ class OfflineModelHelper:
         This is useful in the case where you have two models that are using two different sets of transcripts and you
         only want to select topics where both models have an example speech from.
         """
+
+        def get_trimmed_data(main: list[dict], other: list[dict], order_by_main: bool) -> list[dict]:
+            new_data = []
+            opposite = other if order_by_main else main
+            for title, entry in main.items() if order_by_main else other.items():
+                get_position = lambda x: x["metadata"]["first_debater_answer"]
+                if title in opposite and get_position(entry) == get_position(opposite[title]):
+                    new_data.append(entry)
+            return new_data
+
         title_to_entry_one = {entry["metadata"]["debate_identifier"]: entry for entry in helper_one.data}
         title_to_entry_two = {entry["metadata"]["debate_identifier"]: entry for entry in helper_two.data}
 
-        helper_one.data = [
-            entry for entry in helper_one.data if entry["metadata"]["debate_identifier"] in title_to_entry_two
-        ]
-        helper_two.data = [title_to_entry_two[entry["metadata"]["debate_identifier"]] for entry in helper_one.data]
+        helper_one.data = get_trimmed_data(title_to_entry_one, title_to_entry_two, order_by_main=True)
+        helper_two.data = get_trimmed_data(title_to_entry_two, title_to_entry_one, order_by_main=False)
 
     def get_example(self, idx: int, split_type: SplitType = SplitType.TRAIN) -> DataRow:
         """
@@ -86,11 +94,23 @@ class OfflineModelHelper:
         story_title = debate_identifier.replace("_" + question, "")
         for row in self.dataset.get_data(split=split_type):
             if row.story_title == story_title and row.question == question:
+                if row.positions[0] != self.data[idx % len(self.data)]["metadata"]["first_debater_answer"]:
+                    if row.speeches:
+                        raise Exception("The speech orders are incompatible")
+                    row.positions = (row.positions[1], row.positions[0])
+                    row.correct_index = 1 if row.correct_index == 0 else 1
                 return row
+
         raise Exception(f"A row with title {story_title} and question {question} could not be found in the dataset")
 
     def create_offline_model(
-        self, alias: str, debater_name: str, idx: int, best_of_n_config: Optional[BestOfNConfig] = None, identifier: str = ""
+        self,
+        alias: str,
+        debater_name: str,
+        idx: int,
+        positions: tuple[str, str],
+        best_of_n_config: Optional[BestOfNConfig] = None,
+        identifier: str = "",
     ) -> OfflineModel:
         """
         Generates an OfflineModel
@@ -100,6 +120,7 @@ class OfflineModelHelper:
             debater_name: The name of the debater (Debater_A, Debater_B) that will use the model since
                 OfflineModels are single use
             idx: The index of the original round that was used (not the datsset index)
+            positions: tuple of (debater_a_position, debater_b_position)
             best_of_n_config: an optional config if one wants to resample from the multiple generated speeches.
                 For example, let's say you generated 16 speeches as part of a best-of-n generation but now want to check
                 how the model would've performed if you only sampled 4 speeches, you would pass in a best_of_n config
@@ -110,8 +131,23 @@ class OfflineModelHelper:
         Returns:
             An offline model that can be used once
         """
-        all_speeches = self.data[idx % len(self.data)]["speeches"]
-        relevant_speeches = [speech for speech in filter(lambda x: x["speaker"] == debater_name, all_speeches)]
+        entry = self.data[idx % len(self.data)]
+        all_speeches = entry["speeches"]
+        debater_a_position = entry["metadata"]["first_debater_answer"]
+        debater_b_position = entry["metadata"]["second_debater_answer"]
+
+        is_flipped = debater_a_position == positions[1] and debater_b_position == positions[0]
+        debater_name_to_use = (
+            debater_name
+            if not is_flipped
+            else (
+                constants.DEFAULT_DEBATER_A_NAME
+                if debater_name == constants.DEFAULT_DEBATER_B_NAME
+                else constants.DEFAULT_DEBATER_B_NAME
+            )
+        )
+
+        relevant_speeches = [speech for speech in filter(lambda x: x["speaker"] == debater_name_to_use, all_speeches)]
         selected_speeches = []
         if best_of_n_config:
             for speech in relevant_speeches:

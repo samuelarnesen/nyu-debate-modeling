@@ -34,8 +34,8 @@ class WinStats(BaseModel):
 
 class JudgeStats(BaseModel):
     matches: int = 0
-    correct_calls: int = 0
-    first_calls: int = 0
+    correct_calls: int | float = 0
+    first_calls: int | float = 0
 
 
 class ResultsRow(BaseModel):
@@ -580,6 +580,8 @@ class ResultsCollector:
         for summary in filter(
             lambda x: x.first_debater_alias in current_aliases and x.second_debater_alias in current_aliases, self.summaries
         ):
+            if summary.second_debater_win_prob == 0.5:
+                print(summary, end="\t\t")
             rows.append(
                 ResultsRow(
                     first_debater_alias=summary.first_debater_alias,
@@ -670,34 +672,35 @@ class ResultsCollector:
             return []
 
         summaries = []
-        offline_file_path_prefix = InputUtils.get_full_filepath(
-            base_path=self.experiment.previous_run.file_path, input_type=InputType.RUN
-        )
-        df = pd.read_csv(f"{offline_file_path_prefix}_run.csv")
-        for i, row in df.iterrows():
-            summary = DebateRoundSummary(
-                metadata=QuestionMetadata(
-                    first_debater_correct=row["first_debater_correct"],
-                    question_idx=-1,  # not needed,
-                    background_text="",  # not needed
-                    first_debater_answer=row["first_debater_answer"],
-                    second_debater_answer=row["second_debater_answer"],
-                    debate_identifier=row["debate_identifier"],
-                    question=row["question"],
-                ),
-                transcript="",  # not needed
-                winning_alias=str(row["first_debater_alias"])
-                if row["first_debater_wins"]
-                else str(row["second_debater_alias"]),
-                losing_alias=str(row["first_debater_alias"])
-                if not row["first_debater_wins"]
-                else str(row["second_debater_alias"]),
-                first_debater_alias=str(row["first_debater_alias"]),
-                second_debater_alias=str(row["second_debater_alias"]),
-                first_debater_wins=str(row["first_debater_wins"]),
-                judge_alias="",  # not needed,
-                winning_debater_prob=max(row["first_debater_win_prob"], row["second_debater_win_prob"]),
-                failed=False,
-            )
-            summaries.append(summary)
+        for fp in self.experiment.previous_run.file_path:
+            offline_file_path_prefix = InputUtils.get_full_filepath(base_path=fp, input_type=InputType.RUN)
+            df = pd.read_csv(f"{offline_file_path_prefix}_run.csv")
+            for i, row in df.iterrows():
+                summary = DebateRoundSummary(
+                    metadata=QuestionMetadata(
+                        first_debater_correct=row["first_debater_correct"],
+                        question_idx=-1,  # not needed,
+                        background_text="",  # not needed
+                        first_debater_answer=row["first_debater_answer"],
+                        second_debater_answer=row["second_debater_answer"],
+                        debate_identifier=row["debate_identifier"],
+                        question=row["question"],
+                    ),
+                    transcript="",  # not needed
+                    winning_alias=str(row["first_debater_alias"])
+                    if row["first_debater_wins"]
+                    else str(row["second_debater_alias"]),
+                    losing_alias=str(row["first_debater_alias"])
+                    if not row["first_debater_wins"]
+                    else str(row["second_debater_alias"]),
+                    first_debater_alias=str(row["first_debater_alias"]),
+                    second_debater_alias=str(row["second_debater_alias"]),
+                    first_debater_wins=str(row["first_debater_wins"]),
+                    judge_alias="",  # not needed,
+                    winning_debater_prob=max(row["first_debater_win_prob"], row["second_debater_win_prob"]),
+                    first_debater_win_prob=row["first_debater_win_prob"],
+                    second_debater_win_prob=row["second_debater_win_prob"],
+                    failed=False,
+                )
+                summaries.append(summary)
         return summaries
