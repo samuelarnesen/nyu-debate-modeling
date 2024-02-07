@@ -27,7 +27,7 @@ class ModelResponse(BaseModel):
     probabilistic_decision: Optional[dict[str, float]] = None
     preference: Optional[float] = None
     rejected_responses: list[ModelResponse] = []
-    opposing_responses: list[ModelResponse] = []
+    bon_probabilistic_preferences: list[float] = []
     internal_representations: str = ""
     prompt: str = ""
 

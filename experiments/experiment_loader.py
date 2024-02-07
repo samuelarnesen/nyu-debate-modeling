@@ -260,7 +260,6 @@ class ExperimentLoader:
                 count = 1
             elif offline_model_helpers:
                 count = offline_model_helpers[0].get_size()
-                print(f"setting count to {count}")
             else:
                 count = len(dataset.get_data())
 
@@ -361,6 +360,16 @@ class ExperimentLoader:
                     dynamic_prompt_name=experiment.prompt_config.dynamic_prompt_name,
                 )
 
+            question_metadata = QuestionMetadata(
+                first_debater_correct=correct_index == 0,
+                question_idx=i,
+                background_text=background_text,
+                question=topic,
+                first_debater_answer=position,
+                second_debater_answer=opponent_position,
+                debate_identifier=debate_identifier,
+            )
+
             debater_a = Debater(
                 name=constants.DEFAULT_DEBATER_A_NAME,
                 prompt=prompt_a,
@@ -389,17 +398,7 @@ class ExperimentLoader:
                 first_debater=debater_a,
                 second_debater=debater_b,
                 judge=judge,
-                metadata=[
-                    QuestionMetadata(
-                        first_debater_correct=correct_index == 0,
-                        question_idx=i,
-                        background_text=background_text,
-                        question=topic,
-                        first_debater_answer=position,
-                        second_debater_answer=opponent_position,
-                        debate_identifier=debate_identifier,
-                    )
-                ],
+                metadata=[question_metadata],
             )
 
             flipped_debater_a = Debater(
@@ -422,17 +421,7 @@ class ExperimentLoader:
                 first_debater=flipped_debater_a,
                 second_debater=flipped_debater_b,
                 judge=judge,
-                metadata=[
-                    QuestionMetadata(
-                        first_debater_correct=correct_index == 0,
-                        question_idx=i,
-                        background_text=background_text,
-                        question=topic,
-                        first_debater_answer=position,
-                        second_debater_answer=opponent_position,
-                        debate_identifier=debate_identifier,
-                    )
-                ],
+                metadata=[question_metadata],
             )
 
             if first_offline_file_path:
@@ -475,6 +464,7 @@ class ExperimentLoader:
                         opposing_debater=debate_round.second_debater,
                         judge=debate_round.judge,
                         best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
+                        background_text=question_metadata.background_text,
                     )
                 )
                 flipped_round.set_second_debater(
@@ -483,6 +473,7 @@ class ExperimentLoader:
                         opposing_debater=flipped_round.first_debater,
                         judge=debate_round.judge,
                         best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
+                        background_text=question_metadata.background_text,
                     )
                 )
             if experiment.agents.debaters[debater_idxs[1]].best_of_n and not second_offline_file_path:
@@ -492,6 +483,7 @@ class ExperimentLoader:
                         opposing_debater=debate_round.first_debater,
                         judge=debate_round.judge,
                         best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
+                        background_text=question_metadata.background_text,
                     )
                 )
                 flipped_round.set_first_debater(
@@ -500,6 +492,7 @@ class ExperimentLoader:
                         opposing_debater=flipped_round.second_debater,
                         judge=debate_round.judge,
                         best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
+                        background_text=question_metadata.background_text,
                     )
                 )
 

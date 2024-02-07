@@ -109,7 +109,14 @@ class Debater(Agent):
 
 
 class BestOfNDebater(Debater):
-    def __init__(self, debater: Debater, opposing_debater: Debater, judge: Judge, best_of_n_config: BestOfNConfig):
+    def __init__(
+        self,
+        debater: Debater,
+        opposing_debater: Debater,
+        judge: Judge,
+        best_of_n_config: BestOfNConfig,
+        background_text: str,
+    ):
         super().__init__(
             name=debater.name,
             prompt=debater.prompts,
@@ -121,6 +128,7 @@ class BestOfNDebater(Debater):
         self.base_opponent_transcript = copy.deepcopy(opposing_debater.transcripts[0])
         self.judge = judge
         self.config = best_of_n_config
+        self.background_text = background_text
 
     def __call__(self):
         # just doing round 1 for now and unbatched inputs
@@ -129,6 +137,10 @@ class BestOfNDebater(Debater):
             max_new_tokens=300,
             debater_name=self.name,
         )
+        speeches = [
+            QuoteUtils.validate_and_replace_quotes(speech_content=str(response.speech), background_text=self.background_text)
+            for response in model_responses
+        ]
 
         opposing_debater_responses = self.model.predict(
             inputs=[self.base_opponent_transcript.to_model_input() for _ in range(self.config.opponent_n)],
@@ -136,9 +148,16 @@ class BestOfNDebater(Debater):
             debater_name=self.opposing_debater.name,
         )
 
+        opposing_speeches = [
+            QuoteUtils.validate_and_replace_quotes(
+                speech_content=str(opposing_response.speech), background_text=self.background_text
+            )
+            for opposing_response in opposing_debater_responses
+        ]
+
         judge_inputs = []
-        for response in model_responses:
-            for opposing_response in opposing_debater_responses:
+        for speech in speeches:
+            for opposing_speech in opposing_speeches:
                 judge_transcript = Transcript(
                     name=self.judge.transcripts[0].name,
                     prompt=self.judge.transcripts[0].prompt,
@@ -147,11 +166,11 @@ class BestOfNDebater(Debater):
                     ),
                 )
                 if self.name == constants.DEFAULT_DEBATER_A_NAME:
-                    judge_transcript.add_speech(speaker=self.name, content=response.speech)
-                    judge_transcript.add_speech(speaker=self.opposing_debater.name, content=opposing_response.speech)
+                    judge_transcript.add_speech(speaker=self.name, content=speech)
+                    judge_transcript.add_speech(speaker=self.opposing_debater.name, content=opposing_speech)
                 else:
-                    judge_transcript.add_speech(speaker=self.opposing_debater.name, content=opposing_response.speech)
-                    judge_transcript.add_speech(speaker=self.name, content=response.speech)
+                    judge_transcript.add_speech(speaker=self.opposing_debater.name, content=opposing_speech)
+                    judge_transcript.add_speech(speaker=self.name, content=speech)
 
                 judge_inputs.append(judge_transcript.to_model_input())
 
@@ -169,9 +188,7 @@ class BestOfNDebater(Debater):
 
         for i, (model_response, score) in enumerate(zip(model_responses, scores)):
             model_response.preference = score
-            model_response.opposing_responses = opposing_debater_responses[
-                (i * self.config.opponent_n) : ((i + 1) * self.config.opponent_n)
-            ]
+            model_response.bon_probabilistic_preferences = split_judge_response[i]
             if i != selection_idx:
                 best_model_response.rejected_responses.append(model_response)
         return [best_model_response.speech], [best_model_response]
@@ -182,7 +199,11 @@ class BestOfNDebater(Debater):
         """Deepcopies the debater (except for the model, which is a shallow copy)"""
         debater = super().copy(transcripts=transcripts, prompts=prompts)
         return BestOfNDebater(
-            debater=debater, opposing_debater=self.opposing_debater, judge=self.judge, best_of_n_config=self.config
+            debater=debater,
+            opposing_debater=self.opposing_debater,
+            judge=self.judge,
+            best_of_n_config=self.config,
+            background_text=self.background_text,
         )
 
 
