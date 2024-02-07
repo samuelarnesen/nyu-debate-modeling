@@ -85,6 +85,10 @@ class Judge(Agent):
             batch_predictions = self.generate(max_new_tokens=15, speech_structure=self.speech_structure)
             validated_predictions = self.validate_responses(batch_predictions)
             returned_response = self.process_responses(validated_predictions)
+            if self.chain_of_thought:
+                for generation, prediction in zip(batch_generation, batch_predictions):
+                    prediction.failed = generation.failed or prediction.failed
+
             return returned_response, batch_predictions
         return batch_reasoning, batch_generation
 

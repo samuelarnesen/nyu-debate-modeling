@@ -129,7 +129,7 @@ class ResultsCollector:
     def record_result(self, summaries: DebateRoundSummary | list[DebateRoundSummary]) -> None:
         """Adds metrics from that debate round to local store"""
         summaries = summaries if type(summaries) == list else [summaries]
-        for summary in summaries:
+        for summary in filter(lambda x: not x.failed, summaries):
             self.summaries.append(summary)
             if self.quotes_collector:
                 self.quotes_collector.record_result(summary=summary)

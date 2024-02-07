@@ -30,6 +30,7 @@ class ModelResponse(BaseModel):
     bon_probabilistic_preferences: list[float] = []
     internal_representations: str = ""
     prompt: str = ""
+    failed: bool = False
 
     @validator("probabilistic_decision")
     def check_keys(cls, v):
@@ -66,6 +67,7 @@ class ModelSettings(BaseModel):
     offline_file_path: Optional[str] = None
     served: bool = False
     probe_hyperparams: Optional[ProbeHyperparams] = None
+    require_quote_validation: bool = True
 
     @model_validator(mode="before")
     def verify_custom_settings(cls, values):
@@ -99,3 +101,11 @@ class Model(ABC):
 
     def copy(self, is_debater: Optional[bool] = None, **kwargs) -> Model:
         return self
+
+    def can_merge(self, other: Model) -> bool:
+        return other == self
+
+    def merge(self, other: Model) -> Model:
+        if self.can_merge(other):
+            return self
+        raise Exception("Cannot merge across models")

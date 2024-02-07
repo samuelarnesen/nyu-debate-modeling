@@ -135,7 +135,12 @@ class OpenAIModel(Model):
         if speech_structure == SpeechStructure.DECISION:
             add_addendum(messages=messages, addendum=OpenAIModel.decision_addendum)
 
-        completion = self.call_openai(messages=messages, max_new_tokens=max_new_tokens, speech_structure=speech_structure)
+        try:
+            completion = self.call_openai(
+                messages=messages, max_new_tokens=max_new_tokens, speech_structure=speech_structure
+            )
+        except Exception:
+            return ModelResponse(failed=True)
 
         message = completion.choices[0].message["content"]
 

@@ -13,7 +13,7 @@ import random
 
 
 class OfflineModel(Model):
-    def __init__(self, alias: str, speeches: list[str], **kwargs):
+    def __init__(self, alias: str, speeches: list[str] | list[list[str]], **kwargs):
         """
         An offline model returns the text that was previously generated during an earlier run. This is useful if you
         want to re-judge a round.
@@ -24,17 +24,32 @@ class OfflineModel(Model):
         """
         super().__init__(alias=alias, is_debater=True)
         self.speech_idx = 0
-        self.speeches = speeches
+        self.speeches = speeches if speeches and isinstance(speeches[0], list) else [speeches]
 
     def predict(self, inputs: list[list[ModelInput] | str], **kwargs) -> ModelResponse:
         """Generates a list of texts in response to the given input."""
-        speech = self.speeches[self.speech_idx]
+        speech = [s[self.speech_idx] for s in self.speeches]
         self.speech_idx += 1
-        return [ModelResponse(speech=speech, prompt="\n".join(model_input.content for model_input in inputs[0]))]
+        return [
+            ModelResponse(speech=speech[i], prompt="\n".join(model_input.content for model_input in inputs[i]))
+            for i in range(len(speech))
+        ]
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> OfflineModel:
         """Generates a deepcopy of this model"""
         return OfflineModel(alias=alias, speeches=self.speeches)
+
+    def can_merge(self, other: Model) -> bool:
+        """Determines whether this model can be 'merged' (aka the model associated with one element of the
+        batch can be combined with the model associated with another element so that one can do batch
+        processing."""
+        return isinstance(other, OfflineModel)
+
+    def merge(self, other: Model) -> Model:
+        if self.can_merge(other):
+            self.speeches.extend(other.speeches)
+            return self
+        raise Exception("Cannot merge across models")
 
 
 class OfflineModelHelper:

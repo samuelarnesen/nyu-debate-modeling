@@ -128,6 +128,7 @@ class DebateRound:
 
         first_debater_win_list = []
         winning_probability_list = []
+        failed_list = []
         for i, (debater_a_wins, model_output) in enumerate(zip(last_output, last_model_output)):
             winner = constants.DEFAULT_DEBATER_A_NAME if debater_a_wins else constants.DEFAULT_DEBATER_B_NAME
             first_debater_win_list.append(winner == self.first_debater.name)
@@ -135,6 +136,7 @@ class DebateRound:
             winning_probability_list.append(
                 1.0 if not model_output.probabilistic_decision else model_output.probabilistic_decision[winner]
             )
+            failed_list.append(model_output.failed)
             self.logger.debug(string_value)
 
         if save_file_path_prefix:
@@ -159,6 +161,7 @@ class DebateRound:
                 second_debater_win_prob=(1 - winning_probability_list[i])
                 if first_debater_wins
                 else winning_probability_list[i],
+                failed=failed_list[i],
             )
             for i, first_debater_wins in enumerate(first_debater_win_list)
         ]

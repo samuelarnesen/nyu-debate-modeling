@@ -95,20 +95,20 @@ class ExperimentLoader:
         def validate() -> None:
             for debate_round in debate_rounds:
                 if (
-                    debate_rounds[0].first_debater.model != debate_round.first_debater.model
-                    or debate_rounds[0].second_debater.model != debate_round.second_debater.model
-                    or debate_rounds[0].judge.model != debate_round.judge.model
-                    or debate_rounds[0].first_debater.name != debate_round.first_debater.name
+                    debate_rounds[0].first_debater.name != debate_round.first_debater.name
                     or debate_rounds[0].second_debater.name != debate_round.second_debater.name
                     or debate_rounds[0].judge.name != debate_round.judge.name
                 ):
-                    raise Exception("Cannot merge rounds of across models or names")
+                    raise Exception("Cannot merge rounds of across names")
 
         validate()
         first_debater_prompts = []
         second_debater_prompts = []
         judge_prompts = []
         metadata_list = []
+        first_debater_model = None
+        second_debater_model = None
+        judge_model = None
         for debate_round in debate_rounds:
             for prompt in debate_round.first_debater.prompts:
                 first_debater_prompts.append(prompt)
@@ -119,9 +119,26 @@ class ExperimentLoader:
             for metadata in debate_round.metadata:
                 metadata_list.append(metadata)
 
+            first_debater_model = (
+                debate_round.first_debater.model
+                if not first_debater_model
+                else first_debater_model.merge(debate_round.first_debater.model)
+            )
+
+            second_debater_model = (
+                debate_round.second_debater.model
+                if not second_debater_model
+                else second_debater_model.merge(debate_round.second_debater.model)
+            )
+
+            judge_model = debate_round.judge.model if not judge_model else judge_model.merge(debate_round.judge.model)
+
         first_debater = debate_rounds[0].first_debater.copy(prompts=first_debater_prompts)
         second_debater = debate_rounds[0].second_debater.copy(prompts=second_debater_prompts)
         judge = debate_rounds[0].judge.copy(prompts=judge_prompts)
+        first_debater.model = first_debater_model
+        second_debater.model = second_debater_model
+        judge.model = judge_model
 
         return DebateRound(first_debater=first_debater, second_debater=second_debater, judge=judge, metadata=metadata_list)
 
@@ -376,6 +393,9 @@ class ExperimentLoader:
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
                 scratchpad_config=experiment.agents.debaters[debater_idxs[0]].scratchpad,
+                quotes_require_validation=experiment.agents.debaters[
+                    debater_idxs[0]
+                ].model_settings.require_quote_validation,
             )
 
             debater_b = Debater(
@@ -384,6 +404,9 @@ class ExperimentLoader:
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
                 scratchpad_config=experiment.agents.debaters[debater_idxs[1]].scratchpad,
+                quotes_require_validation=experiment.agents.debaters[
+                    debater_idxs[1]
+                ].model_settings.require_quote_validation,
             )
 
             judge = Judge(
@@ -407,6 +430,9 @@ class ExperimentLoader:
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
                 scratchpad_config=experiment.agents.debaters[debater_idxs[1]].scratchpad,
+                quotes_require_validation=experiment.agents.debaters[
+                    debater_idxs[1]
+                ].model_settings.require_quote_validation,
             )
 
             flipped_debater_b = Debater(
@@ -415,6 +441,9 @@ class ExperimentLoader:
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
                 scratchpad_config=experiment.agents.debaters[debater_idxs[0]].scratchpad,
+                quotes_require_validation=experiment.agents.debaters[
+                    debater_idxs[0]
+                ].model_settings.require_quote_validation,
             )
 
             flipped_round = DebateRound(
