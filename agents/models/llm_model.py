@@ -54,6 +54,7 @@ class LLModel(Model):
         instruction_suffix: str = "",
         requires_file_path: bool = True,
         probe_hyperparams: Optional[ProbeHyperparams] = None,
+        max_mini_batch_size: Optional[int] = None
     ):
         """
         An LLModel uses a large language model (currently Llama 2 or Mistral) to generate text.
@@ -74,6 +75,7 @@ class LLModel(Model):
         self.instruction_prefix = instruction_prefix
         self.instruction_suffix = instruction_suffix
         self.instantiated_model = False
+        self.max_mini_batch_size = max_mini_batch_size or LLModel.MAX_MINI_BATCH_SIZE
         if file_path or not requires_file_path:
             self.instantiated_model = True
             self.is_debater = is_debater
@@ -258,8 +260,8 @@ class LLModel(Model):
             scores = []
             input_lengths = []
             minibatches = [
-                input_strs[i : i + LLModel.MAX_MINI_BATCH_SIZE]
-                for i in range(0, len(input_strs), LLModel.MAX_MINI_BATCH_SIZE)
+                input_strs[i : i + self.max_mini_batch_size]
+                for i in range(0, len(input_strs), self.max_mini_batch_size)
             ]
             for minibatch in minibatches:
                 inputs = self.tokenizer(minibatch, return_tensors="pt", padding=True).to(device)
@@ -268,7 +270,7 @@ class LLModel(Model):
                 sequences += [row for row in mini_sequences]
                 scores += [row for row in outputs.scores] if hasattr(outputs, "scores") else []
                 input_lengths += [elem for elem in (inputs.input_ids != self.tokenizer.pad_token_id).sum(axis=1)]
-            return torch.stack(sequences), torch.stack(input_lengths), torch.stack(scores) if scores else None
+            return sequences, torch.stack(input_lengths), torch.stack(scores) if scores else None
 
         validate()
         self.model.eval()
@@ -279,7 +281,7 @@ class LLModel(Model):
         decoded_outputs = []
         for i, row in enumerate(sequences):
             if self.is_debater or speech_structure != SpeechStructure.DECISION:
-                decoded = self.tokenizer.decode(sequences[i, input_lengths[min(i, len(input_lengths) - 1)] :])
+                decoded = self.tokenizer.decode(sequences[i][input_lengths[min(i, len(input_lengths) - 1)] :])
                 new_tokens = decoded.split(constants.INSTRUCTION_SUFFIX)[-1]
                 decoded_outputs.append(ModelResponse(speech=StringUtils.clean_string(new_tokens), prompt=input_strs[i]))
             else:
@@ -344,6 +346,7 @@ class LlamaModel(LLModel):
             instruction_suffix="output:",
             requires_file_path=True,
             probe_hyperparams=probe_hyperparams,
+            max_mini_batch_size=1
         )
 
         if self.model:
@@ -382,6 +385,7 @@ class MistralModel(LLModel):
             instruction_suffix="[/INST]",
             requires_file_path=True,
             probe_hyperparams=probe_hyperparams,
+            max_mini_batch_size=1
         )
 
         if self.model:

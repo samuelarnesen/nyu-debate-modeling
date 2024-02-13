@@ -109,11 +109,12 @@ class OfflineModelHelper:
         story_title = debate_identifier.replace("_" + question, "")
         for row in self.dataset.get_data(split=split_type):
             if row.story_title == story_title and row.question == question:
-                if row.positions[0] != self.data[idx % len(self.data)]["metadata"]["first_debater_answer"]:
+                if row.positions[0] != self.data[idx % len(self.data)]["metadata"]["first_debater_answer"]:               
                     if row.speeches:
                         raise Exception("The speech orders are incompatible")
+                    correct_answer = row.positions[row.correct_index]
                     row.positions = (row.positions[1], row.positions[0])
-                    row.correct_index = 1 if row.correct_index == 0 else 1
+                    row.correct_index = 0 if correct_answer == row.positions[0] else 1
                 return row
 
         raise Exception(f"A row with title {story_title} and question {question} could not be found in the dataset")
@@ -173,7 +174,7 @@ class OfflineModelHelper:
                 contenders = [(supplemental["speech"], supplemental["preference"])]
                 for rejected_speech in supplemental["rejected_responses"]:
                     contenders.append((rejected_speech["speech"], rejected_speech["preference"]))
-                options = random.choices(contenders, k=best_of_n_config.n)
+                options = random.sample(contenders, k=best_of_n_config.n)
                 best_option = sorted(options, key=lambda x: float(x[1]), reverse=True)[0][0]
                 selected_speeches.append(best_option)
         else:

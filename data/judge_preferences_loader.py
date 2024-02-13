@@ -47,7 +47,7 @@ class JudgePreferencesDataset(RawDataset):
 
 
 class JudgePreferencesLoader(RawDataLoader):
-    MIN_GAP = 0.10
+    MIN_GAP = 0.5
 
     @classmethod
     def load(
@@ -65,23 +65,10 @@ class JudgePreferencesLoader(RawDataLoader):
             A JudgePreferencesDataset where each row has a chosen and a rejected speech.
         """
 
-        def get_original_data_row(data: dict[Any, Any], dataset: RawDataset) -> DataRow:
-            debate_identifier = data["metadata"]["debate_identifier"]
-            question = data["metadata"]["question"]
-            story_title = debate_identifier.replace("_" + question, "")
-            for row in dataset.get_data(split=SplitType.TRAIN):
-                if row.story_title == story_title and row.question == question:
-                    return row
-            raise Exception(f"A row with title {story_title} and question {question} could not be found in the dataset")
-
-        quality_filepath = (supplemental_file_paths or {}).get("quality_file_path", QualityLoader.DEFAULT_TRAIN_PATH)
-        quality_dataset = QualityLoader.load(full_dataset_filepath=quality_filepath)
-
         train_data = []
         input_texts = InputUtils.read_file_texts(base_path=full_dataset_filepath, input_type=InputType.JSON_TRANSCRIPT)
         for text in input_texts:
             data = json.loads(text)
-            row = get_original_data_row(data=data, dataset=quality_dataset)
             for selected in filter(
                 lambda x: x["speaker"] in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME],
                 data["speeches"],
