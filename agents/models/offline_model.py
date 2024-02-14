@@ -84,7 +84,7 @@ class OfflineModelHelper:
             for title, entry in main.items() if order_by_main else other.items():
                 get_position = lambda x: x["metadata"]["first_debater_answer"]
                 if title in opposite and get_position(entry) == get_position(opposite[title]):
-                    new_data.append(entry)
+                    new_data.append(entry if order_by_main else opposite[title])
             return new_data
 
         title_to_entry_one = {entry["metadata"]["debate_identifier"]: entry for entry in helper_one.data}
@@ -109,7 +109,7 @@ class OfflineModelHelper:
         story_title = debate_identifier.replace("_" + question, "")
         for row in self.dataset.get_data(split=split_type):
             if row.story_title == story_title and row.question == question:
-                if row.positions[0] != self.data[idx % len(self.data)]["metadata"]["first_debater_answer"]:               
+                if row.positions[0] != self.data[idx % len(self.data)]["metadata"]["first_debater_answer"]:
                     if row.speeches:
                         raise Exception("The speech orders are incompatible")
                     correct_answer = row.positions[row.correct_index]

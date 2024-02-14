@@ -54,7 +54,7 @@ class LLModel(Model):
         instruction_suffix: str = "",
         requires_file_path: bool = True,
         probe_hyperparams: Optional[ProbeHyperparams] = None,
-        max_mini_batch_size: Optional[int] = None
+        max_mini_batch_size: Optional[int] = None,
     ):
         """
         An LLModel uses a large language model (currently Llama 2 or Mistral) to generate text.
@@ -260,8 +260,7 @@ class LLModel(Model):
             scores = []
             input_lengths = []
             minibatches = [
-                input_strs[i : i + self.max_mini_batch_size]
-                for i in range(0, len(input_strs), self.max_mini_batch_size)
+                input_strs[i : i + self.max_mini_batch_size] for i in range(0, len(input_strs), self.max_mini_batch_size)
             ]
             for minibatch in minibatches:
                 inputs = self.tokenizer(minibatch, return_tensors="pt", padding=True).to(device)
@@ -346,7 +345,7 @@ class LlamaModel(LLModel):
             instruction_suffix="output:",
             requires_file_path=True,
             probe_hyperparams=probe_hyperparams,
-            max_mini_batch_size=1
+            max_mini_batch_size=1,
         )
 
         if self.model:
@@ -385,7 +384,7 @@ class MistralModel(LLModel):
             instruction_suffix="[/INST]",
             requires_file_path=True,
             probe_hyperparams=probe_hyperparams,
-            max_mini_batch_size=1
+            max_mini_batch_size=1,
         )
 
         if self.model:

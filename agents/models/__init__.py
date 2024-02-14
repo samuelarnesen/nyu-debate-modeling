@@ -1,3 +1,4 @@
+from .arbitrary_attribute_model import ArbitraryAttributeModel
 from .deterministic_model import DeterministicModel
 from .human_model import HumanModel
 from .llm_model import (

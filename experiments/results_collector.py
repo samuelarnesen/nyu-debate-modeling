@@ -26,11 +26,11 @@ import uuid
 
 class WinStats(BaseModel):
     matches: int = 0
-    wins: int = 0
+    wins: int | float = 0
     correct_matches: int = 0
-    correct_wins: int = 0
+    correct_wins: int | float = 0
     first_matches: int = 0
-    first_wins: int = 0
+    first_wins: int | float = 0
 
 
 class JudgeStats(BaseModel):

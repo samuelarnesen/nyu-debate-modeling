@@ -1,4 +1,5 @@
 from agents.models import (
+    ArbitraryAttributeModel,
     BestOfNConfig,
     DeterministicModel,
     GenerationParams,

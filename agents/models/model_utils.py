@@ -1,4 +1,5 @@
 from agents.models.model import Model, ModelSettings
+from agents.models.arbitrary_attribute_model import ArbitraryAttributeModel
 from agents.models.deterministic_model import DeterministicModel
 from agents.models.llm_model import LlamaModel, MistralModel, StubLLModel
 from agents.models.openai_model import OpenAIModel
@@ -20,6 +21,7 @@ class ModelType(Enum):
     HUMAN = 6
     MISTRAL = 7
     STUB_LLM = 8
+    ARBITRARY_ATTRIBUTE = 9
 
 
 class ModelUtils:
@@ -68,6 +70,8 @@ class ModelUtils:
             model = DeterministicModel(alias=model_settings.alias, is_debater=is_debater)
         elif model_type == ModelType.OPENAI:
             model = OpenAIModel(alias=model_settings.alias, is_debater=is_debater)
+        elif model_type == ModelType.ARBITRARY_ATTRIBUTE:
+            model = ArbitraryAttributeModel(alias=model_settings.alias, is_debater=is_debater)
         elif model_type == ModelType.OFFLINE:
             model = None  # offline models aren't directly instantiated
         elif model_type == ModelType.HUMAN:
