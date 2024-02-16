@@ -4,7 +4,7 @@ from prompts import PromptLoadingConfig
 import utils.constants as constants
 
 from peft import LoraConfig, PeftConfig, PeftType, PromptTuningInit, PromptTuningConfig, TaskType
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from trl import AutoModelForCausalLMWithValueHead
 import torch
@@ -23,36 +23,38 @@ class TrainingTarget(Enum):
 class LoggingAndSavingConfig(BaseModel):
     logging_steps: int
     output_dir: str
-    merge_output_dir: Optional[str]
+    merge_output_dir: Optional[str] = None
 
 
 class TrainingHyperParameterConfig(BaseModel):
     num_train_epochs: int
     per_device_train_batch_size: int
     gradient_accumulation_steps: int = 1
-    optim: Optional[str]
+    optim: Optional[str] = None
     learning_rate: float
     max_grad_norm: float = float("inf")
     warmup_ratio: float = 0
     lr_scheduler_type: str = ""
     peft_type: PeftType | str = ""
-    steps: Optional[int]
-    supplemental: Optional[dict[str, Any]]
+    steps: Optional[int] = None
+    supplemental: Optional[dict[str, Any]] = None
 
 
 class TrainingConfig(BaseModel):
     model_name: str
-    reference_model_name: Optional[str]
+    reference_model_name: Optional[str] = None
     llm_type: str = "llama"
     prompt_config: PromptLoadingConfig = PromptLoadingConfig()
-    logging_and_saving_config: Optional[LoggingAndSavingConfig]
-    training_hyperparameters: Optional[TrainingHyperParameterConfig]
+    logging_and_saving_config: Optional[LoggingAndSavingConfig] = None
+    training_hyperparameters: Optional[TrainingHyperParameterConfig] = None
     target: Optional[str | TrainingTarget] = None
-    dataset: Optional[DatasetConfig]
+    dataset: Optional[DatasetConfig] = None
     opening_speeches_only: bool = False
     requires_token: bool = False
     max_length: int = constants.MAX_LENGTH
     scratchpad_config: ScratchpadConfig = ScratchpadConfig()
+
+    model_config = ConfigDict(protected_namespaces=("protect_me_", "also_protect_"))
 
 
 class TrainUtils:

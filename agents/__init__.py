@@ -17,6 +17,7 @@ from agents.models import (
     ModelStub,
     ModelType,
     ModelUtils,
+    OfflineDataFormat,
     OfflineModel,
     OfflineModelHelper,
     OpenAIModel,

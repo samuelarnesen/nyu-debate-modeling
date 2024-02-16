@@ -278,7 +278,6 @@ class DebaterUtils:
 
         later_arguments = (
             SpeechFormat(name)
-            .add_format(speech_format=judge_questions)
             .add_format(speech_format=own_speech if name == constants.DEFAULT_DEBATER_A_NAME else opponent_speech)
             .add_format(speech_format=opponent_speech if name == constants.DEFAULT_DEBATER_A_NAME else own_speech)
         )

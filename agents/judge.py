@@ -137,8 +137,6 @@ class JudgeUtils:
 
     argument_speech_format = (
         SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-        .add(prompt_tag=PromptTag.JUDGE_QUESTION_INSTRUCTIONS)
-        .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
         .add(prompt_tag=PromptTag.PRE_DEBATER_A_SPEECH_JUDGE)
         .add_user_inputted_speech(expected_speaker=constants.DEFAULT_DEBATER_A_NAME)
         .add(prompt_tag=PromptTag.PRE_DEBATER_B_SPEECH_JUDGE)

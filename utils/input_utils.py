@@ -10,6 +10,7 @@ import os
 class InputType(Enum):
     TEXT_TRANSCRIPT = ("txt", os.environ[constants.SRC_ROOT] + "outputs/transcripts")
     JSON_TRANSCRIPT = ("json", os.environ[constants.SRC_ROOT] + "outputs/transcripts")
+    JSON_LIST = ("jsonl", os.environ[constants.SRC_ROOT] + "outputs/transcripts")
     RUN = ("csv", os.environ[constants.SRC_ROOT] + "outputs/runs")
 
     def __init__(self, extension: str, location: str):

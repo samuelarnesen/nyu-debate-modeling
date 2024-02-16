@@ -5,6 +5,8 @@ from data import DataRow, RawDataset, SplitType
 from utils import InputType, InputUtils
 import utils.constants as constants
 
+from abc import ABC, abstractmethod
+from enum import auto, Enum
 from typing import Optional
 import copy
 import json
@@ -12,8 +14,111 @@ import os
 import random
 
 
+class OfflineDataFormatParser(ABC):
+    @abstractmethod
+    def get_first_debater_answer(self, entry) -> str:
+        pass
+
+    @abstractmethod
+    def get_second_debater_answer(self, entry) -> str:
+        pass
+
+    @abstractmethod
+    def get_debate_identifier(self, entry) -> str:
+        pass
+
+    @abstractmethod
+    def get_question(self, entry) -> str:
+        pass
+
+    @abstractmethod
+    def get_speeches(self, entry) -> list[dict]:
+        pass
+
+    @abstractmethod
+    def get_speaker_name(self, speech) -> str:
+        pass
+
+    @abstractmethod
+    def get_text(self, speech) -> str:
+        pass
+
+    @abstractmethod
+    def validate(self, file) -> bool:
+        pass
+
+
+class ExpandedDataFormatParser(ABC):
+    def get_first_debater_answer(self, entry) -> str:
+        return entry["metadata"]["first_debater_answer"]
+
+    def get_second_debater_answer(self, entry) -> str:
+        return entry["metadata"]["second_debater_answer"]
+
+    def get_debate_identifier(self, entry) -> str:
+        return entry["metadata"]["debate_identifier"]
+
+    def get_question(self, entry) -> str:
+        return entry["metadata"]["question"]
+
+    def get_speeches(self, entry) -> list[dict]:
+        return entry["speeches"]
+
+    def get_speaker_name(self, speech) -> str:
+        return speech["speaker"]
+
+    def get_text(self, speech) -> str:
+        return speech["content"]
+
+    def validate(self, file) -> bool:
+        return "metadata" in file and "speeches" in file
+
+
+class AbbreviatedDataFormatParser(ABC):
+    def get_first_debater_answer(self, entry) -> str:
+        return entry["answers"][0]
+
+    def get_second_debater_answer(self, entry) -> str:
+        return entry["answers"][1]
+
+    def get_debate_identifier(self, entry) -> str:
+        return "_".join([entry["storyTitle"], entry["question"]])
+
+    def get_question(self, entry) -> str:
+        return entry["question"]
+
+    def get_speeches(self, entry) -> list[dict]:
+        return entry["turns"]
+
+    def get_speaker_name(self, speech) -> str:
+        return (
+            constants.DEFAULT_DEBATER_A_NAME
+            if speech["index"] == 0 and speech["role"] == "Debater"
+            else (constants.DEFAULT_DEBATER_B_NAME if speech["role"] == "Debater" else constants.DEFAULT_JUDGE_NAME)
+        )
+
+    def get_text(self, speech) -> str:
+        return speech["text"]
+
+    def validate(self, file) -> bool:
+        return "answers" in file and "question" in file and "turns" in file
+
+
+class OfflineDataFormat(Enum):
+    EXPANDED = ExpandedDataFormatParser()
+    ABBREVIATED = AbbreviatedDataFormatParser()
+
+    def get_parser(self):
+        return self.value
+
+
 class OfflineModel(Model):
-    def __init__(self, alias: str, speeches: list[str] | list[list[str]], **kwargs):
+    def __init__(
+        self,
+        alias: str,
+        speeches: list[str] | list[list[str]],
+        **kwargs,
+    ):
         """
         An offline model returns the text that was previously generated during an earlier run. This is useful if you
         want to re-judge a round.
@@ -61,13 +166,30 @@ class OfflineModelHelper:
             file_path_prefix: Either the full path of the transcript jsons (not including the numbers at the end) or just
                 the timestamp of the files.
             dataset: The dataset that was used to generate the original prompts
+            data_format: whether the data is structured with separate metadata / speeches tabs (like with
+                the model-model debates) [Expanded] or in the older format (like with the NYU human
+                debates) [Abbreviated]
         """
         self.file_path_prefix = file_path_prefix
-        self.data = [
-            json.loads(text)
-            for text in InputUtils.read_file_texts(base_path=file_path_prefix, input_type=InputType.JSON_TRANSCRIPT)
-        ]
+
+        self.data = []
+
+        json_texts = InputUtils.read_file_texts(base_path=file_path_prefix, input_type=InputType.JSON_TRANSCRIPT)
+        if json_texts:
+            self.data.extend([json.loads(text) for text in json_texts])
+
+        jsonl_texts = InputUtils.read_file_texts(base_path=file_path_prefix, input_type=InputType.JSON_LIST)
+        if jsonl_texts:
+            self.data.extend([json.loads(line) for line in filter(lambda x: x, jsonl_texts[0].split("\n"))])
+
         self.dataset = dataset
+
+        self.data_format = (
+            OfflineDataFormat.EXPANDED
+            if OfflineDataFormat.EXPANDED.get_parser().validate(self.data[0])
+            else OfflineDataFormat.ABBREVIATED
+        )
+        self.parser = self.data_format.get_parser()
 
     @classmethod
     def reduce_to_common_rounds(cls, helper_one: OfflineModelHelper, helper_two: OfflineModelHelper) -> None:
@@ -78,20 +200,46 @@ class OfflineModelHelper:
         only want to select topics where both models have an example speech from.
         """
 
-        def get_trimmed_data(main: list[dict], other: list[dict], order_by_main: bool) -> list[dict]:
+        def get_trimmed_data(
+            main: list[dict],
+            other: list[dict],
+            order_by_main: bool,
+            main_parser: OfflineDataFormatParser,
+            other_parser: OfflineDataFormatParser,
+        ) -> list[dict]:
             new_data = []
             opposite = other if order_by_main else main
+            primary_parser = main_parser if order_by_main else other_parser
+            opposite_parser = other_parser if order_by_main else main_parser
             for title, entry in main.items() if order_by_main else other.items():
-                get_position = lambda x: x["metadata"]["first_debater_answer"]
-                if title in opposite and get_position(entry) == get_position(opposite[title]):
+                primary_answer = primary_parser.get_first_debater_answer(entry)
+                opposite_answer = opposite_parser.get_first_debater_answer(opposite[title])
+                if title in opposite and primary_answer == opposite_answer:
                     new_data.append(entry if order_by_main else opposite[title])
             return new_data
 
-        title_to_entry_one = {entry["metadata"]["debate_identifier"]: entry for entry in helper_one.data}
-        title_to_entry_two = {entry["metadata"]["debate_identifier"]: entry for entry in helper_two.data}
+        if helper_one == helper_two:
+            return
 
-        helper_one.data = get_trimmed_data(title_to_entry_one, title_to_entry_two, order_by_main=True)
-        helper_two.data = get_trimmed_data(title_to_entry_two, title_to_entry_one, order_by_main=False)
+        title_to_entry_one = {helper_one.parser.get_debate_identifier(entry): entry for entry in helper_one.data}
+        title_to_entry_two = {helper_two.parser.get_debate_identifier(entry): entry for entry in helper_two.data}
+
+        helper_one.data = get_trimmed_data(
+            title_to_entry_one,
+            title_to_entry_two,
+            order_by_main=True,
+            main_parser=helper_one.parser,
+            other_parser=helper_two.parser,
+        )
+        helper_two.data = get_trimmed_data(
+            title_to_entry_two,
+            title_to_entry_one,
+            order_by_main=False,
+            main_parser=helper_two.parser,
+            other_parser=helper_one.parser,
+        )
+
+
 
     def get_example(self, idx: int, split_type: SplitType = SplitType.TRAIN) -> DataRow:
         """
@@ -104,12 +252,12 @@ class OfflineModelHelper:
         Returns:
             The corresponding row in the dataset that was used to generate the original round.
         """
-        debate_identifier = self.data[idx % len(self.data)]["metadata"]["debate_identifier"]
-        question = self.data[idx % len(self.data)]["metadata"]["question"]
+        debate_identifier = self.parser.get_debate_identifier(self.data[idx % len(self.data)])
+        question = self.parser.get_question(self.data[idx % len(self.data)])
         story_title = debate_identifier.replace("_" + question, "")
         for row in self.dataset.get_data(split=split_type):
-            if row.story_title == story_title and row.question == question:
-                if row.positions[0] != self.data[idx % len(self.data)]["metadata"]["first_debater_answer"]:
+            if row.story_title.strip() == story_title.strip() and row.question.strip() == question.strip():
+                if row.positions[0] != self.parser.get_first_debater_answer(self.data[idx % len(self.data)]):
                     if row.speeches:
                         raise Exception("The speech orders are incompatible")
                     correct_answer = row.positions[row.correct_index]
@@ -145,15 +293,20 @@ class OfflineModelHelper:
                 how the model would've performed if you only sampled 4 speeches, you would pass in a best_of_n config
                 that specifies that 4 speeches are to be sampled. Please be careful to (a) avoid passing in an
                 n that is greater than the original n and (b) to avoid doing this for multi-stage debate rounds
-                [since debaters may be responding to a speech that was not selected]
+                [since debaters may be responding to a speech that was not selected]. This is only supported
+                for the expanded data format.
 
         Returns:
             An offline model that can be used once
         """
+
+        if self.data_format != OfflineDataFormat.EXPANDED and best_of_n_config:
+            raise Exception("Best of N is only supported with the expanded offline data format")
+
         entry = self.data[idx % len(self.data)]
-        all_speeches = entry["speeches"]
-        debater_a_position = entry["metadata"]["first_debater_answer"]
-        debater_b_position = entry["metadata"]["second_debater_answer"]
+        all_speeches = self.parser.get_speeches(entry)
+        debater_a_position = self.parser.get_first_debater_answer(entry)
+        debater_b_position = self.parser.get_second_debater_answer(entry)
 
         is_flipped = debater_a_position == positions[1] and debater_b_position == positions[0]
         debater_name_to_use = (
@@ -166,7 +319,9 @@ class OfflineModelHelper:
             )
         )
 
-        relevant_speeches = [speech for speech in filter(lambda x: x["speaker"] == debater_name_to_use, all_speeches)]
+        relevant_speeches = [
+            speech for speech in filter(lambda x: self.parser.get_speaker_name(x) == debater_name_to_use, all_speeches)
+        ]
         selected_speeches = []
         if best_of_n_config:
             for speech in relevant_speeches:
@@ -178,7 +333,7 @@ class OfflineModelHelper:
                 best_option = sorted(options, key=lambda x: float(x[1]), reverse=True)[0][0]
                 selected_speeches.append(best_option)
         else:
-            selected_speeches = [speech["content"] for speech in relevant_speeches]
+            selected_speeches = [self.parser.get_text(speech) for speech in relevant_speeches]
 
         return OfflineModel(
             alias=alias,

@@ -483,7 +483,7 @@ class ExperimentLoader:
                     debater_name=flipped_round.first_debater.name,
                     idx=i,
                     positions=(position, opponent_position),
-                    best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
+                    best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                 )
 
             if experiment.agents.debaters[debater_idxs[0]].best_of_n and not first_offline_file_path:

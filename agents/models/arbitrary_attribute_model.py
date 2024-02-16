@@ -81,7 +81,6 @@ class ArbitraryAttributeModel(Model):
             a_score = a_speech.count(self.feature)
             b_score = b_speech.count(self.feature)
             if a_score + b_score > 0:
-                print(a_score, b_score)
                 return constants.DEFAULT_DEBATER_A_NAME if a_score >= b_score else constants.DEFAULT_DEBATER_B_NAME, (
                     a_score / (a_score + b_score),
                     b_score / (a_score + b_score),

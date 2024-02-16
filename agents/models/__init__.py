@@ -16,7 +16,7 @@ from .llm_model import (
 )
 from .model_utils import ModelType, ModelUtils
 from .model import BestOfNConfig, Model, ModelInput, ModelResponse, ModelSettings, SpeechStructure
-from .offline_model import OfflineModel, OfflineModelHelper
+from .offline_model import OfflineDataFormat, OfflineModel, OfflineModelHelper
 from .openai_model import OpenAIModel
 from .random_model import RandomModel
 from .served_model import ServedModel

@@ -7,6 +7,7 @@ import json
 import itertools
 import os
 import random
+import re
 import statistics
 
 
@@ -78,6 +79,18 @@ class QualityDataset(RawDataset):
         return rows
 
     def __example_to_row(self, entry: dict[str, Any], question_idx: int) -> list[DataRow]:
+        def fix_line_spacing(text):
+            """
+            Some stories in QuALITY are in a strange format where each line has a maximum number of words (73),
+            after which there is a newline. This inconsistency in formats makes exact quoting a little trickier
+            so we simplify things by stripping out the excess newlines.
+            """
+            pattern = r"\n+"
+            max_line_length = max([len(line) for line in text.split("\n")])
+            if max_line_length < 100:
+                text = re.sub(pattern, lambda match: " " if len(match.group(0)) == 1 else match.group(0), text)
+            return text
+
         question = entry["questions"][question_idx]
         if "gold_label" not in question or "difficult" not in question or question["difficult"] == 0:
             return None
@@ -104,7 +117,7 @@ class QualityDataset(RawDataset):
         for first, second, first_correct in possible_position_pairs:
             rows.append(
                 DataRow(
-                    background_text=entry["article"],
+                    background_text=fix_line_spacing(entry["article"]),
                     question=question["question"],
                     correct_index=0 if first_correct else 1,
                     positions=(
