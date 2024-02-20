@@ -213,7 +213,7 @@ class OfflineModelHelper:
             opposite_parser = other_parser if order_by_main else main_parser
             for title, entry in main.items() if order_by_main else other.items():
                 primary_answer = primary_parser.get_first_debater_answer(entry)
-                opposite_answer = opposite_parser.get_first_debater_answer(opposite[title])
+                opposite_answer = opposite_parser.get_first_debater_answer(opposite[title]) if title in opposite else None
                 if title in opposite and primary_answer == opposite_answer:
                     new_data.append(entry if order_by_main else opposite[title])
             return new_data
@@ -238,8 +238,6 @@ class OfflineModelHelper:
             main_parser=helper_two.parser,
             other_parser=helper_one.parser,
         )
-
-
 
     def get_example(self, idx: int, split_type: SplitType = SplitType.TRAIN) -> DataRow:
         """

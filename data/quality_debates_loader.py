@@ -98,7 +98,7 @@ class QualityDebatesLoader(RawDataLoader):
     DEFAULT_FILE_PATH = os.environ[constants.SRC_ROOT] + "data/datasets/quality-debates/debates-readable.jsonl"
 
     @classmethod
-    def get_splits(cls, file_path: str, deduplicate: bool = False) -> tuple[list[dict]]:
+    def get_splits(cls, file_path: str, deduplicate: bool = False, combine_train_and_val: bool = False) -> tuple[list[dict]]:
         """
         Filters the dataset and splits it into train, val, and test splits. Consultancy,
         offline debates, and gpt4 debates are excluded.
@@ -131,16 +131,16 @@ class QualityDebatesLoader(RawDataLoader):
                     rows.append(json.loads(line))
             return [row for row in filter(__should_keep, rows)]
 
-        def __create_splits(filtered_rows: list[dict]):
+        def __create_splits(filtered_rows: list[dict], combine_train_and_val: bool = False):
             story_to_row = {}
             story_to_question = {}
             for row in filtered_rows:
-                if row["story"] not in story_to_row:
-                    story_to_row[row["story"]] = []
-                    story_to_question[row["story"]] = []
-                if row["question"] not in story_to_question[row["story"]] or not deduplicate:
-                    story_to_row[row["story"]].append(row)
-                    story_to_question[row["story"]].append(row["question"])
+                if row["storyTitle"] not in story_to_row:
+                    story_to_row[row["storyTitle"]] = []
+                    story_to_question[row["storyTitle"]] = []
+                if row["question"] not in story_to_question[row["storyTitle"]] or not deduplicate:
+                    story_to_row[row["storyTitle"]].append(row)
+                    story_to_question[row["storyTitle"]].append(row["question"])
             train = []
             val = []
             test = []
@@ -151,21 +151,28 @@ class QualityDebatesLoader(RawDataLoader):
                     val.extend(story_to_row[story])
                 else:
                     test.extend(story_to_row[story])
+
+            if combine_train_and_val:
+                train = train + val
+
             return train, val, test
 
         filtered_rows = __get_filtered_rows(file_path=file_path)
-        return __create_splits(filtered_rows)
+        return __create_splits(filtered_rows=filtered_rows, combine_train_and_val=combine_train_and_val)
 
     @classmethod
     def load(
         cls,
         full_dataset_filepath: Optional[str] = None,
         deduplicate: bool = False,
+        combine_train_and_val: bool = False,
         **kwargs,
     ) -> QualityDebatesDataset:
         """Constructs a QualityDebatesDataset"""
         full_dataset_filepath = full_dataset_filepath or QualityDebatesLoader.DEFAULT_FILE_PATH
-        train, val, test = QualityDebatesLoader.get_splits(file_path=full_dataset_filepath, deduplicate=deduplicate)
+        train, val, test = QualityDebatesLoader.get_splits(
+            file_path=full_dataset_filepath, deduplicate=deduplicate, combine_train_and_val=combine_train_and_val
+        )
         return QualityDebatesDataset(
             train_data=train,
             val_data=val,

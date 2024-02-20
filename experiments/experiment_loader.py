@@ -22,7 +22,7 @@ from pydantic import BaseModel, model_validator, field_validator
 import random
 import yaml
 
-from enum import Enum
+from enum import auto, Enum
 from typing import Optional
 import itertools
 
@@ -46,9 +46,10 @@ class PreviousRunConfig(BaseModel):
 
 
 class TournamentType(Enum):
-    ROUND_ROBIN = 1
-    POWER_PAIR = 2
-    CUSTOM = 3
+    ROUND_ROBIN = auto()
+    SELF_PLAY_ONLY = auto()
+    POWER_PAIR = auto()
+    CUSTOM = auto()
 
 
 class TournamentConfig(BaseModel):
@@ -153,6 +154,7 @@ class ExperimentLoader:
             val_filepath=dataset_config.val_file_path,
             test_filepath=dataset_config.test_file_path,
             supplemental_file_paths=dataset_config.supplemental_file_paths,
+            combine_train_and_val=dataset_config.combine_train_and_val,
         )
 
     @classmethod
@@ -584,6 +586,8 @@ class ExperimentLoader:
                     raise Exception(f"Custom matchup for ({a} v {b}) could not be created because ({b}) was not recognized")
                 matchup_idxs.append((aliases_to_idxs[a], aliases_to_idxs[b]))
             return matchup_idxs
+        elif experiment.tournament.tournament_type == TournamentType.SELF_PLAY_ONLY:
+            return [(i, i) for i in range(len(experiment.agents.debaters))]
         else:
             raise Exception("Tournament type was not recognized")
 
