@@ -52,11 +52,46 @@ class QuoteUtils:
         return quote in background_text or QuoteUtils.simplify_text(quote) in QuoteUtils.simplify_text(background_text)
 
     @classmethod
-    def extract_quotes(cls, speech_content: str):
+    def extract_quotes(cls, speech_content: str) -> list[str]:
         """Pulls out all the quotes (valid or invalid) from the speech"""
         return re.findall(
             f"{constants.QUOTE_TAG}(.*?){constants.UNQUOTE_TAG}", speech_content, flags=re.DOTALL
         ) + re.findall(f"{constants.INVALID_QUOTE_TAG}(.*?){constants.INVALID_UNQUOTE_TAG}", speech_content, flags=re.DOTALL)
+
+    @classmethod
+    def clean_up_quotes(cls, speech_content: str) -> list[str]:
+        """Cleans up minorly butchered quotes that interfere with human comprehension and/or stats
+        (empty quotes, unterminated quotes, unpaired quotes)"""
+
+        # cleans up duplicate tags and empty quotes
+        previous = speech_content
+        replaced_text = speech_content
+        replaced_text = re.sub(f"({constants.QUOTE_TAG}{constants.UNQUOTE_TAG})+", "", replaced_text, flags=re.DOTALL)
+        replaced_text = re.sub(f"{constants.QUOTE_TAG}{2,}", constants.QUOTE_TAG, replaced_text, flags=re.DOTALL)
+        replaced_text = re.sub(f"{constants.UNQUOTE_TAG}{2,}", constants.UNQUOTE_TAG, replaced_text, flags=re.DOTALL)
+
+        # adds an unquote tag to the end of the text if there's an unterminated quote at the end
+        all_quote_tags = re.findall(rf"{constants.QUOTE_TAG}|{constants.UNQUOTE_TAG}", replaced_text, flags=re.DOTALL)
+        if all_quote_tags and all_quote_tags[-1] == constants.QUOTE_TAG:
+            replaced_text += constants.UNQUOTE_TAG
+
+        # removes end tags that aren't matched with a start tag
+        tag_pattern = re.compile(rf"{constants.QUOTE_TAG}|{constants.UNQUOTE_TAG}")
+        all_tags = tag_pattern.finditer(replaced_text)
+        opening_tag_count = 0
+        superfluous_tags = []
+        for match in all_tags:
+            tag = match.group()
+            if tag == constants.QUOTE_TAG:
+                opening_tag_count += 1
+            elif opening_tag_count > 0:
+                opening_tag_count -= 1
+            else:
+                superfluous_tags.append((match.start(), match.end()))
+        for start, end in reversed(superfluous_tags):
+            replaced_text = replaced_text[:start] + replaced_text[end:]
+
+        return replaced_text
 
     @classmethod
     def find_best_match(
@@ -132,7 +167,7 @@ class QuoteUtils:
         the input quote is replaced with the correct text. If no match is found, the original
         quote is wrapped in <invalid_quote></invalid_quote> tags. See find_best_match() for
         explanations of the remaining parameters."""
-        updated_speech_content = speech_content
+        updated_speech_content = QuoteUtils.clean_up_quotes(speech_content)
         for quote in QuoteUtils.extract_quotes(speech_content=speech_content):
             if not QuoteUtils.validate_quote(quote=quote, background_text=background_text):
                 updated_speech_content = QuoteUtils.replace_invalid_quote(
