@@ -1,4 +1,4 @@
-from agents import Debater, DebaterUtils, Judge, JudgeUtils, LLMInput, LLMType, Transcript
+from agents import Debater, Judge, LLMInput, LLMType, SpeechFormatType, Transcript
 from data import AnnotatedQualityDebatesDataset, DataRow, DatasetType, RawDataset, SpeakerType, SpeechData, SplitType
 from prompts import DynamicPromptParser, Prompt, PromptParser, PromptTag
 from train.train_utils import TrainingConfig, TrainingTarget
@@ -157,11 +157,13 @@ class RowConverter:
                 name=name,
                 prompt=prompt,
                 speech_format=(
-                    DebaterUtils.get_speech_format(
+                    SpeechFormatType.DEFAULT_DEBATE.get_speech_format(
                         name=name, num_speeches=rounds, use_scratchpad=config.scratchpad_config.use_scratchpad
                     )
                     if is_debater
-                    else JudgeUtils.get_default_speech_format(num_speeches=(rounds - 1), chain_of_thought=False)
+                    else SpeechFormatType.DEFAULT_DEBATE_JUDGE.get_speech_format(
+                        name=constants.DEFAULT_JUDGE_NAME, num_speeches=(rounds - 1), use_scratchpad=False
+                    )
                 ),
             )
 

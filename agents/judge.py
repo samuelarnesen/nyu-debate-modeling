@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from agents.agent import Agent
+from agents.agent import Agent, ScratchpadConfig
 from agents.models import Model, ModelResponse, SpeechStructure
+from agents.speech_format import SpeechFormat, SpeechFormatType
 from agents.transcript import SpeechFormat, SpeechType, Transcript
 from prompts import Prompt, PromptTag
 from utils import LoggerUtils
@@ -26,7 +27,7 @@ class Judge(Agent):
         speech_format: Optional[SpeechFormat] = None,
         speech_structure: SpeechStructure = SpeechStructure.DECISION,
         expected_saver: str = constants.DEFAULT_JUDGE_NAME,
-        chain_of_thought: bool = True,
+        scratchpad_config: ScratchpadConfig = ScratchpadConfig(),
     ):
         """
         The abstraction used to both judge rounds and determine who speaks next.
@@ -39,7 +40,7 @@ class Judge(Agent):
             speech_format: the order of speeches the judge expects to hear
             speech_structure: the default way the judge is to supposed to generate text
             expected_saver: whether the judge or the debater is in charge of saving the transcript
-            chain_of_thought: whether the judge gets to use chain-of-thought before generating the response
+            scratchpad_config: configuration that specifies if and how to use a scratchpad
         """
         super().__init__(
             name=name,
@@ -51,12 +52,14 @@ class Judge(Agent):
             receive_validated_quotes=True,
             speech_format=speech_format
             if speech_format
-            else JudgeUtils.get_default_speech_format(num_speeches=num_speeches, chain_of_thought=chain_of_thought),
+            else SpeechFormatType.DEFAULT_DEBATE_JUDGE.get_speech_format(
+                name=name, num_speeches=num_speeches, use_scratchpad=scratchpad_config.use_scratchpad
+            ),
         )
         self.logger = LoggerUtils.get_default_logger(__name__)
         self.speech_structure = speech_structure
         self.expected_saver = expected_saver
-        self.chain_of_thought = chain_of_thought
+        self.scratchpad_config = scratchpad_config
         self.num_speeches = num_speeches
 
     def generate(
@@ -75,17 +78,17 @@ class Judge(Agent):
             Either a string with the text it generated or a boolean indicating whether the first debater won
             (depending on whether the speech was a decision or open-ended) for each element in the batch.
         """
-        if self.chain_of_thought or not self.transcripts[0].only_decision_remains():
+        if self.scratchpad_config.use_scratchpad or not self.transcripts[0].only_decision_remains():
             batch_generation = self.generate(max_new_tokens=250, speech_structure=SpeechStructure.OPEN_ENDED)
             batch_reasoning = [response.speech for response in batch_generation]
         if self.transcripts[0].only_decision_remains():  # all formats should be the same so we can use any transcript
-            if self.chain_of_thought:
+            if self.scratchpad_config.use_scratchpad:
                 for i, reasoning in enumerate(batch_reasoning):
                     super().receive_message(speaker=self.name, content=reasoning, idx=i)
             batch_predictions = self.generate(max_new_tokens=15, speech_structure=self.speech_structure)
             validated_predictions = self.validate_responses(batch_predictions)
             returned_response = self.process_responses(validated_predictions)
-            if self.chain_of_thought:
+            if self.scratchpad_config.use_scratchpad:
                 for generation, prediction in zip(batch_generation, batch_predictions):
                     prediction.failed = generation.failed or prediction.failed
 
@@ -112,58 +115,8 @@ class Judge(Agent):
             speech_format=self.speech_format,
             speech_structure=self.speech_structure,
             expected_saver=self.expected_saver,
-            chain_of_thought=self.chain_of_thought,
+            scratchpad_config=self.scratchpad_config,
         )
         if transcripts:
             judge.transcripts = [transcript.copy() for transcript in transcripts]
         return judge
-
-
-class JudgeUtils:
-    pre_debate_speech_format = (
-        SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-        .add(prompt_tag=PromptTag.OVERALL_SYSTEM)
-        .add(prompt_tag=PromptTag.JUDGE_SYSTEM)
-        .add(prompt_tag=PromptTag.PRE_DEBATE_JUDGE)
-    )
-
-    opening_speech_speech_format = (
-        SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-        .add(prompt_tag=PromptTag.PRE_DEBATER_A_SPEECH_JUDGE)
-        .add_user_inputted_speech(expected_speaker=constants.DEFAULT_DEBATER_A_NAME)
-        .add(prompt_tag=PromptTag.PRE_DEBATER_B_SPEECH_JUDGE)
-        .add_user_inputted_speech(expected_speaker=constants.DEFAULT_DEBATER_B_NAME)
-    )
-
-    argument_speech_format = (
-        SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-        .add(prompt_tag=PromptTag.PRE_DEBATER_A_SPEECH_JUDGE)
-        .add_user_inputted_speech(expected_speaker=constants.DEFAULT_DEBATER_A_NAME)
-        .add(prompt_tag=PromptTag.PRE_DEBATER_B_SPEECH_JUDGE)
-        .add_user_inputted_speech(expected_speaker=constants.DEFAULT_DEBATER_B_NAME)
-    )
-
-    @classmethod
-    def get_decision_speech_format(cls, chain_of_thought: bool):
-        """gets the speech format for the judge prior to making a decision"""
-        decision_speech_format = SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-        if chain_of_thought:
-            return (
-                decision_speech_format.add(prompt_tag=PromptTag.POST_ROUND_JUDGE)
-                .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
-                .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
-            )
-        return decision_speech_format.add(prompt_tag=PromptTag.POST_ROUND_JUDGE_WITHOUT_REASONING).add_user_inputted_speech(
-            expected_speaker=constants.DEFAULT_JUDGE_NAME
-        )
-
-    @classmethod
-    def get_default_speech_format(cls, num_speeches: int, chain_of_thought: bool):
-        """Gets the speech order for the judge"""
-        return (
-            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-            .add_format(speech_format=JudgeUtils.pre_debate_speech_format)
-            .add_format(speech_format=JudgeUtils.opening_speech_speech_format)
-            .add_format(speech_format=JudgeUtils.argument_speech_format, repeats=(num_speeches - 1))
-            .add_format(speech_format=JudgeUtils.get_decision_speech_format(chain_of_thought=chain_of_thought))
-        )

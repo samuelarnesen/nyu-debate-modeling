@@ -416,7 +416,7 @@ class ExperimentLoader:
                 prompt=prompt_judge,
                 model=judge_model,
                 num_speeches=experiment.num_speeches,
-                chain_of_thought=experiment.agents.judge.scratchpad.use_scratchpad,
+                scratchpad_config=experiment.agents.judge.scratchpad,
             )
 
             debate_round = DebateRound(

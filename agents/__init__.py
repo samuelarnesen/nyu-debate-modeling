@@ -30,6 +30,15 @@ from agents.models import (
 )
 from .agent import Agent, AgentConfig, ScratchpadConfig
 from .debate_round import DebateRound, DebateRoundSummary, QuestionMetadata, SplittingRule
-from .debater import BestOfNDebater, Debater, DebaterUtils, HumanDebater
-from .judge import Judge, JudgeUtils
-from .transcript import Transcript, Speech, SpeechFormat, SpeechFormatEntry, SpeechType
+from .debater import BestOfNDebater, Debater, HumanDebater
+from .judge import Judge
+from .speech_format import (
+    Speech,
+    SpeechFormat,
+    SpeechFormatEntry,
+    SpeechType,
+    SpeechFormat,
+    SpeechFormatEntry,
+    SpeechFormatType,
+)
+from .transcript import Transcript
