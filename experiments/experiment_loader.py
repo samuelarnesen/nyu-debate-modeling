@@ -330,8 +330,12 @@ class ExperimentLoader:
             )
 
             config_b = PromptConfig(
-                name=constants.DEFAULT_DEBATER_B_NAME,
-                opponent_name=constants.DEFAULT_DEBATER_A_NAME,
+                name=constants.DEFAULT_DEBATER_B_NAME
+                if not experiment.speech_structure.flip_position_order
+                else constants.DEFAULT_DEBATER_A_NAME,
+                opponent_name=constants.DEFAULT_DEBATER_A_NAME
+                if not experiment.speech_structure.flip_position_order
+                else constants.DEFAULT_DEBATER_B_NAME,
                 position=opponent_position,
                 opponent_position=position,
                 topic=topic,
@@ -347,7 +351,7 @@ class ExperimentLoader:
             )
 
             flipped_prompt_a = PromptParser.parse(
-                prompt_config=config_a,
+                prompt_config=config_a if not experiment.speech_structure.flip_position_order else config_b,
                 prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.agents.debaters[debater_idxs[1]].model_settings.override_prompt
                 or experiment.speech_structure.default_prompt_name
@@ -363,7 +367,7 @@ class ExperimentLoader:
             )
 
             flipped_prompt_b = PromptParser.parse(
-                prompt_config=config_b,
+                prompt_config=config_b if not experiment.speech_structure.flip_position_order else config_a,
                 prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.agents.debaters[debater_idxs[0]].model_settings.override_prompt
                 or experiment.speech_structure.default_prompt_name
@@ -372,6 +376,12 @@ class ExperimentLoader:
 
             prompt_judge = PromptParser.parse(
                 prompt_config=config_a,
+                prompts_file_path=experiment.prompt_config.file_path,
+                name=experiment.speech_structure.default_prompt_name or experiment.prompt_config.default_prompt_name,
+            )
+
+            flipped_prompt_judge = PromptParser.parse(
+                prompt_config=config_a if not experiment.speech_structure.flip_position_order else config_b,
                 prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.speech_structure.default_prompt_name or experiment.prompt_config.default_prompt_name,
             )
@@ -438,6 +448,18 @@ class ExperimentLoader:
                 metadata=[question_metadata],
             )
 
+            flipped_question_metadata = QuestionMetadata(
+                first_debater_correct=correct_index == 0
+                if not experiment.speech_structure.flip_position_order
+                else correct_index != 0,
+                question_idx=i,
+                background_text=background_text,
+                question=topic,
+                first_debater_answer=position if not experiment.speech_structure.flip_position_order else opponent_position,
+                second_debater_answer=opponent_position if not experiment.speech_structure.flip_position_order else position,
+                debate_identifier=debate_identifier,
+            )
+
             flipped_debater_a = Debater(
                 name=constants.DEFAULT_DEBATER_A_NAME,
                 prompt=flipped_prompt_a,
@@ -470,11 +492,24 @@ class ExperimentLoader:
                 ].model_settings.require_quote_validation,
             )
 
+            flipped_judge = Judge(
+                name=constants.DEFAULT_JUDGE_NAME,
+                prompt=flipped_prompt_judge,
+                model=judge_model,
+                speech_format=experiment.speech_structure.judge_format.get_speech_format(
+                    name=constants.DEFAULT_JUDGE_NAME,
+                    num_speeches=experiment.num_speeches,
+                    use_scratchpad=experiment.agents.judge.scratchpad.use_scratchpad,
+                ),
+                num_speeches=experiment.num_speeches,
+                scratchpad_config=experiment.agents.judge.scratchpad,
+            )
+
             flipped_round = DebateRound(
                 first_debater=flipped_debater_a,
                 second_debater=flipped_debater_b,
-                judge=judge,
-                metadata=[question_metadata],
+                judge=flipped_judge,
+                metadata=[flipped_question_metadata],
             )
 
             if first_offline_file_path:
@@ -490,7 +525,9 @@ class ExperimentLoader:
                     alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
                     debater_name=debate_round.second_debater.name,
                     idx=i,
-                    positions=(position, opponent_position),
+                    positions=(position, opponent_position)
+                    if not experiment.speech_structure.flip_position_order
+                    else (opponent_position, position),
                     best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                 )
             if second_offline_file_path:
@@ -506,7 +543,9 @@ class ExperimentLoader:
                     alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
                     debater_name=flipped_round.first_debater.name,
                     idx=i,
-                    positions=(position, opponent_position),
+                    positions=(position, opponent_position)
+                    if not experiment.speech_structure.flip_position_order
+                    else (opponent_position, position),
                     best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                 )
 
@@ -557,7 +596,10 @@ class ExperimentLoader:
                 flipped_round.set_first_debater(HumanDebater(debater=flipped_round.first_debater, speeches=speeches))
 
             rounds.append(debate_round)
-            if experiment.flip and flipped_round.first_debater.model.alias != flipped_round.second_debater.model.alias:
+            if experiment.flip and (
+                flipped_round.first_debater.model.alias != flipped_round.second_debater.model.alias
+                or experiment.speech_structure.flip_position_order
+            ):
                 rounds.append(flipped_round)
 
         if len(rounds) <= 1:
@@ -568,7 +610,7 @@ class ExperimentLoader:
         current_normal_batch = []
         current_flipped_batch = []
         for i, debate_round in enumerate(rounds):
-            if i % 2 == 0:
+            if i % 2 == 0 or experiment.speech_structure.num_participants == 1 or not experiment.flip:
                 current_normal_batch.append(debate_round)
                 if len(current_normal_batch) == experiment.batch_size:
                     batched_rounds.append(ExperimentLoader.merge_debate_rounds(current_normal_batch))

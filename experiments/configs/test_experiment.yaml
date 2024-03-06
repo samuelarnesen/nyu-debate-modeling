@@ -271,7 +271,7 @@ Normal_Operational_Test:
 Operational_Test:
   batch_size: 8
   num_speeches: 1
-  flip: False
+  flip: True
   enable_self_debate: True
   speech_structure: default_consultancy
   agents:

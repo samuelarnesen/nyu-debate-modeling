@@ -65,7 +65,7 @@ class SpeechFormatType(Enum):
 
 
 class SpeechFormatStructure(Enum):
-    DEFAULT_DEBATE = (1, SpeechFormatType.DEFAULT_DEBATE, SpeechFormatType.DEFAULT_DEBATE_JUDGE, "Debate Prompt", 2)
+    DEFAULT_DEBATE = (1, SpeechFormatType.DEFAULT_DEBATE, SpeechFormatType.DEFAULT_DEBATE_JUDGE, "Debate Prompt", 2, False)
 
     DEFAULT_CONSULTANCY = (
         2,
@@ -73,6 +73,7 @@ class SpeechFormatStructure(Enum):
         SpeechFormatType.DEFAULT_CONSULTANCY_JUDGE,
         "Consultancy Prompt",
         1,
+        True,
     )
 
     def __init__(
@@ -82,12 +83,14 @@ class SpeechFormatStructure(Enum):
         judge_format: SpeechFormatType,
         default_prompt_name: str,
         num_participants: int,
+        flip_position_order: bool,
     ):
         self._value_ = value
         self.debater_format = debater_format
         self.judge_format = judge_format
         self.default_prompt_name = default_prompt_name
         self.num_participants = num_participants
+        self.flip_position_order = flip_position_order
 
 
 class SpeechFormat:
