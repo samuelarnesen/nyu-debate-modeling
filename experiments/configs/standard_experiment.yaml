@@ -46,58 +46,47 @@ Quality:
   batch_size: 1
   num_speeches: 1
   flip: True
+  enable_self_debate: False
+  previous_run:
+    file_path: 2024-02-17_10:24:38.891468
+    replicate_topics: False
+    merge_results: True
   agents:
     debaters:
       - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-          alias: sft
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-1/checkpoint-69
+          alias: dpo
       - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-5
-          alias: dpo
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-no-filter
+          alias: dpo-no-filter
     judge:
       model_settings:
         model_type: openai
-        alias: openai-judge
+        alias: openai_judge
   dataset:
     dataset_type: quality
     split_type: val
-Best of N:
+Tournament - Data Generation - Human:
   batch_size: 1
   num_speeches: 1
   flip: False
+  enable_self_debate: True
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
   agents:
     debaters:
       - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-4/checkpoint-10
-          alias: "mixtral-4"
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b
+          alias: "human"
         best_of_n:
-          n: 4
-          opponent_n: 1
-          maxmin: True
-    judge:
-      model_settings:
-        model_type: openai
-        alias: "openai-judge"
-  dataset:
-    dataset_type: quality
-    split_type: train
-Tournament - Data Generation:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  agents:
-    debaters:
-      - model_settings:
-          model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified/checkpoint-156
-          alias: "mixtral-1-epoch"
-        best_of_n:
-          n: 16
-          opponent_n: 4
-          maxmin: True
+          n: 8
+          opponent_n: 2
+          maxmin: False
     judge:
       model_settings:
         model_type: openai

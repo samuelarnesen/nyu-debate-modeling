@@ -39,6 +39,7 @@ from .speech_format import (
     SpeechType,
     SpeechFormat,
     SpeechFormatEntry,
+    SpeechFormatStructure,
     SpeechFormatType,
 )
 from .transcript import Transcript

@@ -12,9 +12,11 @@ from agents import (
     OfflineModelHelper,
     QuestionMetadata,
     ServedModel,
+    SpeechFormatType,
+    SpeechFormatStructure,
 )
 from data import DatasetConfig, DatasetType, LoaderUtils, RawDataLoader, RawDataset, SplitType
-from prompts import DynamicPromptParser, Prompt, PromptConfig, PromptLoadingConfig, PromptParser
+from prompts import Prompt, PromptConfig, PromptLoadingConfig, PromptParser
 from utils import LoggerUtils
 import utils.constants as constants
 
@@ -48,8 +50,12 @@ class PreviousRunConfig(BaseModel):
 class TournamentType(Enum):
     ROUND_ROBIN = auto()
     SELF_PLAY_ONLY = auto()
-    POWER_PAIR = auto()
     CUSTOM = auto()
+
+
+class RoundStructure(Enum):
+    DEBATE = auto()
+    CONSULTANCY = auto()
 
 
 class TournamentConfig(BaseModel):
@@ -61,8 +67,6 @@ class TournamentConfig(BaseModel):
     def validate_tournament_type(cls, tournament_type: str | TournamentType):
         if isinstance(tournament_type, str):
             tournament_type = TournamentType[tournament_type.upper()]
-        if tournament_type == TournamentType.POWER_PAIR:
-            raise ValueError("Power paired tournaments are not supported yet")
         return tournament_type
 
     @model_validator(mode="after")
@@ -86,6 +90,14 @@ class ExperimentConfig(BaseModel):
     enable_self_debate: bool = False
     previous_run: Optional[PreviousRunConfig] = None
     tournament: Optional[TournamentConfig] = TournamentConfig()
+    speech_structure: SpeechFormatStructure = SpeechFormatStructure.DEFAULT_DEBATE.name
+
+    @field_validator("speech_structure", mode="before")
+    @classmethod
+    def validate_speech_structure(cls, speech_structure: str | SpeechFormatStructure):
+        if isinstance(speech_structure, str):
+            return SpeechFormatStructure[speech_structure.upper()]
+        return speech_structure
 
 
 class ExperimentLoader:
@@ -330,6 +342,7 @@ class ExperimentLoader:
                 prompt_config=config_a,
                 prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.agents.debaters[debater_idxs[0]].model_settings.override_prompt
+                or experiment.speech_structure.default_prompt_name
                 or experiment.prompt_config.default_prompt_name,
             )
 
@@ -337,6 +350,7 @@ class ExperimentLoader:
                 prompt_config=config_a,
                 prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.agents.debaters[debater_idxs[1]].model_settings.override_prompt
+                or experiment.speech_structure.default_prompt_name
                 or experiment.prompt_config.default_prompt_name,
             )
 
@@ -344,6 +358,7 @@ class ExperimentLoader:
                 prompt_config=config_b,
                 prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.agents.debaters[debater_idxs[1]].model_settings.override_prompt
+                or experiment.speech_structure.default_prompt_name
                 or experiment.prompt_config.default_prompt_name,
             )
 
@@ -351,33 +366,15 @@ class ExperimentLoader:
                 prompt_config=config_b,
                 prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.agents.debaters[debater_idxs[0]].model_settings.override_prompt
+                or experiment.speech_structure.default_prompt_name
                 or experiment.prompt_config.default_prompt_name,
             )
 
             prompt_judge = PromptParser.parse(
                 prompt_config=config_a,
                 prompts_file_path=experiment.prompt_config.file_path,
-                name=experiment.prompt_config.default_prompt_name,
+                name=experiment.speech_structure.default_prompt_name or experiment.prompt_config.default_prompt_name,
             )
-
-            if experiment.prompt_config.use_dynamic_prompt:
-                prompt_a = DynamicPromptParser.convert_to_dynamic_prompt(
-                    prompt=prompt_a,
-                    prompt_config=config_a,
-                    dataset=dataset,
-                    row=example,
-                    dynamic_prompt_file_path=experiment.prompt_config.dynamic_prompts_file_path,
-                    dynamic_prompt_name=experiment.prompt_config.dynamic_prompt_name,
-                )
-
-                prompt_b = DynamicPromptParser.convert_to_dynamic_prompt(
-                    prompt=prompt_b,
-                    prompt_config=config_b,
-                    dataset=dataset,
-                    row=example,
-                    dynamic_prompt_file_path=experiment.prompt_config.dynamic_prompts_file_path,
-                    dynamic_prompt_name=experiment.prompt_config.dynamic_prompt_name,
-                )
 
             question_metadata = QuestionMetadata(
                 first_debater_correct=correct_index == 0,
@@ -394,6 +391,11 @@ class ExperimentLoader:
                 prompt=prompt_a,
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
+                speech_format=experiment.speech_structure.debater_format.get_speech_format(
+                    name=constants.DEFAULT_DEBATER_A_NAME,
+                    num_speeches=experiment.num_speeches,
+                    use_scratchpad=experiment.agents.debaters[debater_idxs[0]].scratchpad.use_scratchpad,
+                ),
                 scratchpad_config=experiment.agents.debaters[debater_idxs[0]].scratchpad,
                 quotes_require_validation=experiment.agents.debaters[
                     debater_idxs[0]
@@ -405,6 +407,11 @@ class ExperimentLoader:
                 prompt=prompt_b,
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
+                speech_format=experiment.speech_structure.debater_format.get_speech_format(
+                    name=constants.DEFAULT_DEBATER_B_NAME,
+                    num_speeches=experiment.num_speeches,
+                    use_scratchpad=experiment.agents.debaters[debater_idxs[1]].scratchpad.use_scratchpad,
+                ),
                 scratchpad_config=experiment.agents.debaters[debater_idxs[1]].scratchpad,
                 quotes_require_validation=experiment.agents.debaters[
                     debater_idxs[1]
@@ -415,6 +422,11 @@ class ExperimentLoader:
                 name=constants.DEFAULT_JUDGE_NAME,
                 prompt=prompt_judge,
                 model=judge_model,
+                speech_format=experiment.speech_structure.judge_format.get_speech_format(
+                    name=constants.DEFAULT_JUDGE_NAME,
+                    num_speeches=experiment.num_speeches,
+                    use_scratchpad=experiment.agents.judge.scratchpad.use_scratchpad,
+                ),
                 num_speeches=experiment.num_speeches,
                 scratchpad_config=experiment.agents.judge.scratchpad,
             )
@@ -432,6 +444,11 @@ class ExperimentLoader:
                 model=debater_two_model,
                 num_speeches=experiment.num_speeches,
                 scratchpad_config=experiment.agents.debaters[debater_idxs[1]].scratchpad,
+                speech_format=experiment.speech_structure.debater_format.get_speech_format(
+                    name=constants.DEFAULT_DEBATER_A_NAME,
+                    num_speeches=experiment.num_speeches,
+                    use_scratchpad=experiment.agents.debaters[debater_idxs[1]].scratchpad.use_scratchpad,
+                ),
                 quotes_require_validation=experiment.agents.debaters[
                     debater_idxs[1]
                 ].model_settings.require_quote_validation,
@@ -443,6 +460,11 @@ class ExperimentLoader:
                 model=debater_one_model,
                 num_speeches=experiment.num_speeches,
                 scratchpad_config=experiment.agents.debaters[debater_idxs[0]].scratchpad,
+                speech_format=experiment.speech_structure.debater_format.get_speech_format(
+                    name=constants.DEFAULT_DEBATER_B_NAME,
+                    num_speeches=experiment.num_speeches,
+                    use_scratchpad=experiment.agents.debaters[debater_idxs[0]].scratchpad.use_scratchpad,
+                ),
                 quotes_require_validation=experiment.agents.debaters[
                     debater_idxs[0]
                 ].model_settings.require_quote_validation,
@@ -570,7 +592,12 @@ class ExperimentLoader:
         if not experiment.agents or not experiment.agents.debaters or len(experiment.agents.debaters) < 1:
             raise Exception("At least 1 debater must be defined")
 
-        if experiment.tournament.tournament_type == TournamentType.ROUND_ROBIN:
+        if (
+            experiment.tournament.tournament_type == TournamentType.SELF_PLAY_ONLY
+            or experiment.speech_structure.num_participants == 1
+        ):
+            return [(i, i) for i in range(len(experiment.agents.debaters))]
+        elif experiment.tournament.tournament_type == TournamentType.ROUND_ROBIN:
             all_idxs = [i for i in range(len(experiment.agents.debaters))] if len(experiment.agents.debaters) > 1 else [0, 0]
             all_debater_idxs = [elem for elem in itertools.combinations(all_idxs, r=2)]
             if experiment.enable_self_debate and len(experiment.agents.debaters) > 1:
@@ -586,8 +613,6 @@ class ExperimentLoader:
                     raise Exception(f"Custom matchup for ({a} v {b}) could not be created because ({b}) was not recognized")
                 matchup_idxs.append((aliases_to_idxs[a], aliases_to_idxs[b]))
             return matchup_idxs
-        elif experiment.tournament.tournament_type == TournamentType.SELF_PLAY_ONLY:
-            return [(i, i) for i in range(len(experiment.agents.debaters))]
         else:
             raise Exception("Tournament type was not recognized")
 

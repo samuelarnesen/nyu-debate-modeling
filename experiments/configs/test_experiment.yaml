@@ -116,7 +116,7 @@ Quality_Test:
         alias: random-judge
   dataset:
     dataset_type: quality
-    split_type: train
+    split_type: val
 Human_Test:
   batch_size: 1
   num_speeches: 1
@@ -137,46 +137,6 @@ Human_Test:
         alias: random-judge
   dataset:
     dataset_type: quality_debates
-Dynamic_Test:
-  batch_size: 1
-  num_speeches: 1
-  flip: True
-  agents:
-    debaters:
-      - model_settings:
-          model_type: random
-          alias: random-debater-1
-      - model_settings:
-          model_type: random
-          alias: random-debater-2
-    judge:
-      model_settings:
-        model_type: random
-        alias: random-judge
-  dataset:
-    dataset_type: annotated_quality_debates
-    split_type: train
-Dynamic_Override_Test:
-  batch_size: 1
-  num_speeches: 1
-  flip: True
-  agents:
-    debaters:
-      - model_settings:
-          model_type: random
-          alias: random-debater-1
-          override_prompt: Quote Heavy
-      - model_settings:
-          model_type: random
-          alias: random-debater-2
-          override_prompt: Quote Light
-    judge:
-      model_settings:
-        model_type: random
-        alias: random-judge
-  dataset:
-    dataset_type: annotated_quality_debates
-    split_type: train
 Labelled_Scratchpad_Test:
   batch_size: 1
   num_speeches: 1
@@ -253,53 +213,304 @@ Previous_Run_To_Replicate_Test:
   dataset:
     dataset_type: quality
     split_type: val
-Tournament:
-  batch_size: 1
+GPT_Test:
+  batch_size: 25
   num_speeches: 1
   flip: True
   enable_self_debate: True
   agents:
     debaters:
       - model_settings:
-          alias: 16
+          alias: gpt35-1
           model_type: offline
-          offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
-        best_of_n:
-          n: 16
-          opponent_n: 1
-          maxmin: True
+          offline_file_path: /Users/samarnesen/nyu/scratch/adj_datasets/gpt35_bo16.jsonl
+          require_quote_validation: True
       - model_settings:
-          alias: 8
+          alias: claude21-1
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/adj_datasets/claude21_bo16.jsonl
+          require_quote_validation: True
+      - model_settings:
+          alias: gpt4t-1
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/adj_datasets/gpt4t_bo16.jsonl
+          require_quote_validation: True
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai_judge
+  dataset:
+    dataset_type: quality
+    split_type: train
+  tournament:
+    tournament_type: self_play_only
+Normal_Operational_Test:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: False
+  agents:
+    debaters:
+      - model_settings:
+          alias: llama
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-04_10_33_55.198327
+          require_quote_validation: True
+      - model_settings:
+          alias: dpo
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-21_14_48_01.693701
+          require_quote_validation: True
+    judge:
+      model_settings:
+        model_type: arbitrary_attribute
+        alias: arbitrary_attribute_judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+Operational_Test:
+  batch_size: 8
+  num_speeches: 1
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          alias: dpo-1
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-21_14_48_01.693701
+          require_quote_validation: True
+    judge:
+      model_settings:
+        model_type: random
+        alias: random_judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+Self_Play_Test:
+  batch_size: 8
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  agents:
+    debaters:
+      - model_settings:
+          alias: ext-8
           model_type: offline
           offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
+          require_quote_validation: True
         best_of_n:
           n: 8
           opponent_n: 1
-          maxmin: True
+          maxmin: False
       - model_settings:
-          alias: 4
+          alias: ext-4
           model_type: offline
           offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
+          require_quote_validation: True
         best_of_n:
           n: 4
           opponent_n: 1
-          maxmin: True
+          maxmin: False
       - model_settings:
-          alias: 2
+          alias: ext-2
           model_type: offline
           offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
+          require_quote_validation: True
         best_of_n:
           n: 2
           opponent_n: 1
-          maxmin: True
+          maxmin: False
       - model_settings:
-          alias: 1
+          alias: ext-1
           model_type: offline
           offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060
+          require_quote_validation: True
         best_of_n:
           n: 1
           opponent_n: 1
-          maxmin: True
+          maxmin: False
+      - model_settings:
+          alias: short-8
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-04_10_33_55.198327
+          require_quote_validation: True
+        best_of_n:
+          n: 8
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: short-4
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-04_10_33_55.198327
+          require_quote_validation: True
+        best_of_n:
+          n: 4
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: short-2
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-04_10_33_55.198327
+          require_quote_validation: True
+        best_of_n:
+          n: 2
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: short-1
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-04_10_33_55.198327
+          require_quote_validation: True
+        best_of_n:
+          n: 1
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: high-temp-8
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-06_19_11_16.323454
+          require_quote_validation: True
+        best_of_n:
+          n: 8
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: high-temp-4
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-06_19_11_16.323454
+          require_quote_validation: True
+        best_of_n:
+          n: 4
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: high-temp-2
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-06_19_11_16.323454
+          require_quote_validation: True
+        best_of_n:
+          n: 2
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: high-temp-1
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-06_19_11_16.323454
+          require_quote_validation: True
+        best_of_n:
+          n: 1
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: human-8
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-07_17_30_49.528341
+          require_quote_validation: True
+        best_of_n:
+          n: 8
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: human-4
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-07_17_30_49.528341
+          require_quote_validation: True
+        best_of_n:
+          n: 4
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: human-2
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-07_17_30_49.528341
+          require_quote_validation: True
+        best_of_n:
+          n: 2
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: human-1
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-07_17_30_49.528341
+          require_quote_validation: True
+        best_of_n:
+          n: 1
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: llama-8
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-09_02_21_50.000591
+          require_quote_validation: True
+        best_of_n:
+          n: 8
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: llama-4
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-09_02_21_50.000591
+          require_quote_validation: True
+        best_of_n:
+          n: 4
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: llama-2
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-09_02_21_50.000591
+          require_quote_validation: True
+        best_of_n:
+          n: 2
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: llama-1
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-09_02_21_50.000591
+          require_quote_validation: True
+        best_of_n:
+          n: 1
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: dpo-8
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-21_14_48_01.693701
+          require_quote_validation: True
+        best_of_n:
+          n: 8
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: dpo-4
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-21_14_48_01.693701
+          require_quote_validation: True
+        best_of_n:
+          n: 4
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: dpo-2
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-21_14_48_01.693701
+          require_quote_validation: True
+        best_of_n:
+          n: 2
+          opponent_n: 1
+          maxmin: False
+      - model_settings:
+          alias: dpo-1
+          model_type: offline
+          offline_file_path: /Users/samarnesen/Downloads/2024-02-21_14_48_01.693701
+          require_quote_validation: True
+        best_of_n:
+          n: 1
+          opponent_n: 1
+          maxmin: False
     judge:
       model_settings:
         model_type: openai
@@ -307,56 +518,5 @@ Tournament:
   dataset:
     dataset_type: quality
     split_type: val
-Operational_Test:
-  batch_size: 1
-  num_speeches: 1
-  flip: True
-  enable_self_debate: True
-  previous_run:
-    file_path: 2024-02-01_12:20:14.610274
-    replicate_topics: True
-    merge_results: True
-  agents:
-    debaters:
-      - model_settings:
-          alias: "alice"
-          model_type: random
-      - model_settings:
-          alias: "bob"
-          model_type: random
-      - model_settings:
-          model_type: random
-          alias: "16"
-      - model_settings:
-          model_type: random
-          alias: "8"
-      - model_settings:
-          model_type: random
-          alias: "4"
-      - model_settings:
-          model_type: random
-          alias: "2"
-      - model_settings:
-          model_type: random
-          alias: "1"
-    judge:
-      model_settings:
-        model_type: random
-        alias: random_judge
   tournament:
-    tournament_type: custom
-    custom_matchups:
-      - ['alice', "16"]
-      - ['alice', "8"]
-      - ['alice', "4"]
-      - ['alice', "2"]
-      - ['alice', "1"]
-      - ['bob', "16"]
-      - ['bob', "8"]
-      - ['bob', "4"]
-      - ['bob', "2"]
-      - ['bob', "1"]
-      - ['alice', 'bob']
-  dataset:
-    dataset_type: quality
-    split_type: val
+    tournament_type: self_play_only

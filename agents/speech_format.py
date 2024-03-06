@@ -42,6 +42,19 @@ class SpeechFormatType(Enum):
             name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad
         ),
     )
+    DEFAULT_CONSULTANCY = (
+        auto(),
+        lambda name, num_speeches, use_scratchpad: SpeechFormat.default_consultancy_format(
+            name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad
+        ),
+    )
+
+    DEFAULT_CONSULTANCY_JUDGE = (
+        auto(),
+        lambda name, num_speeches, use_scratchpad: SpeechFormat.default_consultancy_judge_format(
+            name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad
+        ),
+    )
 
     def __init__(self, value: int, builder_func: Callable):
         self._value_ = value
@@ -49,6 +62,32 @@ class SpeechFormatType(Enum):
 
     def get_speech_format(self, name: str, num_speeches: int, use_scratchpad: bool):
         return self.builder(name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad)
+
+
+class SpeechFormatStructure(Enum):
+    DEFAULT_DEBATE = (1, SpeechFormatType.DEFAULT_DEBATE, SpeechFormatType.DEFAULT_DEBATE_JUDGE, "Debate Prompt", 2)
+
+    DEFAULT_CONSULTANCY = (
+        2,
+        SpeechFormatType.DEFAULT_CONSULTANCY,
+        SpeechFormatType.DEFAULT_CONSULTANCY_JUDGE,
+        "Consultancy Prompt",
+        1,
+    )
+
+    def __init__(
+        self,
+        value: int,
+        debater_format: SpeechFormatType,
+        judge_format: SpeechFormatType,
+        default_prompt_name: str,
+        num_participants: int,
+    ):
+        self._value_ = value
+        self.debater_format = debater_format
+        self.judge_format = judge_format
+        self.default_prompt_name = default_prompt_name
+        self.num_participants = num_participants
 
 
 class SpeechFormat:
@@ -176,6 +215,7 @@ class SpeechFormat:
 
         later_arguments = (
             SpeechFormat(name)
+            .add_format(speech_format=judge_questions)
             .add_format(speech_format=own_speech if name == constants.DEFAULT_DEBATER_A_NAME else opponent_speech)
             .add_format(speech_format=opponent_speech if name == constants.DEFAULT_DEBATER_A_NAME else own_speech)
         )
@@ -211,8 +251,15 @@ class SpeechFormat:
             .add_user_inputted_speech(expected_speaker=constants.DEFAULT_DEBATER_B_NAME)
         )
 
+        judge_questions = (
+            SpeechFormat(name)
+            .add(prompt_tag=PromptTag.PRE_JUDGE_QUESTIONS)
+            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
+        )
+
         argument_speech_format = (
             SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
+            .add_format(speech_format=judge_questions)
             .add(prompt_tag=PromptTag.PRE_DEBATER_A_SPEECH_JUDGE)
             .add_user_inputted_speech(expected_speaker=constants.DEFAULT_DEBATER_A_NAME)
             .add(prompt_tag=PromptTag.PRE_DEBATER_B_SPEECH_JUDGE)
@@ -235,5 +282,102 @@ class SpeechFormat:
             .add_format(speech_format=pre_debate_speech_format)
             .add_format(speech_format=opening_speech_speech_format)
             .add_format(speech_format=argument_speech_format, repeats=(num_speeches - 1))
+            .add_format(speech_format=decision_speech_format)
+        )
+
+    @classmethod
+    def default_consultancy_format(cls, name: str, num_speeches: int, use_scratchpad: bool, **kwargs) -> SpeechFormat:
+        """Generates the order of speeches that the debater expects to receive"""
+
+        pre_debate = (
+            SpeechFormat(name)
+            .add(prompt_tag=PromptTag.OVERALL_SYSTEM)
+            .add(prompt_tag=PromptTag.DEBATER_SYSTEM)
+            .add(prompt_tag=PromptTag.PRE_DEBATE)
+        )
+
+        judge_questions = (
+            SpeechFormat(name)
+            .add(prompt_tag=PromptTag.PRE_JUDGE_QUESTIONS)
+            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
+        )
+
+        scratchpad = (
+            SpeechFormat(name)
+            .add(prompt_tag=PromptTag.PREVIOUS_DEBATER_SCRATCHPAD, last_only_prompt_tag=PromptTag.DEBATER_SCRATCHPAD)
+            .add_user_inputted_speech(expected_speaker=name)
+        )
+        own_speech = (
+            SpeechFormat(name)
+            .add(prompt_tag=PromptTag.PRE_PREVIOUS_SPEECH, last_only_prompt_tag=PromptTag.PRE_SPEECH)
+            .add_user_inputted_speech(expected_speaker=name)
+        )
+        if use_scratchpad:
+            own_speech = scratchpad.add_format(speech_format=own_speech)
+
+        opening_statements = (
+            SpeechFormat(name).add(prompt_tag=PromptTag.PRE_OPENING_SPEECH).add_format(speech_format=own_speech)
+        )
+
+        later_arguments = SpeechFormat(name).add_format(speech_format=judge_questions).add_format(speech_format=own_speech)
+
+        decision = (
+            SpeechFormat(name)
+            .add(prompt_tag=PromptTag.JUDGE_DECISION_FOR_DEBATER)
+            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
+        )
+
+        return (
+            SpeechFormat(name)
+            .add_format(speech_format=pre_debate)
+            .add_format(speech_format=opening_statements)
+            .add_format(speech_format=later_arguments, repeats=(num_speeches - 1))
+            .add_format(speech_format=decision)
+        )
+
+    @classmethod
+    def default_consultancy_judge_format(cls, name: str, num_speeches: int, use_scratchpad: bool, **kwargs) -> SpeechFormat:
+        pre_debate_speech_format = (
+            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
+            .add(prompt_tag=PromptTag.OVERALL_SYSTEM)
+            .add(prompt_tag=PromptTag.JUDGE_SYSTEM)
+            .add(prompt_tag=PromptTag.PRE_DEBATE_JUDGE)
+        )
+
+        judge_questions = (
+            SpeechFormat(name)
+            .add(prompt_tag=PromptTag.PRE_JUDGE_QUESTIONS)
+            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
+        )
+
+        opening_speech_speech_format = (
+            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
+            .add(prompt_tag=PromptTag.PRE_DEBATER_A_SPEECH_JUDGE)
+            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_DEBATER_A_NAME)
+        )
+
+        later_speech_format = (
+            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
+            .add_format(speech_format=judge_questions)
+            .add(prompt_tag=PromptTag.PRE_DEBATER_A_SPEECH_JUDGE)
+            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_DEBATER_A_NAME)
+        )
+
+        decision_speech_format = SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
+        if use_scratchpad:
+            decision_speech_format = (
+                decision_speech_format.add(prompt_tag=PromptTag.POST_ROUND_JUDGE)
+                .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
+                .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
+            )
+        decision_speech_format = decision_speech_format.add(
+            prompt_tag=PromptTag.POST_ROUND_JUDGE_WITHOUT_REASONING
+        ).add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
+
+        return (
+            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
+            .add_format(speech_format=pre_debate_speech_format)
+            .add_format(speech_format=opening_speech_speech_format)
+            .add_format(speech_format=later_speech_format, repeats=(num_speeches - 1))
             .add_format(speech_format=decision_speech_format)
         )

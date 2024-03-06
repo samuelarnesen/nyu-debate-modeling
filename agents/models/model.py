@@ -68,6 +68,7 @@ class ModelSettings(BaseModel):
     served: bool = False
     probe_hyperparams: Optional[ProbeHyperparams] = None
     require_quote_validation: bool = True
+    tokens_of_difference: tuple[str, str] = ("_A", "_B")
 
     @model_validator(mode="before")
     def verify_custom_settings(cls, values):

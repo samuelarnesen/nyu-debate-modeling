@@ -69,7 +69,9 @@ class ModelUtils:
         elif model_type == ModelType.DETERMINISTIC:
             model = DeterministicModel(alias=model_settings.alias, is_debater=is_debater)
         elif model_type == ModelType.OPENAI:
-            model = OpenAIModel(alias=model_settings.alias, is_debater=is_debater)
+            model = OpenAIModel(
+                alias=model_settings.alias, is_debater=is_debater, tokens_of_difference=model_settings.tokens_of_difference
+            )
         elif model_type == ModelType.ARBITRARY_ATTRIBUTE:
             model = ArbitraryAttributeModel(alias=model_settings.alias, is_debater=is_debater)
         elif model_type == ModelType.OFFLINE:
