@@ -168,7 +168,7 @@ class QuoteUtils:
         quote is wrapped in <invalid_quote></invalid_quote> tags. See find_best_match() for
         explanations of the remaining parameters."""
         updated_speech_content = QuoteUtils.clean_up_quotes(speech_content)
-        for quote in QuoteUtils.extract_quotes(speech_content=speech_content):
+        for quote in QuoteUtils.extract_quotes(speech_content=updated_speech_content):
             if not QuoteUtils.validate_quote(quote=quote, background_text=background_text):
                 updated_speech_content = QuoteUtils.replace_invalid_quote(
                     speech_content=updated_speech_content,

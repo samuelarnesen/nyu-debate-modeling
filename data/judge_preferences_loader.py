@@ -1,6 +1,6 @@
 from data.dataset import DataRow, DatasetType, JudgePreferenceDataRow, RawDataLoader, RawDataset, SplitType
 from data.quality_loader import QualityLoader
-from utils import InputType, InputUtils
+from utils import InputType, InputUtils, QuoteUtils
 import utils.constants as constants
 
 from typing import Any, Optional
@@ -47,23 +47,27 @@ class JudgePreferencesDataset(RawDataset):
 
 
 class JudgePreferencesLoader(RawDataLoader):
-    MIN_GAP = 0.5
+    MIN_GAP = 0.0
 
     @classmethod
-    def load(
-        cls, full_dataset_filepath: str | list[str], supplemental_file_paths: Optional[dict[str, str]] = None, **kwargs
-    ) -> JudgePreferencesDataset:
+    def load(cls, full_dataset_filepath: str | list[str], **kwargs) -> JudgePreferencesDataset:
         """
         Constructs a JudgePreferencesDataset.
 
         Params:
             full_dataset_filepath: This is the *prefix* of the files with all the Best-of-N generations.
-            supplemental_file_paths: An optional dictionary of paths that could be used to support the creation
-                of the dataset. In this case, the relevant one would be quality_file_path.
 
         Returns:
             A JudgePreferencesDataset where each row has a chosen and a rejected speech.
         """
+
+        def clean_speech(speech: str) -> str:
+            speech = speech.replace(constants.INVALID_QUOTE_TAG, constants.QUOTE_TAG).replace(
+                constants.INVALID_UNQUOTE_TAG, constants.UNQUOTE_TAG
+            )
+            punctuation = [">", ".", "?", "!"]
+            speech = speech[: max([speech.rfind(p) for p in punctuation]) + 1]
+            return QuoteUtils.clean_up_quotes(speech_content=speech)
 
         train_data = []
         input_texts = InputUtils.read_file_texts(base_path=full_dataset_filepath, input_type=InputType.JSON_TRANSCRIPT)
@@ -76,11 +80,7 @@ class JudgePreferencesLoader(RawDataLoader):
                 instruction = selected["supplemental"]["prompt"]
                 rejected = sorted(selected["supplemental"]["rejected_responses"], key=lambda x: x["preference"])[0]
                 if selected["supplemental"]["preference"] - rejected["preference"] > JudgePreferencesLoader.MIN_GAP:
-                    selected_speech = (
-                        selected["content"]
-                        .replace(constants.INVALID_QUOTE_TAG, constants.QUOTE_TAG)
-                        .replace(constants.INVALID_UNQUOTE_TAG, constants.UNQUOTE_TAG)
-                    )
+                    selected_speech = clean_speech(selected["content"])
                     train_data.append((instruction, selected_speech, rejected["speech"]))
 
         return JudgePreferencesDataset(

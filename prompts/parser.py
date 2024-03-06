@@ -175,6 +175,7 @@ class PromptParser:
         cls, row: DataRow, position: int, use_title_as_background_text: bool = False
     ) -> PromptConfig:
         """Generates a default prompt config using a data row -- used in training"""
+        position = max(position, 0)
         return PromptConfig(
             name=constants.DEFAULT_DEBATER_A_NAME if position == 0 else constants.DEFAULT_DEBATER_B_NAME,
             opponent_name=constants.DEFAULT_DEBATER_B_NAME if position == 0 else constants.DEFAULT_DEBATER_A_NAME,

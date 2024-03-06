@@ -3,19 +3,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 import torch
-
-
-class DatasetConfig(BaseModel):
-    dataset_type: str
-    full_dataset_file_path: Optional[str | list[str]] = None
-    train_file_path: Optional[str] = None
-    val_file_path: Optional[str] = None
-    test_file_path: Optional[str] = None
-    supplemental_file_paths: dict[str, str] = {}
-    split_type: str = "train"
-    combine_train_and_val: bool = False
 
 
 class SplitType(Enum):
@@ -32,6 +21,27 @@ class DatasetType(Enum):
     SCRATCHPAD_QUALITY_DEBATES = 5
     QUOTE_RELEVANCE = 6
     JUDGING_PROBE = 7
+
+
+class DatasetConfig(BaseModel):
+    dataset_type: DatasetType
+    full_dataset_file_path: Optional[str | list[str]] = None
+    train_file_path: Optional[str] = None
+    val_file_path: Optional[str] = None
+    test_file_path: Optional[str] = None
+    supplemental_file_paths: dict[str, str] = {}
+    split_type: SplitType = SplitType.TRAIN
+    combine_train_and_val: bool = False
+
+    @field_validator("split_type", mode="before")
+    @classmethod
+    def validate_tournament_type(cls, split_type: str):
+        return SplitType[split_type.upper()]
+
+    @field_validator("dataset_type", mode="before")
+    @classmethod
+    def validate_dataset_type(cls, dataset_type: str):
+        return DatasetType[dataset_type.upper()]
 
 
 class SpeakerType(Enum):
@@ -70,9 +80,9 @@ class SpeechData(BaseModel):
     text: str
     position: int
     speaker_type: SpeakerType
-    supplemental_file_paths: Optional[dict[str, str]] = None
     scratchpad: Optional[str] = None
     annotation: Optional[AnnotationData] = None
+    probabilities: Optional[tuple[float, float]]
 
 
 class DataRow(BaseModel):

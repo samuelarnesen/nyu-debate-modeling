@@ -146,8 +146,7 @@ class ExperimentLoader:
     @classmethod
     def create_dataset(cls, experiment: ExperimentConfig) -> RawDataset:
         dataset_config = experiment.dataset
-        dataset_type = DatasetType[dataset_config.dataset_type.upper()]
-        loader_cls = LoaderUtils.get_loader_type(dataset_type)
+        loader_cls = LoaderUtils.get_loader_type(dataset_config.dataset_type)
         return loader_cls.load(
             full_dataset_filepath=dataset_config.full_dataset_file_path,
             train_filepath=dataset_config.train_file_path,
@@ -156,10 +155,6 @@ class ExperimentLoader:
             supplemental_file_paths=dataset_config.supplemental_file_paths,
             combine_train_and_val=dataset_config.combine_train_and_val,
         )
-
-    @classmethod
-    def get_split(cls, experiment: ExperimentConfig) -> SplitType:
-        return SplitType[experiment.dataset.split_type.upper()] if experiment.dataset.split_type else SplitType.TRAIN
 
     @classmethod
     def get_model_id(cls, model_settings: ModelSettings):
@@ -199,6 +194,9 @@ class ExperimentLoader:
 
         # create logger
         logger = LoggerUtils.get_default_logger(__name__)
+
+        first_alias = experiment.agents.debaters[debater_idxs[0]].model_settings.alias
+        second_alias = experiment.agents.debaters[debater_idxs[1]].model_settings.alias
 
         debater_one_model_id = ExperimentLoader.get_model_id(experiment.agents.debaters[debater_idxs[0]].model_settings)
         debater_two_model_id = ExperimentLoader.get_model_id(experiment.agents.debaters[debater_idxs[1]].model_settings)
@@ -281,6 +279,8 @@ class ExperimentLoader:
                 count = offline_model_helpers[0].get_size()
             else:
                 count = len(dataset.get_data())
+
+        logger.info(f"Creating {count} rounds between {first_alias} and {second_alias}")
 
         # create debate rounds
         rounds = []
@@ -615,7 +615,6 @@ class ExperimentLoader:
 
         # create dataset
         dataset = ExperimentLoader.create_dataset(experiment)
-        split_type = ExperimentLoader.get_split(experiment)
 
         all_rounds = []
         model_cache = {}
@@ -624,7 +623,7 @@ class ExperimentLoader:
             rounds, model_cache, offline_model_helper_cache = ExperimentLoader.create_debate_rounds_for_combination(
                 experiment=experiment,
                 dataset=dataset,
-                split_type=split_type,
+                split_type=experiment.dataset.split_type,
                 debater_idxs=combination,
                 count=count,
                 model_cache=model_cache,

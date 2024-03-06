@@ -478,13 +478,39 @@ class ResultsCollector:
         total_quote_counts = {}
         valid_quote_counts = {}
         valid_quote_word_counts = {}
+        quote_length_distributions = {}
+        quote_accuracy_cdf = {}
         for key in all_categories:
             quote_accuracy[key] = {name: get_accuracy(results, name, key) for name in results}
             total_quote_counts[key] = {name: results[name][key].number_of_quotes for name in results}
             valid_quote_counts[key] = {name: results[name][key].number_of_valid_quotes for name in results}
             valid_quote_word_counts[key] = {name: results[name][key].total_valid_quote_length for name in results}
 
-        fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+            if key != constants.OVERALL:
+                continue
+
+            quote_length_distributions[key] = {}
+            quote_accuracy_cdf[key] = {}
+            for name in results:
+                quote_length_distributions[key][name] = []
+                quote_accuracy_cdf[key][name] = []
+                forward_count = 0
+                total_count = 0
+                total_accurate = 0
+                length = len(results[name][key].quote_length_to_accuracy)
+                for i in range(length):
+                    entry = results[name][key].quote_length_to_accuracy[length - i - 1]
+                    total_accurate += entry[0]
+                    total_count += entry[1]
+                    if length - i - 1 <= 50:
+                        quote_accuracy_cdf[key][name].append(total_accurate / max(total_count, 1))
+                        quote_length_distributions[key][name].append(total_count)
+                quote_accuracy_cdf[key][name] = [elem for elem in reversed(quote_accuracy_cdf[key][name])]
+                quote_length_distributions[key][name] = [
+                    elem / total_count for elem in reversed(quote_length_distributions[key][name])
+                ]
+
+        fig, axs = plt.subplots(3, 2, figsize=(12, 8))
         index = np.arange(len(results))
         bar_width = 0.3 / self.num_debaters
 
@@ -524,6 +550,25 @@ class ResultsCollector:
             axs[1, 1].set_xticks(index + (bar_width * (len(all_categories) - 1)) / self.num_debaters, results.keys())
             axs[1, 1].set_title("Valid Quote Word Count")
             axs[1, 1].legend()
+
+        for alias in results.keys():
+            axs[2, 0].plot(
+                [i for i in range(len(quote_length_distributions[constants.OVERALL][alias]))],
+                quote_length_distributions[constants.OVERALL][alias],
+                label=alias,
+            )
+            axs[2, 0].set_title("Quote Length CDF")
+            axs[2, 0].set_ylim(0, 1)
+            axs[2, 0].legend()
+
+            axs[2, 1].plot(
+                [i for i in range(len(quote_accuracy_cdf[constants.OVERALL][alias]))],
+                quote_accuracy_cdf[constants.OVERALL][alias],
+                label=alias,
+            )
+            axs[2, 1].set_title("Quote Accuracy CDF")
+            axs[2, 1].set_ylim(0, 1)
+            axs[2, 1].legend()
 
         fig.suptitle("Quotes")
         plt.tight_layout()
@@ -628,44 +673,49 @@ class ResultsCollector:
 
         all_stats = []
 
-        bt_results = self.__graph_bradley_terry()
-        all_stats.append(bt_results)
-        self.logger.info(bt_results)
+        try:
+            bt_results = self.__graph_bradley_terry()
+            all_stats.append(bt_results)
+            self.logger.info(bt_results)
 
-        plt.clf()
-        win_results = self.__graph_wins()
-        converted_win_results = {key: value.dict() for key, value in win_results.items()}
-        all_stats.append(converted_win_results)
-        self.logger.info(win_results)
-
-        plt.clf()
-        judge_results = self.__graph_judge()
-        converted_judge_results = {
-            key: {k: v.dict() for k, v in minigraph.items()} for key, minigraph in judge_results.items()
-        }
-        all_stats.append(converted_judge_results)
-        self.logger.info(judge_results)
-
-        if self.quotes_collector:
             plt.clf()
-            quote_results = self.__graph_quotes(win_stats_dict=win_results)
-            converted_quote_results = {key: {k: v.dict() for k, v in value.items()} for key, value in quote_results.items()}
-            all_stats.append(converted_quote_results)
-            self.logger.info(quote_results)
+            win_results = self.__graph_wins()
+            converted_win_results = {key: value.dict() for key, value in win_results.items()}
+            all_stats.append(converted_win_results)
+            self.logger.info(win_results)
 
-        if self.annotator:
-            try:
+            plt.clf()
+            judge_results = self.__graph_judge()
+            converted_judge_results = {
+                key: {k: v.dict() for k, v in minigraph.items()} for key, minigraph in judge_results.items()
+            }
+            all_stats.append(converted_judge_results)
+            self.logger.info(judge_results)
+
+            if self.quotes_collector:
                 plt.clf()
-                classifier_results = self.__graph_features()
-                converted_classifier_results = {key: value for key, value in classifier_results.items()}
-                all_stats.append(converted_classifier_results)
-                self.logger.info(classifier_results)
-            except Exception as e:
-                self.logger.error(e)
+                quote_results = self.__graph_quotes(win_stats_dict=win_results)
+                converted_quote_results = {
+                    key: {k: v.dict() for k, v in value.items()} for key, value in quote_results.items()
+                }
+                all_stats.append(converted_quote_results)
+                self.logger.info(quote_results)
 
-        if self.should_save and self.stats_path_prefix:
-            with open(f"{self.stats_path_prefix}.json", "w") as f:
-                json.dump(all_stats, f)
+            if self.annotator:
+                try:
+                    plt.clf()
+                    classifier_results = self.__graph_features()
+                    converted_classifier_results = {key: value for key, value in classifier_results.items()}
+                    all_stats.append(converted_classifier_results)
+                    self.logger.info(classifier_results)
+                except Exception as e:
+                    self.logger.error(e)
+
+            if self.should_save and self.stats_path_prefix:
+                with open(f"{self.stats_path_prefix}.json", "w") as f:
+                    json.dump(all_stats, f)
+        except:
+            print("huh we got an exception")
 
         self.__organize_into_df()
 

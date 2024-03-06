@@ -4,7 +4,7 @@ from prompts import DynamicPromptParser, Prompt, PromptParser, PromptTag
 from train.train_utils import TrainingConfig, TrainingTarget
 import utils.constants as constants
 
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 
 class RowConverter:
@@ -106,6 +106,7 @@ class RowConverter:
         dataset: RawDataset,
         use_dummy: bool = False,
         filter_empty_speeches: bool = True,
+        use_gold_labels: Optional[bool] = None,
     ) -> list[LLMInput]:
         """
         Returns a list of inputs that can be used as rows in an actual training dataset.
@@ -119,6 +120,8 @@ class RowConverter:
             is_debater: whether the row is being converted for training a debater (true) or judge (false)
             dataset: the dataset (abstraction from our code) that the row is sampled from
             use_dummy: whether to use a dummy speech instead of the text of a real speech (for dynamic prompting only)
+            use_gold_labels: whether the judge should use gold labels (True) or human judgment (False). Only applicable
+                if is_debater is False
 
         Returns:
             llm_inputs: a list of inputs of type LLMInput that can be easily converted into a dataset that
@@ -158,7 +161,7 @@ class RowConverter:
                         name=name, num_speeches=rounds, use_scratchpad=config.scratchpad_config.use_scratchpad
                     )
                     if is_debater
-                    else JudgeUtils.get_default_speech_format(num_speeches=(rounds - 1))
+                    else JudgeUtils.get_default_speech_format(num_speeches=(rounds - 1), chain_of_thought=False)
                 ),
             )
 
@@ -182,12 +185,42 @@ class RowConverter:
                 )
                 transcript.add_speech(speaker=name, content=speech.scratchpad if not use_dummy else (dummy_text + "\n"))
 
-            llm_input = llm_class.generate_llm_input_from_model_inputs(
-                input_list=transcript.to_model_input(), extra_suffix=speech.text
-            )
+            speech_text = [speech.text]
+            if not is_debater:
+                if use_gold_labels:
+                    speech_texts = ["Winner: Debater_A"] if row.correct_index == 0 else ["Winner: Debater_B"]
+                else:
+                    winner = "A" if speech.probabilities[0] > 0.5 else "B"
+                    loser = "B" if speech.probabilities[0] > 0.5 else "A"
+                    max_probability = max(speech.probabilities)
+                    max_percent = round(max_probability * 100)
+                    """
+                    speech_texts = [
+                        f"Winner: Debater_{winner}",
+                        f"Winner: Debater_{winner}" if max_probability > 0.75 else f"Winner: Debater_{loser}",
+                    ]"""
+                    speech_texts = [f"Debater_{winner} | {max_percent}%"]
 
-            if (llm_input.extra_suffix and isinstance(llm_input.extra_suffix, str)) or not filter_empty_speeches:
-                llm_inputs.append(llm_input.dict())
+            local_llm_input_list = [
+                llm_class.generate_llm_input_from_model_inputs(
+                    input_list=transcript.to_model_input(), extra_suffix=speech_text
+                )
+                for speech_text in speech_texts
+            ]
+
+            if (
+                isinstance(local_llm_input_list[0], LLMInput)
+                and local_llm_input_list[0].extra_suffix
+                and isinstance(local_llm_input_list[0].extra_suffix, str)
+                or not filter_empty_speeches
+            ):
+                llm_inputs.extend([llm_input.dict() for llm_input in local_llm_input_list])
+            elif (
+                isinstance(local_llm_input_list[0], list)
+                and isinstance(local_llm_input_list[0][-1], dict)
+                and local_llm_input_list[0][-1].get("role", "") == "assistant"
+            ):
+                llm_inputs.extend(local_llm_input_list)
 
             previous_speaker_type = speech.speaker_type
             speeches_so_far.append(speech)
@@ -221,6 +254,7 @@ class RowConverter:
             is_debater=False,
             dataset=dataset,
             use_dummy=use_dummy,
+            use_gold_labels=False,
         )
 
     @classmethod

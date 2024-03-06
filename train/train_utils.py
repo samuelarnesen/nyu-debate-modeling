@@ -71,8 +71,7 @@ class TrainUtils:
             dataset: a dataset object that can later be used as a training dataset
         """
         dataset_config = config.dataset
-        dataset_type = DatasetType[dataset_config.dataset_type.upper()]
-        loader_cls = LoaderUtils.get_loader_type(dataset_type)
+        loader_cls = LoaderUtils.get_loader_type(dataset_config.dataset_type)
         return loader_cls.load(
             full_dataset_filepath=dataset_config.full_dataset_file_path,
             train_filepath=dataset_config.train_file_path,

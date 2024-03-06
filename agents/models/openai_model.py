@@ -17,15 +17,11 @@ import re
 
 
 class OpenAIModel(Model):
-    decision_addendum = (
-        "\n\nNow please give your answer exclusively in this format:\n"
-        + "Winner:[DEBATER_NAME] (Example 1 - Winner: Debater_A. Example 2: Winner: Debater_B)\n"
-        + "Do not contain any other text at all."
-    )
-
     decision_regex = ".*Winner: (Debater_[AB])"
 
-    MAX_PARALLEL_REQUESTS = 10
+    MAX_PARALLEL_REQUESTS = 16
+    INSTRUCTION_SUFFIX = ""
+    OPENAI_MODEL_ENDPOINT = "ft:gpt-4-0613:nyu-arg::8ytKWgRW"  # "gpt-4-0125-preview"  # "ft:gpt-4-0613:nyu-arg::8xhmtfJz"
 
     def __init__(self, alias: str, is_debater: bool = True, **kwargs):
         """
@@ -37,6 +33,7 @@ class OpenAIModel(Model):
         """
         super().__init__(alias=alias, is_debater=is_debater)
         self.__configure()
+        self.client = openai.OpenAI()
         self.logger = LoggerUtils.get_default_logger(__name__)
 
     def __configure(self):
@@ -98,17 +95,6 @@ class OpenAIModel(Model):
             A list of model responses, with one string for each entry in the batch.
         """
 
-        def model_input_to_openai_format(model_input: ModelInput | str) -> dict[str, str]:
-            if isinstance(model_input, str):
-                return {"role": RoleType.USER.name.lower(), "content": model_input}
-            return {"role": model_input.role.name.lower(), "content": model_input.content}
-
-        def add_addendum(messages: list[dict[str, str]], addendum: str) -> None:
-            if messages[-1]["role"] == "user":
-                messages[-1]["content"] = "\n".join([messages[-1]["content"], addendum])
-            else:
-                messages.append({"role": "user", "content": addendum})
-
         def extract_response_from_structured_speech(message: str, regex_str: str, default: str) -> str:
             match = re.match(regex_str, message)
             if match:
@@ -130,19 +116,17 @@ class OpenAIModel(Model):
                     return renormalized_scores[debater_suffixes[0]], renormalized_scores[debater_suffixes[1]]
             return 0.5, 0.5
 
-        messages = [model_input_to_openai_format(model_input) for model_input in model_input_list]
-
-        if speech_structure == SpeechStructure.DECISION:
-            add_addendum(messages=messages, addendum=OpenAIModel.decision_addendum)
+        messages = OpenAIModel.generate_llm_input_from_model_inputs(input_list=model_input_list)
 
         try:
             completion = self.call_openai(
                 messages=messages, max_new_tokens=max_new_tokens, speech_structure=speech_structure
             )
-        except Exception:
+        except Exception as e:
+            self.logger.warn("Received an exception while calling OpenAI")
             return ModelResponse(failed=True)
 
-        message = completion.choices[0].message["content"]
+        message = completion.choices[0].message.content
 
         if speech_structure == SpeechStructure.DECISION:
             a_odds, b_odds = process_logprobs(completion)
@@ -167,12 +151,12 @@ class OpenAIModel(Model):
 
         return ModelResponse(speech=message, prompt="\n".join(model_input.content for model_input in model_input_list))
 
-    @backoff.on_exception(backoff.expo, backoff.on_exception, max_tries=8)
+    @backoff.on_exception(backoff.expo, backoff.on_exception, max_tries=1)
     def call_openai(
         self, messages: list[dict[str, str]], speech_structure: SpeechStructure, max_new_tokens: int
     ) -> openai.ChatCompletion:
-        return openai.ChatCompletion.create(
-            model="gpt-4-0125-preview",
+        return self.client.chat.completions.create(
+            model=OpenAIModel.OPENAI_MODEL_ENDPOINT,
             messages=messages,
             max_tokens=max_new_tokens,
             logprobs=(speech_structure != SpeechStructure.OPEN_ENDED),
@@ -182,3 +166,22 @@ class OpenAIModel(Model):
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> OpenAIModel:
         """Generates a deepcopy of this model"""
         return OpenAIModel(alias=alias, is_debater=is_debater)
+
+    @classmethod
+    def generate_llm_input_from_model_inputs(
+        cls, input_list: list[ModelInput], extra_suffix: str = ""
+    ) -> dict[str, list[dict[str, str]]]:
+        """Converts a ModelInput into the jsonl format for GPT finetuning that's expected by the model"""
+
+        def model_input_to_openai_format(model_input: ModelInput | str) -> dict[str, str]:
+            if isinstance(model_input, str):
+                return {"role": RoleType.USER.name.lower(), "content": model_input}
+            return {"role": model_input.role.name.lower(), "content": model_input.content}
+
+        def add_actual_speech(messages: list[dict[str, str]], actual_speech: str) -> None:
+            messages.append({"role": "assistant", "content": actual_speech})
+
+        messages = [model_input_to_openai_format(model_input) for model_input in input_list]
+        if extra_suffix:
+            add_actual_speech(messages=messages, actual_speech=extra_suffix)
+        return messages

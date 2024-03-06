@@ -5,16 +5,21 @@ import utils.constants as constants
 
 from pydantic import BaseModel
 
+import copy
 import re
+import sys
 
 
 class QuoteStats(BaseModel):
     number_of_quotes: int
     number_of_valid_quotes: int
     total_valid_quote_length: int
+    quote_length_to_accuracy: list[list[int]]
 
 
 class QuotesCollector:
+    MAX_TRACKED_QUOTE_LENGTH = 300
+
     def __init__(self, experiment: ExperimentConfig):
         """Collects metrics about quotation usage from debate rounds"""
         self.logger = LoggerUtils.get_default_logger(__name__)
@@ -25,22 +30,18 @@ class QuotesCollector:
         """Records metrics on the use of quotations in the inputted debate round and stores it"""
 
         def add_new_alias(alias):
+            default = QuoteStats(
+                number_of_quotes=0,
+                number_of_valid_quotes=0,
+                total_valid_quote_length=0,
+                quote_length_to_accuracy=[[0, 0] for i in range(QuotesCollector.MAX_TRACKED_QUOTE_LENGTH)],
+            )
             self.alias_to_results[alias] = {}
-            self.alias_to_results[alias][constants.OVERALL] = QuoteStats(
-                number_of_quotes=0, number_of_valid_quotes=0, total_valid_quote_length=0
-            )
-            self.alias_to_results[alias][constants.CORRECT] = QuoteStats(
-                number_of_quotes=0, number_of_valid_quotes=0, total_valid_quote_length=0
-            )
-            self.alias_to_results[alias][constants.WINNER] = QuoteStats(
-                number_of_quotes=0, number_of_valid_quotes=0, total_valid_quote_length=0
-            )
-            self.alias_to_results[alias][constants.LOSER] = QuoteStats(
-                number_of_quotes=0, number_of_valid_quotes=0, total_valid_quote_length=0
-            )
-            self.alias_to_results[alias][constants.INCORRECT] = QuoteStats(
-                number_of_quotes=0, number_of_valid_quotes=0, total_valid_quote_length=0
-            )
+            self.alias_to_results[alias][constants.OVERALL] = copy.deepcopy(default)
+            self.alias_to_results[alias][constants.CORRECT] = copy.deepcopy(default)
+            self.alias_to_results[alias][constants.WINNER] = copy.deepcopy(default)
+            self.alias_to_results[alias][constants.LOSER] = copy.deepcopy(default)
+            self.alias_to_results[alias][constants.INCORRECT] = copy.deepcopy(default)
 
         def is_correct(speaker: str):
             return (speaker == constants.DEFAULT_DEBATER_A_NAME and summary.metadata.first_debater_correct) or (
@@ -76,33 +77,44 @@ class QuotesCollector:
             only_one_alias = summary.winning_alias == summary.losing_alias
 
             for quote in outputted_quotes:
+                quote_length = len(quote.split())
                 if QuoteUtils.validate_quote(quote, summary.metadata.background_text, speech.content):
                     self.alias_to_results[alias][constants.OVERALL].number_of_valid_quotes += 1
-                    self.alias_to_results[alias][constants.OVERALL].total_valid_quote_length += len(quote.split())
+                    self.alias_to_results[alias][constants.OVERALL].total_valid_quote_length += quote_length
+                    self.alias_to_results[alias][constants.OVERALL].quote_length_to_accuracy[quote_length][0] += 1
                     if winner or only_one_alias:
                         self.alias_to_results[alias][constants.WINNER].number_of_valid_quotes += 1
-                        self.alias_to_results[alias][constants.WINNER].total_valid_quote_length += len(quote.split())
+                        self.alias_to_results[alias][constants.WINNER].total_valid_quote_length += quote_length
+                        self.alias_to_results[alias][constants.WINNER].quote_length_to_accuracy[quote_length][0] += 1
                     if not winner or only_one_alias:
                         self.alias_to_results[alias][constants.LOSER].number_of_valid_quotes += 1
-                        self.alias_to_results[alias][constants.LOSER].total_valid_quote_length += len(quote.split())
+                        self.alias_to_results[alias][constants.LOSER].total_valid_quote_length += quote_length
+                        self.alias_to_results[alias][constants.LOSER].quote_length_to_accuracy[quote_length][0] += 1
                     if correct or only_one_alias:
                         self.alias_to_results[alias][constants.CORRECT].number_of_valid_quotes += 1
-                        self.alias_to_results[alias][constants.CORRECT].total_valid_quote_length += len(quote.split())
+                        self.alias_to_results[alias][constants.CORRECT].total_valid_quote_length += quote_length
+                        self.alias_to_results[alias][constants.CORRECT].quote_length_to_accuracy[quote_length][0] += 1
                     if not correct or only_one_alias:
                         self.alias_to_results[alias][constants.INCORRECT].number_of_valid_quotes += 1
-                        self.alias_to_results[alias][constants.INCORRECT].total_valid_quote_length += len(quote.split())
+                        self.alias_to_results[alias][constants.INCORRECT].total_valid_quote_length += quote_length
+                        self.alias_to_results[alias][constants.INCORRECT].quote_length_to_accuracy[quote_length][0] += 1
                 else:
                     self.logger.debug("The following quote was invalid:\n{}".format(quote))
 
                 self.alias_to_results[alias][constants.OVERALL].number_of_quotes += 1
+                self.alias_to_results[alias][constants.OVERALL].quote_length_to_accuracy[quote_length][1] += 1
                 if winner or only_one_alias:
                     self.alias_to_results[alias][constants.WINNER].number_of_quotes += 1
+                    self.alias_to_results[alias][constants.WINNER].quote_length_to_accuracy[quote_length][1] += 1
                 if not winner or only_one_alias:
                     self.alias_to_results[alias][constants.LOSER].number_of_quotes += 1
+                    self.alias_to_results[alias][constants.LOSER].quote_length_to_accuracy[quote_length][1] += 1
                 if correct or only_one_alias:
                     self.alias_to_results[alias][constants.CORRECT].number_of_quotes += 1
+                    self.alias_to_results[alias][constants.CORRECT].quote_length_to_accuracy[quote_length][1] += 1
                 if not correct or only_one_alias:
                     self.alias_to_results[alias][constants.INCORRECT].number_of_quotes += 1
+                    self.alias_to_results[alias][constants.CORRECT].quote_length_to_accuracy[quote_length][1] += 1
 
     def get_results(self) -> dict[str, dict[str, QuoteStats]]:
         """
@@ -112,4 +124,18 @@ class QuotesCollector:
             alias_to_results: a dictionary that maps a model alias to another dictionary, where the keys are different
                 slices of the data (e.g 'overall', 'winner', 'correct') and the values are raw counts.
         """
-        return self.alias_to_results
+        simplified_results = {}
+        for alias in self.alias_to_results:
+            simplified_results[alias] = copy.deepcopy(self.alias_to_results[alias])
+            for key in simplified_results[alias]:
+                vals = [
+                    idx
+                    for idx, pair in filter(
+                        lambda x: x[1][1] > 0, enumerate(simplified_results[alias][key].quote_length_to_accuracy)
+                    )
+                ]
+                max_val = max(vals) if vals else 0
+                simplified_results[alias][key].quote_length_to_accuracy = simplified_results[alias][
+                    key
+                ].quote_length_to_accuracy[: (max_val + 1)]
+        return simplified_results

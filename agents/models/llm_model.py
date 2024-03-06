@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from agents.models.model import Model, ModelInput, ModelResponse, ProbeHyperparams, SpeechStructure
+from agents.models.openai_model import OpenAIModel
 from prompts import RoleType
 from utils import LoggerUtils, StringUtils, timer
 import utils.constants as constants
@@ -12,7 +13,7 @@ import torch.nn as nn
 import torch
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import auto, Enum
 from typing import Any, Optional, Union, Type
 import base64
 import copy
@@ -31,7 +32,7 @@ class LLMInput(BaseModel):
 
 class GenerationParams(BaseModel):
     max_new_tokens: int = 300
-    temperature: float = 1.0
+    temperature: float = 0.5
     top_p: float = 0.9
     repetition_penalty: float = 1.2
     do_sample: bool = True
@@ -487,9 +488,10 @@ class LLModuleWithLinearProbe(nn.Module):
 
 
 class LLMType(Enum):
-    LLAMA = 0
-    MISTRAL = 1
-    STUB_LLM = 2
+    LLAMA = auto()
+    MISTRAL = auto()
+    OPENAI = auto()
+    STUB_LLM = auto()
 
     def get_llm_class(self) -> Type[LLModel]:
         if self == LLMType.LLAMA:
@@ -498,6 +500,8 @@ class LLMType(Enum):
             return MistralModel
         elif self == LLMType.STUB_LLM:
             return StubLLModel
+        elif self == LLMType.OPENAI:
+            return OpenAIModel
         else:
             raise Exception(f"Model type {self} not recognized")
 
