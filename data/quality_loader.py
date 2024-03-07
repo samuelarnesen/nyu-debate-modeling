@@ -1,5 +1,5 @@
 from data.dataset import DataRow, DatasetType, RawDataLoader, RawDataset, SplitType
-from data.quality_debates_loader import QualityDebatesDataset, QualityDebatesLoader
+from data.quality_debates_loader import QualityDebatesDataset, QualityDebatesLoader, QualityTranscriptsLoader
 import utils.constants as constants
 
 from typing import Any, Optional
@@ -220,7 +220,7 @@ class QualityLoader(RawDataLoader):
 
         if deduplicate_with_quality_debates:
             quality_debates_filepath = (supplemental_file_paths or {}).get(
-                "quality_debates_file_path", QualityDebatesLoader.DEFAULT_FILE_PATH
+                "quality_debates_file_path", QualityTranscriptsLoader.DEFAULT_FILE_PATH
             )
             quality_debates_dataset = QualityDebatesLoader.load(
                 full_dataset_filepath=quality_debates_filepath, deduplicate=True

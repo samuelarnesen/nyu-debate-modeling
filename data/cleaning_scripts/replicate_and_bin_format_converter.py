@@ -45,13 +45,15 @@ def get_external_debates(file_path: str):
         swap: bool = False,
         role: str = "Debater",
         probs: Optional[tuple[float, float]] = None,
+        is_judge: bool = False,
     ):
+        index = 0 if correct != swap else 1
         return {
             "chars": -1,
             "charLimit": -1,
             "quoteChars": -1,
             "quoteCharLimit": -1,
-            "index": 0 if correct != swap else 1,
+            "index": index if not is_judge else None,
             "probabilities": probs,
             "role": role,
             "text": text,
@@ -72,6 +74,7 @@ def get_external_debates(file_path: str):
             answers = [transcript["answers"]["correct"], transcript["answers"]["incorrect"]]
 
         rd = transcript["rounds"][0]
+        is_debate = rd["correct"] is not None and rd["incorrect"] is not None
         correct_turn = create_turn(text=rd["correct"], correct=True, swap=swap) if rd["correct"] else None
         incorrect_turn = create_turn(text=rd["incorrect"], correct=False, swap=swap) if rd["incorrect"] else None
 
@@ -89,7 +92,7 @@ def get_external_debates(file_path: str):
                 judge_probs = (1 - (row["confidence"] / 100), row["confidence"] / 100)
             else:  # then B is correct and they voted for A
                 judge_probs = (row["confidence"] / 100, 1 - (row["confidence"] / 100))
-        turns.append(create_turn(text="", role="Judge", probs=judge_probs))
+        turns.append(create_turn(text="", role="Judge", probs=judge_probs, is_judge=True))
 
         new_debate = {
             "storyId": "-1",

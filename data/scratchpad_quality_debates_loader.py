@@ -1,5 +1,5 @@
 from data.dataset import DataRow, DatasetType, RawDataLoader, SpeechData, SplitType
-from data.quality_debates_loader import QualityDebatesLoader, QualityDebatesDataset
+from data.quality_debates_loader import QualityDebatesLoader, QualityDebatesDataset, QualityTranscriptsLoader
 from utils import QuoteUtils
 import utils.constants as constants
 
@@ -73,7 +73,7 @@ class ScratchpadQualityDebatesLoader(RawDataLoader):
         if os.path.exists(ScratchpadQualityDebatesLoader.DEFAULT_PICKLE_PATH):
             with open(ScratchpadQualityDebatesLoader.DEFAULT_PICKLE_PATH, "rb") as f:
                 return pickle.load(f)
-        full_dataset_filepath = full_dataset_filepath or QualityDebatesLoader.DEFAULT_FILE_PATH
+        full_dataset_filepath = full_dataset_filepath or QualityTranscriptsLoader.DEFAULT_FILE_PATH
         train, val, test = QualityDebatesLoader.get_splits(file_path=full_dataset_filepath, deduplicate=deduplicate)
         return ScratchpadQualityDebatesDataset(
             train_data=train,

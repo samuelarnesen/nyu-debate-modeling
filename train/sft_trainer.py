@@ -51,8 +51,9 @@ class SupervisedTrainer:
         llm_inputs = []
 
         for idx, raw_dataset in enumerate(raw_datasets):
+            speech_structure = config.speech_structure[idx % len(config.speech_structure)]
             llm_input_lists = [
-                RowConverter.convert_row(row=row, config=config, dataset=raw_dataset)
+                RowConverter.convert_row(row=row, config=config, dataset=raw_dataset, speech_structure=speech_structure)
                 for i, row in enumerate(raw_dataset.get_data(split=config.dataset[idx].split_type))
             ]
 
@@ -77,6 +78,12 @@ class SupervisedTrainer:
                 raise Exception("Data format was invalid")
 
         df = pd.DataFrame(data=llm_inputs)
+
+        str_versions = [json.dumps({"messages": llm_input}) for llm_input in llm_inputs]
+        with open("/Users/samarnesen/nyu/scratch/debates-and-consultancies-combined.jsonl", "w") as f:
+            str_version = "\n".join(str_versions)
+            f.write(str_version)
+
         return Dataset.from_pandas(df).shuffle()
 
     @classmethod

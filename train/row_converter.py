@@ -1,5 +1,5 @@
-from agents import Debater, Judge, LLMInput, LLMType, SpeechFormatType, Transcript
-from data import AnnotatedQualityDebatesDataset, DataRow, DatasetType, RawDataset, SpeakerType, SpeechData, SplitType
+from agents import Debater, Judge, LLMInput, LLMType, SpeechFormatType, SpeechFormatStructure, Transcript
+from data import DataRow, DatasetType, RawDataset, SpeakerType, SpeechData, SplitType
 from prompts import Prompt, PromptParser, PromptTag
 from train.train_utils import TrainingConfig, TrainingTarget
 import utils.constants as constants
@@ -10,11 +10,16 @@ from typing import Any, Callable, Optional
 class RowConverter:
     @classmethod
     def generate_prompt_from_speech(
-        cls, row: DataRow, speech: SpeechData, config: TrainingConfig, dataset: RawDataset
+        cls,
+        row: DataRow,
+        speech: SpeechData,
+        config: TrainingConfig,
+        dataset: RawDataset,
+        speech_structure: SpeechFormatStructure,
     ) -> Prompt:
         """Constructs a prompt from a given speech and row in the dataset"""
         position = speech.position
-        if config.target == TrainingTarget.JUDGE and config.speech_structure.num_participants == 1:
+        if config.target == TrainingTarget.JUDGE and speech_structure.num_participants == 1:
             all_positions = set([speech.position for speech in row.speeches])
             position = 0 if 0 in all_positions else 1
 
@@ -26,7 +31,7 @@ class RowConverter:
         return PromptParser.parse(
             prompt_config=prompt_config,
             prompts_file_path=config.prompt_config.file_path,
-            name=config.speech_structure.default_prompt_name or config.prompt_config.default_prompt_name,
+            name=speech_structure.default_prompt_name or config.prompt_config.default_prompt_name,
         )
 
         return prompt
@@ -69,6 +74,7 @@ class RowConverter:
         skipping_func: Callable[[SpeechData], bool],
         is_debater: bool,
         dataset: RawDataset,
+        speech_structure: SpeechFormatStructure,
         filter_empty_speeches: bool = True,
         use_gold_labels: Optional[bool] = None,
     ) -> list[LLMInput]:
@@ -83,6 +89,7 @@ class RowConverter:
                 (useful if we want to exclude things like pre-debate judge probabilities)
             is_debater: whether the row is being converted for training a debater (true) or judge (false)
             dataset: the dataset (abstraction from our code) that the row is sampled from
+            speech_structure: the format that that the round should be converted to (debate or consultancy)
             use_gold_labels: whether the judge should use gold labels (True) or human judgment (False). Only applicable
                 if is_debater is False
 
@@ -114,17 +121,19 @@ class RowConverter:
                 continue
 
             name = RowConverter.get_speaker_from_speech(speech)
-            prompt = RowConverter.generate_prompt_from_speech(row=row, speech=speech, config=config, dataset=dataset)
+            prompt = RowConverter.generate_prompt_from_speech(
+                row=row, speech=speech, config=config, dataset=dataset, speech_structure=speech_structure
+            )
 
             transcript = Transcript(
                 name=name,
                 prompt=prompt,
                 speech_format=(
-                    config.speech_structure.debater_format.get_speech_format(
+                    speech_structure.debater_format.get_speech_format(
                         name=name, num_speeches=rounds, use_scratchpad=config.scratchpad_config.use_scratchpad
                     )
                     if is_debater
-                    else config.speech_structure.judge_format.get_speech_format(
+                    else speech_structure.judge_format.get_speech_format(
                         name=constants.DEFAULT_JUDGE_NAME, num_speeches=(rounds - 1), use_scratchpad=False, flipped=False
                     )
                 ),
@@ -183,7 +192,9 @@ class RowConverter:
         return llm_inputs
 
     @classmethod
-    def convert_all_speeches_for_debater(cls, row: DataRow, config: TrainingConfig, dataset: RawDataset) -> list[LLMInput]:
+    def convert_all_speeches_for_debater(
+        cls, row: DataRow, config: TrainingConfig, dataset: RawDataset, speech_structure: SpeechFormatStructure
+    ) -> list[LLMInput]:
         """Returns a list of inputs that can be used as rows in an actual training dataset that can be
         used to train a debater. See convert_transcript() for more details"""
         return RowConverter.convert_transcript(
@@ -192,11 +203,12 @@ class RowConverter:
             skipping_func=lambda speech: speech.speaker_type == SpeakerType.JUDGE,
             is_debater=True,
             dataset=dataset,
+            speech_structure=speech_structure,
         )
 
     @classmethod
     def convert_all_speeches_for_judge(
-        cls, row: DataRow, config: TrainingConfig, dataset: RawDataset
+        cls, row: DataRow, config: TrainingConfig, dataset: RawDataset, speech_structure: SpeechFormatStructure
     ) -> list[dict[str, str]]:
         """Returns a list of inputs that can be used as rows in an actual training dataset that can be
         used to train a judge. See convert_transcript() for more details"""
@@ -206,22 +218,24 @@ class RowConverter:
             skipping_func=lambda speech: speech.speaker_type == SpeakerType.DEBATER,
             is_debater=False,
             dataset=dataset,
+            speech_structure=speech_structure,
             use_gold_labels=False,
         )
 
     @classmethod
     def convert_row(
-        cls,
-        row: DataRow,
-        config: TrainingConfig,
-        dataset: RawDataset,
+        cls, row: DataRow, config: TrainingConfig, dataset: RawDataset, speech_structure: SpeechFormatStructure
     ) -> list[dict[str, str]]:
         """Returns a list of inputs that can be used as rows in an actual training dataset. See
         convert_transcript() for more details"""
         if config.target == TrainingTarget.DEBATER:
-            return RowConverter.convert_all_speeches_for_debater(row=row, config=config, dataset=dataset)
+            return RowConverter.convert_all_speeches_for_debater(
+                row=row, config=config, dataset=dataset, speech_structure=speech_structure
+            )
         elif config.target == TrainingTarget.JUDGE:
-            return RowConverter.convert_all_speeches_for_judge(row=row, config=config, dataset=dataset)
+            return RowConverter.convert_all_speeches_for_judge(
+                row=row, config=config, dataset=dataset, speech_structure=speech_structure
+            )
         else:
             raise Exception(
                 f"Tried to train on an ineligible training target of {config.target}. This line should not be reached."

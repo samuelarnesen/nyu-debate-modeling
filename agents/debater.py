@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from agents.agent import Agent, ScratchpadConfig
 from agents.models import BestOfNConfig, HumanModel, Model, ModelResponse, SpeechStructure
-from agents.speech_format import SpeechFormat, SpeechFormatType
+from agents.speech_format import SpeechFormat, SpeechFormatType, SpeechFormatStructure
 from agents.transcript import SpeechFormat, Transcript
 from prompts import Prompt, PromptTag
 from utils import LoggerUtils, QuoteUtils
@@ -158,7 +158,7 @@ class BestOfNDebater(Debater):
                 judge_transcript = Transcript(
                     name=self.judge.transcripts[0].name,
                     prompt=self.judge.transcripts[0].prompt,
-                    speech_format=SpeechFormat.DEFAULT_DEBATE_JUDGE.get_speech_format(
+                    speech_format=SpeechFormatType.DEFAULT_DEBATE_JUDGE.get_speech_format(
                         name=constants.DEFAULT_JUDGE_NAME, num_speeches=self.judge.num_speeches, use_scratchpad=False
                     ),
                 )

@@ -90,7 +90,7 @@ class ExperimentConfig(BaseModel):
     enable_self_debate: bool = False
     previous_run: Optional[PreviousRunConfig] = None
     tournament: Optional[TournamentConfig] = TournamentConfig()
-    speech_structure: SpeechFormatStructure = SpeechFormatStructure.DEFAULT_DEBATE.name
+    speech_structure: SpeechFormatStructure = SpeechFormatStructure.DEFAULT_DEBATE
 
     @field_validator("speech_structure", mode="before")
     @classmethod

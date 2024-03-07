@@ -53,15 +53,25 @@ class TrainingConfig(BaseModel):
     requires_token: bool = False
     max_length: int = constants.MAX_LENGTH
     scratchpad_config: ScratchpadConfig = ScratchpadConfig()
-    speech_structure: SpeechFormatStructure = SpeechFormatStructure.DEFAULT_DEBATE.name
+    speech_structure: SpeechFormatStructure | list[SpeechFormatStructure] = SpeechFormatStructure.DEFAULT_DEBATE
     model_config = ConfigDict(protected_namespaces=("protect_me_", "also_protect_"))
 
     @field_validator("speech_structure", mode="before")
     @classmethod
-    def validate_speech_structure(cls, speech_structure: str | SpeechFormatStructure):
-        if isinstance(speech_structure, str):
-            return SpeechFormatStructure[speech_structure.upper()]
-        return speech_structure
+    def validate_speech_structure(
+        cls, speech_structure: str | SpeechFormatStructure | list[str] | list[SpeechFormatStructure]
+    ):
+        if not isinstance(speech_structure, list):
+            speech_structure = [speech_structure]
+
+        new_speech_structure = []
+        for s in speech_structure:
+            if isinstance(s, str):
+                new_speech_structure.append(SpeechFormatStructure[s.upper()])
+            else:
+                new_speech_structure.append(s)
+
+        return new_speech_structure
 
     @field_validator("target", mode="before")
     @classmethod
@@ -69,6 +79,20 @@ class TrainingConfig(BaseModel):
         if isinstance(target, str):
             return TrainingTarget[target.upper()]
         return target
+
+    @field_validator("target", mode="before")
+    @classmethod
+    def validate_dataset(cls, dataset: DatasetConfig | list[DatasetConfig]):
+        if isinstance(dataset, DatasetConfig):
+            return [dataset]
+        return dataset
+
+    @model_validator(mode="after")
+    @classmethod
+    def ensure_speech_structure_matches_datasets(cls, values):
+        if len(values.speech_structure) > 1 and len(values.speech_structure) != len(values.dataset):
+            raise ValueError(f"We could not match speech structures to each dataset")
+        return values
 
 
 class TrainUtils:
@@ -98,7 +122,7 @@ class TrainUtils:
                 test_filepath=dataset_config.test_file_path,
                 supplemental_file_paths=dataset_config.supplemental_file_paths,
                 deduplicate=deduplicate,
-                **kwargs
+                **kwargs,
             )
             datasets.append(dataset)
         return datasets
