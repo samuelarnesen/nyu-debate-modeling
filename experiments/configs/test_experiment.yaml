@@ -268,26 +268,6 @@ Normal_Operational_Test:
   dataset:
     dataset_type: quality
     split_type: val
-Operational_Test:
-  batch_size: 8
-  num_speeches: 1
-  flip: True
-  enable_self_debate: True
-  speech_structure: default_consultancy
-  agents:
-    debaters:
-      - model_settings:
-          alias: dpo-1
-          model_type: offline
-          offline_file_path: /Users/samarnesen/Downloads/2024-02-21_14_48_01.693701
-          require_quote_validation: True
-    judge:
-      model_settings:
-        model_type: random
-        alias: random_judge
-  dataset:
-    dataset_type: quality
-    split_type: val
 Self_Play_Test:
   batch_size: 8
   num_speeches: 1
@@ -520,3 +500,21 @@ Self_Play_Test:
     split_type: val
   tournament:
     tournament_type: self_play_only
+Operational_Test:
+  batch_size: 8
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          alias: random-1
+          model_type: random
+    judge:
+      model_settings:
+        model_type: random
+        alias: random_judge
+  dataset:
+    dataset_type: quality_consultancy
+    split_type: train

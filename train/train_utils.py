@@ -1,10 +1,10 @@
-from agents import LLMType, LLModel, ModelStub, ScratchpadConfig, TokenizerStub
+from agents import LLMType, LLModel, ModelStub, ScratchpadConfig, SpeechFormatStructure, TokenizerStub
 from data import DatasetConfig, DatasetType, LoaderUtils, RawDataset
 from prompts import PromptLoadingConfig
 import utils.constants as constants
 
 from peft import LoraConfig, PeftConfig, PeftType, PromptTuningInit, PromptTuningConfig, TaskType
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator, field_validator
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from trl import AutoModelForCausalLMWithValueHead
 import torch
@@ -47,19 +47,33 @@ class TrainingConfig(BaseModel):
     prompt_config: PromptLoadingConfig = PromptLoadingConfig()
     logging_and_saving_config: Optional[LoggingAndSavingConfig] = None
     training_hyperparameters: Optional[TrainingHyperParameterConfig] = None
-    target: Optional[str | TrainingTarget] = None
-    dataset: Optional[DatasetConfig] = None
+    target: TrainingTarget = TrainingTarget.DEBATER
+    dataset: DatasetConfig | list[DatasetConfig]
     opening_speeches_only: bool = False
     requires_token: bool = False
     max_length: int = constants.MAX_LENGTH
     scratchpad_config: ScratchpadConfig = ScratchpadConfig()
-
+    speech_structure: SpeechFormatStructure = SpeechFormatStructure.DEFAULT_DEBATE.name
     model_config = ConfigDict(protected_namespaces=("protect_me_", "also_protect_"))
+
+    @field_validator("speech_structure", mode="before")
+    @classmethod
+    def validate_speech_structure(cls, speech_structure: str | SpeechFormatStructure):
+        if isinstance(speech_structure, str):
+            return SpeechFormatStructure[speech_structure.upper()]
+        return speech_structure
+
+    @field_validator("target", mode="before")
+    @classmethod
+    def validate_training_target(cls, target: str | TrainingTarget):
+        if isinstance(target, str):
+            return TrainingTarget[target.upper()]
+        return target
 
 
 class TrainUtils:
     @classmethod
-    def create_dataset(cls, config: TrainingConfig, deduplicate: bool = False, **kwargs) -> RawDataset:
+    def create_datasets(cls, config: TrainingConfig, deduplicate: bool = False, **kwargs) -> RawDataset:
         """
         Constructs a dataset that will later be converted into a training dataset.
 
@@ -70,17 +84,24 @@ class TrainUtils:
         Returns:
             dataset: a dataset object that can later be used as a training dataset
         """
-        dataset_config = config.dataset
-        loader_cls = LoaderUtils.get_loader_type(dataset_config.dataset_type)
-        return loader_cls.load(
-            full_dataset_filepath=dataset_config.full_dataset_file_path,
-            train_filepath=dataset_config.train_file_path,
-            val_filepath=dataset_config.val_file_path,
-            test_filepath=dataset_config.test_file_path,
-            supplemental_file_paths=dataset_config.supplemental_file_paths,
-            deduplicate=deduplicate,
-            **kwargs
-        )
+        dataset_configs = config.dataset
+        if isinstance(dataset_configs, DatasetConfig):
+            dataset_configs = [dataset_configs]
+
+        datasets = []
+        for dataset_config in dataset_configs:
+            loader_cls = LoaderUtils.get_loader_type(dataset_config.dataset_type)
+            dataset = loader_cls.load(
+                full_dataset_filepath=dataset_config.full_dataset_file_path,
+                train_filepath=dataset_config.train_file_path,
+                val_filepath=dataset_config.val_file_path,
+                test_filepath=dataset_config.test_file_path,
+                supplemental_file_paths=dataset_config.supplemental_file_paths,
+                deduplicate=deduplicate,
+                **kwargs
+            )
+            datasets.append(dataset)
+        return datasets
 
     @classmethod
     def parse_config(cls, config_name: Optional[str], config_filepath: str) -> TrainingConfig:

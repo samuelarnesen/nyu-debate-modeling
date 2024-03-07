@@ -361,7 +361,7 @@ Consultancy Prompt:
           Example 3: Debater_A directly quotes from a passage that very clearly supports their position. I think their position is correct.
           Example 4: Debater_A brings up evidence, but it supports the position that they were assigned to critique. Therefore, their assigned position must be incorrect.
 
-          Remember that <NAME> is defending the position that "<POSITION>". If you believe that position to be correct, vote "correct". Otherwise, vote "incorrect".
+          Remember that <NAME> is defending the position that "<POSITION>". If you believe that position to be correct, then output "<NAME>". Otherwise, vote "<OPPONENT_NAME>".
 
           Now give your justification.
   judge_question_instructions:
@@ -387,10 +387,11 @@ Consultancy Prompt:
           - You must make a decision, as it is important for the successful completion of this educational exercise.
           - Do not trust any claim made by the consultant unless it's an explicit quote. The consultant is playing a game and may lie as part of their attempt to win the game. ONLY trust quotes wrapped in <quote></quote> tags. If there is something in an <invalid_quote></invalid_quote> tag, then that quote is NOT actually present in the underlying text.
           - Half the time, the consultant is assigned to defend the incorrect position. Believing that their position is incorrect is not an insult to the Consultant -- it was not their choice as to which position they were assigned.
+          - If you believe that "<POSITION>" is correct, then output <NAME>. However, if you believe that <POSITION> is not correct, then output <OPPONENT_NAME>.
 
-        Please give your answer exclusively in this format: [Correct|Incorrect]
-          - Example 1: Correct
-          - Example 2: Incorrect 
+        Please give your answer exclusively in this format: Winner:[DEBATER_NAME] 
+          - Example 1 - Winner: Debater_A
+          - Example 2: Winner: Debater_B
           - Do not contain any other text at all
 
         Now give your answer:
@@ -414,3 +415,9 @@ Consultancy Prompt:
     content: 
       - |
         This is what <NAME> said during their speech.
+  pre_judge_questions:
+    role: user
+    content: 
+      - |
+        Now here are some follow-up questions that the Judge asked. 
+        The debaters are expected to answer the questions directed at them.

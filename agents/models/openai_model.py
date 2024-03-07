@@ -23,20 +23,16 @@ class OpenAIModel(Model):
     INSTRUCTION_SUFFIX = ""
     OPENAI_MODEL_ENDPOINT = "ft:gpt-4-0613:nyu-arg::8ytKWgRW"  # "gpt-4-0125-preview"  # "ft:gpt-4-0613:nyu-arg::8xhmtfJz"
 
-    def __init__(self, alias: str, is_debater: bool = True, tokens_of_difference: tuple[str, str] = ("_A", "_B"), **kwargs):
+    def __init__(self, alias: str, is_debater: bool = True, **kwargs):
         """
         An OpenAIModel calls GPT4 to generate the appropriate text.
 
         Args:
             alias: String that identifies the model for metrics and deduplication
             is_debater: Boolean indicating whether the model is a debater (true) or judge (false)
-            tokens_of_difference: the tokens one should look at to see which debater won. For example, the default in
-                debate would be to look at the difference in probability between the "_A" and "_B" tokens. However,
-                for consultancy, one might want to look at the difference between the "Correct" and "Incorrect" tokens.
         """
         super().__init__(alias=alias, is_debater=is_debater)
         self.__configure()
-        self.tokens_of_difference = tokens_of_difference
         self.client = openai.OpenAI()
         self.logger = LoggerUtils.get_default_logger(__name__)
 
@@ -108,17 +104,18 @@ class OpenAIModel(Model):
                 return default
 
         def process_logprobs(completion: dict) -> tuple[float, float]:
+            debater_suffixes = ["_A", "_B"]
             logprobs = completion.choices[0].logprobs.content
             for entry in logprobs:
-                if entry.token in self.tokens_of_difference:
-                    scores = {suffix: 0 for suffix in self.tokens_of_difference}
-                    for option in filter(lambda x: x.token in self.tokens_of_difference, entry.top_logprobs):
+                if entry.token in debater_suffixes:
+                    scores = {suffix: 0 for suffix in debater_suffixes}
+                    for option in filter(lambda x: x.token in debater_suffixes, entry.top_logprobs):
                         scores[option.token] = math.exp(float(option.logprob))
                     total_probs = sum(scores.values())
                     renormalized_scores = {suffix: scores[suffix] / total_probs for suffix in scores}
                     return (
-                        renormalized_scores[self.tokens_of_difference[0]],
-                        renormalized_scores[self.tokens_of_difference[1]],
+                        renormalized_scores[debater_suffixes[0]],
+                        renormalized_scores[debater_suffixes[1]],
                     )
             return 0.5, 0.5
 

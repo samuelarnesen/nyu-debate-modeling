@@ -32,27 +32,27 @@ class SpeechFormatEntry(BaseModel):
 class SpeechFormatType(Enum):
     DEFAULT_DEBATE = (
         auto(),
-        lambda name, num_speeches, use_scratchpad: SpeechFormat.default_debate_format(
+        lambda name, num_speeches, use_scratchpad, **kwargs: SpeechFormat.default_debate_format(
             name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad
         ),
     )
     DEFAULT_DEBATE_JUDGE = (
         auto(),
-        lambda name, num_speeches, use_scratchpad: SpeechFormat.default_judge_format(
+        lambda name, num_speeches, use_scratchpad, **kwargs: SpeechFormat.default_judge_format(
             name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad
         ),
     )
     DEFAULT_CONSULTANCY = (
         auto(),
-        lambda name, num_speeches, use_scratchpad: SpeechFormat.default_consultancy_format(
+        lambda name, num_speeches, use_scratchpad, **kwargs: SpeechFormat.default_consultancy_format(
             name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad
         ),
     )
 
     DEFAULT_CONSULTANCY_JUDGE = (
         auto(),
-        lambda name, num_speeches, use_scratchpad: SpeechFormat.default_consultancy_judge_format(
-            name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad
+        lambda name, num_speeches, use_scratchpad, flipped, **kwargs: SpeechFormat.default_consultancy_judge_format(
+            name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad, flipped=flipped
         ),
     )
 
@@ -60,8 +60,8 @@ class SpeechFormatType(Enum):
         self._value_ = value
         self.builder = builder_func
 
-    def get_speech_format(self, name: str, num_speeches: int, use_scratchpad: bool):
-        return self.builder(name=name, num_speeches=num_speeches, use_scratchpad=use_scratchpad)
+    def get_speech_format(self, **kwargs):
+        return self.builder(**kwargs)
 
 
 class SpeechFormatStructure(Enum):
@@ -339,7 +339,9 @@ class SpeechFormat:
         )
 
     @classmethod
-    def default_consultancy_judge_format(cls, name: str, num_speeches: int, use_scratchpad: bool, **kwargs) -> SpeechFormat:
+    def default_consultancy_judge_format(
+        cls, name: str, num_speeches: int, use_scratchpad: bool, flipped: bool, **kwargs
+    ) -> SpeechFormat:
         pre_debate_speech_format = (
             SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
             .add(prompt_tag=PromptTag.OVERALL_SYSTEM)
@@ -356,14 +358,18 @@ class SpeechFormat:
         opening_speech_speech_format = (
             SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
             .add(prompt_tag=PromptTag.PRE_DEBATER_A_SPEECH_JUDGE)
-            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_DEBATER_A_NAME)
+            .add_user_inputted_speech(
+                expected_speaker=constants.DEFAULT_DEBATER_A_NAME if not flipped else constants.DEFAULT_DEBATER_B_NAME
+            )
         )
 
         later_speech_format = (
             SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
             .add_format(speech_format=judge_questions)
             .add(prompt_tag=PromptTag.PRE_DEBATER_A_SPEECH_JUDGE)
-            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_DEBATER_A_NAME)
+            .add_user_inputted_speech(
+                expected_speaker=constants.DEFAULT_DEBATER_A_NAME if not flipped else constants.DEFAULT_DEBATER_B_NAME
+            )
         )
 
         decision_speech_format = SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)

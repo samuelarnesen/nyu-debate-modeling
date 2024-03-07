@@ -21,6 +21,7 @@ class DatasetType(Enum):
     SCRATCHPAD_QUALITY_DEBATES = 5
     QUOTE_RELEVANCE = 6
     JUDGING_PROBE = 7
+    QUALITY_CONSULTANCY = 8
 
 
 class DatasetConfig(BaseModel):

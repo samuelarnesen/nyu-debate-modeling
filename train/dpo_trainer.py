@@ -29,16 +29,22 @@ class DirectPreferenceTrainer:
     """Class for training a model using Direct Preference Optimization"""
 
     @classmethod
-    def convert_dataset(cls, raw_dataset: RawDataset) -> Dataset:
+    def convert_dataset(cls, raw_datasets: list[RawDataset]) -> Dataset:
         """Converts a dataset (abstraction used in this codebase) into a Dataset object (abstraction
         used by huggingface's trainer objects)"""
-        rows = [row.dict() for row in raw_dataset.get_data(split=SplitType.TRAIN)]
+        rows = []
+        for raw_dataset in raw_datasets:
+            rows += [row.dict() for row in raw_dataset.get_data(split=SplitType.TRAIN)]
         df = pd.DataFrame(data=rows)
         return Dataset.from_pandas(df)
 
     @classmethod
     def get_trainer(
-        cls, config: TrainingConfig, raw_dataset: Optional[RawDataset] = None, is_local: bool = False, is_test: bool = False
+        cls,
+        config: TrainingConfig,
+        raw_datasets: Optional[list[RawDataset]] = None,
+        is_local: bool = False,
+        is_test: bool = False,
     ) -> Optional[DPOTrainer]:
         """
         Generates a Trainer object.
@@ -74,10 +80,10 @@ class DirectPreferenceTrainer:
             use_cpu=is_local,
         )
 
-        if not raw_dataset:
-            raw_dataset = TrainUtils.create_dataset(config=config)
+        if not raw_datasets:
+            raw_datasets = TrainUtils.create_datasets(config=config)
 
-        train_dataset = DirectPreferenceTrainer.convert_dataset(raw_dataset=raw_dataset)
+        train_dataset = DirectPreferenceTrainer.convert_dataset(raw_datasets=raw_datasets)
 
         peft_config = TrainUtils.get_peft_config(config=config)
 
@@ -90,7 +96,7 @@ class DirectPreferenceTrainer:
                 ref_model=None,
                 max_length=16384,
                 max_prompt_length=16384,
-                beta=0.1,
+                beta=0.01,
                 args=training_args,
                 train_dataset=train_dataset,
                 tokenizer=tokenizer,

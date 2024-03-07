@@ -330,12 +330,8 @@ class ExperimentLoader:
             )
 
             config_b = PromptConfig(
-                name=constants.DEFAULT_DEBATER_B_NAME
-                if not experiment.speech_structure.flip_position_order
-                else constants.DEFAULT_DEBATER_A_NAME,
-                opponent_name=constants.DEFAULT_DEBATER_A_NAME
-                if not experiment.speech_structure.flip_position_order
-                else constants.DEFAULT_DEBATER_B_NAME,
+                name=constants.DEFAULT_DEBATER_B_NAME,
+                opponent_name=constants.DEFAULT_DEBATER_A_NAME,
                 position=opponent_position,
                 opponent_position=position,
                 topic=topic,
@@ -351,7 +347,7 @@ class ExperimentLoader:
             )
 
             flipped_prompt_a = PromptParser.parse(
-                prompt_config=config_a if not experiment.speech_structure.flip_position_order else config_b,
+                prompt_config=config_a,
                 prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.agents.debaters[debater_idxs[1]].model_settings.override_prompt
                 or experiment.speech_structure.default_prompt_name
@@ -367,7 +363,7 @@ class ExperimentLoader:
             )
 
             flipped_prompt_b = PromptParser.parse(
-                prompt_config=config_b if not experiment.speech_structure.flip_position_order else config_a,
+                prompt_config=config_b,
                 prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.agents.debaters[debater_idxs[0]].model_settings.override_prompt
                 or experiment.speech_structure.default_prompt_name
@@ -436,6 +432,7 @@ class ExperimentLoader:
                     name=constants.DEFAULT_JUDGE_NAME,
                     num_speeches=experiment.num_speeches,
                     use_scratchpad=experiment.agents.judge.scratchpad.use_scratchpad,
+                    flipped=False,
                 ),
                 num_speeches=experiment.num_speeches,
                 scratchpad_config=experiment.agents.judge.scratchpad,
@@ -500,6 +497,7 @@ class ExperimentLoader:
                     name=constants.DEFAULT_JUDGE_NAME,
                     num_speeches=experiment.num_speeches,
                     use_scratchpad=experiment.agents.judge.scratchpad.use_scratchpad,
+                    flipped=True,
                 ),
                 num_speeches=experiment.num_speeches,
                 scratchpad_config=experiment.agents.judge.scratchpad,
@@ -596,10 +594,7 @@ class ExperimentLoader:
                 flipped_round.set_first_debater(HumanDebater(debater=flipped_round.first_debater, speeches=speeches))
 
             rounds.append(debate_round)
-            if experiment.flip and (
-                flipped_round.first_debater.model.alias != flipped_round.second_debater.model.alias
-                or experiment.speech_structure.flip_position_order
-            ):
+            if experiment.flip:
                 rounds.append(flipped_round)
 
         if len(rounds) <= 1:
@@ -610,7 +605,7 @@ class ExperimentLoader:
         current_normal_batch = []
         current_flipped_batch = []
         for i, debate_round in enumerate(rounds):
-            if i % 2 == 0 or experiment.speech_structure.num_participants == 1 or not experiment.flip:
+            if i % 2 == 0 or not experiment.flip:
                 current_normal_batch.append(debate_round)
                 if len(current_normal_batch) == experiment.batch_size:
                     batched_rounds.append(ExperimentLoader.merge_debate_rounds(current_normal_batch))

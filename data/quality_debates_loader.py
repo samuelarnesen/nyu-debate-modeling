@@ -1,7 +1,7 @@
 from data.dataset import DataRow, DatasetType, RawDataLoader, RawDataset, SpeakerType, SpeechData, SplitType
 import utils.constants as constants
 
-from typing import Any, Optional
+from typing import Any, Callable, Optional, Type
 import json
 import os
 import re
@@ -95,11 +95,17 @@ class QualityDebatesDataset(RawDataset):
         )
 
 
-class QualityDebatesLoader(RawDataLoader):
+class QualityTranscriptsLoader:
     DEFAULT_FILE_PATH = os.environ[constants.SRC_ROOT] + "data/datasets/quality-debates/debates-readable.jsonl"
 
     @classmethod
-    def get_splits(cls, file_path: str, deduplicate: bool = False, combine_train_and_val: bool = False) -> tuple[list[dict]]:
+    def get_splits(
+        cls,
+        file_path: str,
+        deduplicate: bool = False,
+        combine_train_and_val: bool = False,
+        should_keep: Optional[Callable[dict[str, Any], bool]] = None,
+    ) -> tuple[list[dict]]:
         """
         Filters the dataset and splits it into train, val, and test splits. Consultancy,
         offline debates, and gpt4 debates are excluded.
@@ -107,6 +113,7 @@ class QualityDebatesLoader(RawDataLoader):
         Params:
             file_path: the path to the debate transcripts.
             deduplicate: whether we should return only one transcript for a given question.
+            should_keep: a function that accepts a row and returns whether it should be kept (not filtered)
 
         Returns:
             train_data: a list of json rows corresponding to the filtered training data
@@ -114,23 +121,12 @@ class QualityDebatesLoader(RawDataLoader):
             test_data: a list of json rows corresponding to the filtered test data
         """
 
-        def __should_keep(row: dict[str, Any]) -> bool:
-            roles = [turn["role"] for turn in row["turns"]]
-            positions = set([turn.get("index") for turn in row["turns"]])
-            return (
-                len(roles) >= 3
-                and "GPT-4" not in roles
-                and "Offline Judge" not in roles
-                and 0 in positions
-                and 1 in positions
-            )
-
         def __get_filtered_rows(file_path: str):
             rows = []
             with open(file_path) as f:
                 for line in f.readlines():
                     rows.append(json.loads(line))
-            return [row for row in filter(__should_keep, rows)]
+            return [row for row in filter(should_keep, rows)]
 
         def __create_splits(filtered_rows: list[dict], combine_train_and_val: bool = False):
             story_to_row = {}
@@ -164,18 +160,89 @@ class QualityDebatesLoader(RawDataLoader):
     @classmethod
     def load(
         cls,
+        constructor_cls: Type[RawDataLoader],
         full_dataset_filepath: Optional[str] = None,
         deduplicate: bool = False,
         combine_train_and_val: bool = False,
         **kwargs,
     ) -> QualityDebatesDataset:
         """Constructs a QualityDebatesDataset"""
-        full_dataset_filepath = full_dataset_filepath or QualityDebatesLoader.DEFAULT_FILE_PATH
-        train, val, test = QualityDebatesLoader.get_splits(
+        full_dataset_filepath = full_dataset_filepath or QualityTranscriptsLoader.DEFAULT_FILE_PATH
+        train, val, test = constructor_cls.get_splits(
             file_path=full_dataset_filepath, deduplicate=deduplicate, combine_train_and_val=combine_train_and_val
         )
         return QualityDebatesDataset(
             train_data=train,
             val_data=val,
             test_data=test,
+        )
+
+
+class QualityConsultancyLoader(RawDataLoader):
+    @classmethod
+    def get_splits(cls, file_path: str, deduplicate: bool = False, combine_train_and_val: bool = False):
+        def should_keep(row: dict[str, Any]) -> bool:
+            roles = [turn["role"] for turn in row["turns"]]
+            positions = set([turn.get("index") for turn in filter(lambda x: x.get("index") is not None, row["turns"])])
+            return len(set(roles)) >= 2 and "GPT-4" not in roles and "Offline Judge" not in roles and len(positions) == 1
+
+        return QualityTranscriptsLoader.get_splits(
+            file_path=file_path,
+            deduplicate=deduplicate,
+            combine_train_and_val=combine_train_and_val,
+            should_keep=should_keep,
+        )
+
+    @classmethod
+    def load(
+        cls,
+        full_dataset_filepath: Optional[str] = None,
+        deduplicate: bool = False,
+        combine_train_and_val: bool = False,
+        **kwargs,
+    ) -> QualityDebatesDataset:
+        """Constructs a QualityDebatesDataset"""
+        return QualityTranscriptsLoader.load(
+            constructor_cls=cls,
+            full_dataset_filepath=full_dataset_filepath,
+            deduplicate=deduplicate,
+            combine_train_and_val=combine_train_and_val,
+        )
+
+
+class QualityDebatesLoader(RawDataLoader):
+    @classmethod
+    def get_splits(cls, file_path: str, deduplicate: bool = False, combine_train_and_val: bool = False):
+        def should_keep(row: dict[str, Any]) -> bool:
+            roles = [turn["role"] for turn in row["turns"]]
+            positions = set([turn.get("index") for turn in row["turns"]])
+            return (
+                len(roles) >= 3
+                and "GPT-4" not in roles
+                and "Offline Judge" not in roles
+                and 0 in positions
+                and 1 in positions
+            )
+
+        return QualityTranscriptsLoader.get_splits(
+            file_path=file_path,
+            deduplicate=deduplicate,
+            combine_train_and_val=combine_train_and_val,
+            should_keep=should_keep,
+        )
+
+    @classmethod
+    def load(
+        cls,
+        full_dataset_filepath: Optional[str] = None,
+        deduplicate: bool = False,
+        combine_train_and_val: bool = False,
+        **kwargs,
+    ) -> QualityDebatesDataset:
+        """Constructs a QualityDebatesDataset"""
+        return QualityTranscriptsLoader.load(
+            constructor_cls=cls,
+            full_dataset_filepath=full_dataset_filepath,
+            deduplicate=deduplicate,
+            combine_train_and_val=combine_train_and_val,
         )

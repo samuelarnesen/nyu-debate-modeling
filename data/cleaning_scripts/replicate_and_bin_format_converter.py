@@ -6,35 +6,15 @@ import json
 import pandas as pd
 import re
 import sys
+from typing import Optional
 
 
-"""
-external_debate_sources = [
-    "/Users/samarnesen/Downloads/sp/claude2.1_Bo16_claude2.1_Bo16/debate_sim/data0.csv",
-    "/Users/samarnesen/Downloads/sp/claude2.1_Bo4_Co8_claude2.1_Bo4_Co8/debate_sim/data0.csv",
-    "/Users/samarnesen/Downloads/sp/claude2.1_Bo4_claude2.1_Bo4/debate_sim/data0.csv",
-    "/Users/samarnesen/Downloads/sp/claude2.1_Bo8_claude2.1_Bo8/debate_sim/data0.csv",
-    "/Users/samarnesen/Downloads/sp/claude2.1_Co16_claude2.1_Co16/debate_sim/data0.csv",
-    "/Users/samarnesen/Downloads/sp/claude2.1_Co2_claude2.1_Co2/debate_sim/data0.csv",
-    "/Users/samarnesen/Downloads/sp/gpt4t_Bo16_gpt4t_Bo16/debate_sim/data0.csv",
-    "/Users/samarnesen/Downloads/sp/gpt4t_Bo1_gpt4t_Bo1/debate_sim/data0.csv",
-    "/Users/samarnesen/Downloads/sp/gpt4t_Bo32_gpt4t_Bo32/debate_sim/data0.csv",
-    "/Users/samarnesen/Downloads/sp/gpt4t_Bo4_Co8_gpt4t_Bo4_Co8/debate_sim/data0.csv",
-    "/Users/samarnesen/Downloads/sp/gpt4t_Bo4_gpt4t_Bo4/debate_sim/data0.csv",
-    "/Users/samarnesen/Downloads/sp/gpt4t_Bo8_gpt4t_Bo8/debate_sim/data0.csv",
-    "/Users/samarnesen/Downloads/sp/gpt4t_Co16_gpt4t_Co16/debate_sim/data0.csv",
-]
-
-"""
-output_gpt_only = "/Users/samarnesen/nyu/scratch/combined_gpt_debates.jsonl"
-output_combined = "/Users/samarnesen/nyu/scratch/combined_human_and_gpt4_debates.jsonl"
-
+output_gpt_only = "/Users/samarnesen/nyu/scratch/binned_gpt_debates_and_consultancies.jsonl"
+output_combined = "/Users/samarnesen/nyu/scratch/binned_human_and_gpt4_debates_and_consultancies.jsonl"
 
 external_debate_sources = [
-    "/Users/samarnesen/Downloads/sp/gpt4t_Bo32_gpt4t_Bo32/debate_sim/data0.csv",
+    "/Users/samarnesen/Downloads/llm_debate_dataset/llm_debate_human_judge_dataset.csv",
 ]
-
-# output_gpt_only = "/Users/samarnesen/nyu/scratch/adj_datasets/gpt3.5_bo16.jsonl"
 
 
 def get_debaters_from_file_path(file_path: str):
@@ -59,14 +39,20 @@ def get_debaters_from_file_path(file_path: str):
 
 
 def get_external_debates(file_path: str):
-    def create_turn(text: str, correct: bool = True, swap: bool = False, role: str = "Debater"):
+    def create_turn(
+        text: str,
+        correct: bool = True,
+        swap: bool = False,
+        role: str = "Debater",
+        probs: Optional[tuple[float, float]] = None,
+    ):
         return {
             "chars": -1,
             "charLimit": -1,
             "quoteChars": -1,
             "quoteCharLimit": -1,
             "index": 0 if correct != swap else 1,
-            "probabilities": None,
+            "probabilities": probs,
             "role": role,
             "text": text,
         }
@@ -74,6 +60,8 @@ def get_external_debates(file_path: str):
     debates = []
 
     df = pd.read_csv(file_path)
+    df = df[~df["judge_id"].isin([11, 17, 20, 22, 29, 32, 34, 35, 36, 37])]
+    df = df[(df["debate_method"] == "debate") | (df["debate_method"] == "consultancy")]
     one, two = get_debaters_from_file_path(file_path)
     for i, row in df.iterrows():
         swap = i % 2 == 1
@@ -82,27 +70,41 @@ def get_external_debates(file_path: str):
             answers = [transcript["answers"]["incorrect"], transcript["answers"]["correct"]]
         else:
             answers = [transcript["answers"]["correct"], transcript["answers"]["incorrect"]]
-        turns = []
 
         rd = transcript["rounds"][0]
-        correct_turn = create_turn(text=rd["correct"], correct=True, swap=swap)
-        incorrect_turn = create_turn(rd["incorrect"], correct=False, swap=swap)
-        turns.extend([correct_turn, incorrect_turn] if not swap else [incorrect_turn, correct_turn])
-        turns.append(create_turn(text="", role="Judge"))
+        correct_turn = create_turn(text=rd["correct"], correct=True, swap=swap) if rd["correct"] else None
+        incorrect_turn = create_turn(text=rd["incorrect"], correct=False, swap=swap) if rd["incorrect"] else None
+
+        turns = [correct_turn, incorrect_turn] if not swap else [incorrect_turn, correct_turn]
+        turns = [turn for turn in filter(lambda x: x is not None, turns)]
+
+        judge_probs = [0, 0]
+        if not swap:
+            if row["correct"]:  # then A is correct and they voted for A
+                judge_probs = (row["confidence"] / 100, 1 - (row["confidence"] / 100))
+            else:  # then A is correct and they voted for B
+                judge_probs = (1 - (row["confidence"] / 100), row["confidence"] / 100)
+        else:
+            if row["correct"]:  # then B is correct and they voted for B
+                judge_probs = (1 - (row["confidence"] / 100), row["confidence"] / 100)
+            else:  # then B is correct and they voted for A
+                judge_probs = (row["confidence"] / 100, 1 - (row["confidence"] / 100))
+        turns.append(create_turn(text="", role="Judge", probs=judge_probs))
 
         new_debate = {
             "storyId": "-1",
             "storyTitle": row["story_title"],
-            "story": row["story"],
+            "story": row["story_title"],
             "question": row["question"],
             "answers": answers,
             "debateId": "-1",
             "judge": "-1",
             "turns": turns,
             "isJudgeCorrect": False,
-            "correctAnswer": row["correct answer"],
+            "correctAnswer": transcript["answers"]["correct"],
             "debaters": [one, two],
         }
+
         debates.append(new_debate)
 
     return debates
@@ -140,17 +142,10 @@ if __name__ == "__main__":
         for debate in external_debates:
             is_truncated = False
             for turn in debate["turns"]:
-                if not turn["text"]:
-                    print("MISSING")
                 if "TRUNCATED" in turn["text"]:
                     is_truncated = True
             if not is_truncated:
                 gpt_debates.append(debate)
-
-    with open(output_gpt_only, "w+") as f:
-        for debate in gpt_debates:
-            f.write(json.dumps(debate))
-            f.write("\n")
 
     with open("data/datasets/quality-debates/debates-readable.jsonl", "r") as human_f:
         lines = human_f.readlines()

@@ -3,7 +3,7 @@ from data.annotated_quality_debates_loader import AnnotatedQualityDebatesLoader
 from data.judge_preferences_loader import JudgePreferencesLoader
 from data.scratchpad_quality_debates_loader import ScratchpadQualityDebatesLoader
 from data.quality_loader import QualityLoader
-from data.quality_debates_loader import QualityDebatesLoader
+from data.quality_debates_loader import QualityConsultancyLoader, QualityDebatesLoader
 from data.quality_judging_loader import QualityJudgingLoader
 from data.quote_relevance_loader import QuoteRelevanceLoader
 
@@ -29,5 +29,7 @@ class LoaderUtils:
             return QuoteRelevanceLoader
         elif dataset_type == DatasetType.JUDGING_PROBE:
             return QualityJudgingLoader
+        elif dataset_type == DatasetType.QUALITY_CONSULTANCY:
+            return QualityConsultancyLoader
 
         raise Exception(f"Loader {dataset_type} not found")

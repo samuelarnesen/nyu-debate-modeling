@@ -68,7 +68,7 @@ Quality:
   dataset:
     dataset_type: quality
     split_type: val
-Tournament - Data Generation - Human:
+Tournament - Data Generation - Llama:
   batch_size: 1
   num_speeches: 1
   flip: False
@@ -80,17 +80,17 @@ Tournament - Data Generation - Human:
   agents:
     debaters:
       - model_settings:
-          model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b
-          alias: "human"
+          model_type: llama
+          model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+          alias: "llama"
         best_of_n:
           n: 8
           opponent_n: 2
           maxmin: False
     judge:
       model_settings:
-        model_type: openai
-        alias: "openai-judge"
+        model_type: random
+        alias: "random-judge"
   dataset:
     dataset_type: quality
     split_type: val

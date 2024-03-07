@@ -13,6 +13,7 @@ import pandas as pd
 import torch
 
 from typing import Optional, Type
+import json
 
 try:
     from utils.flash_attn_utils import replace_attn_with_flash_attn, upcast_layer_for_flash_attention
@@ -43,23 +44,48 @@ class SupervisedTrainer:
         return instructions
 
     @classmethod
-    def convert_dataset(cls, raw_dataset: RawDataset, config: TrainingConfig, target: TrainingTarget) -> Dataset:
+    def convert_dataset(cls, raw_datasets: list[RawDataset], config: TrainingConfig) -> Dataset:
         """Converts a dataset (abstraction used in this codebase) into a Dataset object (abstraction
         used by huggingface's trainer objects)"""
-        llm_input_lists = [
-            RowConverter.convert_row(row=row, config=config, target=target, dataset=raw_dataset)
-            for i, row in enumerate(raw_dataset.get_data(split=SplitType.TRAIN))
-        ]
-        llm_inputs = [
-            item for llm_input_list in llm_input_lists for item in filter(lambda x: x["extra_suffix"], llm_input_list)
-        ]
+
+        llm_inputs = []
+
+        for idx, raw_dataset in enumerate(raw_datasets):
+            llm_input_lists = [
+                RowConverter.convert_row(row=row, config=config, dataset=raw_dataset)
+                for i, row in enumerate(raw_dataset.get_data(split=config.dataset[idx].split_type))
+            ]
+
+            if llm_input_lists and isinstance(llm_input_lists[0], list) and isinstance(llm_input_lists[0][0], dict):
+                llm_inputs += [
+                    item
+                    for llm_input_list in llm_input_lists
+                    for item in filter(lambda x: x["extra_suffix"], llm_input_list)
+                ]
+            elif (
+                llm_input_lists
+                and isinstance(llm_input_lists[0], list)
+                and isinstance(llm_input_lists[0][0], list)
+                and isinstance(llm_input_lists[0][0][0], dict)
+            ):
+                llm_inputs += [
+                    item
+                    for llm_input_list in llm_input_lists
+                    for item in filter(lambda x: x[-1]["role"] == "assistant", llm_input_list)
+                ]
+            else:
+                raise Exception("Data format was invalid")
 
         df = pd.DataFrame(data=llm_inputs)
         return Dataset.from_pandas(df).shuffle()
 
     @classmethod
     def get_trainer(
-        cls, config: TrainingConfig, raw_dataset: Optional[RawDataset] = None, is_local: bool = False, is_test: bool = False
+        cls,
+        config: TrainingConfig,
+        raw_datasets: Optional[list[RawDataset]] = None,
+        is_local: bool = False,
+        is_test: bool = False,
     ) -> Optional[SFTTrainer]:
         """
         Generates a Trainer object.
@@ -76,8 +102,8 @@ class SupervisedTrainer:
         if FLASH_ATTENTION_AVAILABLE:
             replace_attn_with_flash_attn()
 
-        if not raw_dataset:
-            raw_dataset = TrainUtils.create_dataset(config=config)
+        if not raw_datasets:
+            raw_datasets = TrainUtils.create_datasets(config=config)
 
         tokenizer = TrainUtils.get_tokenizer(config=config, is_local=is_local)
         model = TrainUtils.load_model(config=config, is_local=is_local)
@@ -107,11 +133,9 @@ class SupervisedTrainer:
             tokenizer=tokenizer,
         )
 
-        target = TrainingTarget[config.target.upper()]
         train_dataset = SupervisedTrainer.convert_dataset(
-            raw_dataset=raw_dataset,
+            raw_datasets=raw_datasets,
             config=config,
-            target=target,
         )
 
         peft_config = TrainUtils.get_peft_config(config) if not is_local else None

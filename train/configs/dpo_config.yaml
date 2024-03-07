@@ -15,55 +15,26 @@ Test:
     logging_and_saving_config:
         logging_steps: 1
         output_dir: /fake/file/path
-13B - Alpaca - Basic:
-    model_name: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4/
-    target: debater
-    training_hyperparameters:
-        num_train_epochs: 1
-        per_device_train_batch_size: 1
-        gradient_accumulation_steps: 8
-        optim: paged_adamw_32bit
-        learning_rate: 5e-4
-        max_grad_norm: 0.3
-        warmup_ratio: 0.03
-        lr_scheduler_type: constant
-        peft_type: lora
-    logging_and_saving_config:
-        logging_steps: 1
-        output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-1/
-        merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
-13B - Alpaca - Updated:
-    model_name: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
-    target: debater
-    training_hyperparameters:
-        num_train_epochs: 1
-        per_device_train_batch_size: 1
-        gradient_accumulation_steps: 4
-        optim: paged_adamw_32bit
-        learning_rate: 5e-4
-        max_grad_norm: 0.3
-        warmup_ratio: 0.03
-        lr_scheduler_type: constant
-        peft_type: lora
-    logging_and_saving_config:
-        logging_steps: 10
-        output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-2/
-        merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-dpo-current/
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: 2024-01-25_23_36_24.541209
 Mixtral:
-    model_name: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-3
+    model_name: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
     target: debater
     llm_type: mistral
     training_hyperparameters:
-        num_train_epochs: 2
+        num_train_epochs: 4
         per_device_train_batch_size: 1
         gradient_accumulation_steps: 8
         optim: paged_adamw_32bit
-        learning_rate: 2e-6
+        learning_rate: 10e-6
         max_grad_norm: 0.3
         warmup_ratio: 0.03
         lr_scheduler_type: constant
         peft_type: lora
     logging_and_saving_config:
         logging_steps: 1
-        output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-4
-        merge_output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-merged
+        output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-no-filter
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: 2024-02-15_12:21
