@@ -214,7 +214,7 @@ class BestOfNOfflineModel(Model):
 
 
 class OfflineModelHelper:
-    def __init__(self, file_path_prefix: str, dataset: RawDataset):
+    def __init__(self, file_path_prefix: str, dataset: RawDataset, split_type: SplitType):
         """
         This class is used to generate the data and models for offline processing.
 
@@ -222,9 +222,7 @@ class OfflineModelHelper:
             file_path_prefix: Either the full path of the transcript jsons (not including the numbers at the end) or just
                 the timestamp of the files.
             dataset: The dataset that was used to generate the original prompts
-            data_format: whether the data is structured with separate metadata / speeches tabs (like with
-                the model-model debates) [Expanded] or in the older format (like with the NYU human
-                debates) [Abbreviated]
+            split_type: Which split of the dataset will be looked at
         """
         self.file_path_prefix = file_path_prefix
 
@@ -239,6 +237,7 @@ class OfflineModelHelper:
             self.data.extend([json.loads(line) for line in filter(lambda x: x, jsonl_texts[0].split("\n"))])
 
         self.dataset = dataset
+        self.split_type = split_type
 
         self.data_format = (
             OfflineDataFormat.EXPANDED
@@ -246,6 +245,8 @@ class OfflineModelHelper:
             else OfflineDataFormat.ABBREVIATED
         )
         self.parser = self.data_format.get_parser()
+
+        self.prune_data()
 
     @classmethod
     def reduce_to_common_rounds(cls, helper_one: OfflineModelHelper, helper_two: OfflineModelHelper) -> None:
@@ -295,6 +296,34 @@ class OfflineModelHelper:
             other_parser=helper_one.parser,
         )
 
+    def prune_data(self) -> None:
+        """Removes data rows that could not be found in the reference dataset"""
+
+        def validate_idx(idx: int) -> bool:
+            debate_identifier = self.parser.get_debate_identifier(self.data[idx % len(self.data)])
+            question = self.parser.get_question(self.data[idx % len(self.data)])
+            story_title = debate_identifier.replace("_" + question, "")
+            for row in self.dataset.get_data(split=self.split_type):
+                if (
+                    row.story_title.strip() == story_title.strip()
+                    and row.question.strip() == question.strip()
+                    and (
+                        row.positions[0] == self.parser.get_first_debater_answer(self.data[idx % len(self.data)])
+                        or row.positions[0] == self.parser.get_second_debater_answer(self.data[idx % len(self.data)])
+                    )
+                    and (
+                        row.positions[1] == self.parser.get_first_debater_answer(self.data[idx % len(self.data)])
+                        or row.positions[1] == self.parser.get_second_debater_answer(self.data[idx % len(self.data)])
+                    )
+                ):
+                    return True
+            return False
+
+        idxs_to_keep = [validate_idx(idx) for idx in range(len(self.data))]
+        self.data = [row for idx, row in filter(lambda x: idxs_to_keep[x[0]], enumerate(self.data))]
+        if not self.data:
+            raise Exception("No eligible data was found")
+
     def get_example(self, idx: int, split_type: SplitType = SplitType.TRAIN) -> DataRow:
         """
         Gets the row of the dataset that was used to generate the original round.
@@ -306,6 +335,7 @@ class OfflineModelHelper:
         Returns:
             The corresponding row in the dataset that was used to generate the original round.
         """
+
         debate_identifier = self.parser.get_debate_identifier(self.data[idx % len(self.data)])
         question = self.parser.get_question(self.data[idx % len(self.data)])
         story_title = debate_identifier.replace("_" + question, "")
@@ -388,7 +418,8 @@ class OfflineModelHelper:
                 best_option = sorted(options, key=lambda x: float(x[1]), reverse=True)[0][0]
                 selected_speeches.append(best_option)
                 contender_speeches.append([c[0] for c in contenders])
-                opponent_speeches.append([resp["speech"] for resp in supplemental["bon_opposing_model_responses"]])
+                if "bon_opposing_model_responses" in supplemental:
+                    opponent_speeches.append([resp["speech"] for resp in supplemental["bon_opposing_model_responses"]])
         else:
             selected_speeches = [self.parser.get_text(speech) for speech in relevant_speeches]
 

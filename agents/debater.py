@@ -152,8 +152,6 @@ class BestOfNDebater(Debater):
             for opposing_response in opposing_debater_responses
         ]
 
-        print(len(speeches), len(opposing_speeches))
-
         judge_inputs = []
         for speech in speeches:
             for opposing_speech in opposing_speeches:

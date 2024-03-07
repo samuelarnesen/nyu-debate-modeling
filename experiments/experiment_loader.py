@@ -276,7 +276,7 @@ class ExperimentLoader:
                 if fp in offline_model_helper_cache:
                     offline_model_helpers.append(offline_model_helper_cache[fp])
                 else:
-                    helper = OfflineModelHelper(file_path_prefix=fp, dataset=dataset)
+                    helper = OfflineModelHelper(file_path_prefix=fp, dataset=dataset, split_type=split_type)
                     offline_model_helpers.append(helper)
                     offline_model_helper_cache[fp] = helper
 
