@@ -1,5 +1,10 @@
 from data.dataset import DataRow, DatasetType, RawDataLoader, RawDataset, SplitType
-from data.quality_debates_loader import QualityDebatesDataset, QualityDebatesLoader, QualityTranscriptsLoader
+from data.quality_debates_loader import (
+    QualityDebatesDataset,
+    QualityConsultancyLoader,
+    QualityDebatesLoader,
+    QualityTranscriptsLoader,
+)
 import utils.constants as constants
 
 from typing import Any, Optional
@@ -19,7 +24,7 @@ class QualityDataset(RawDataset):
         test_data: list[dict[str, Any]],
         override_type: Optional[DatasetType] = None,
         allow_multiple_positions_per_question: bool = False,
-        dedupe_dataset: QualityDebatesDataset = None,
+        dedupe_dataset: Optional[list[QualityDebatesDataset]] = None,
     ):
         """
         Dataset where each row contains a question and positions from the Quality dataset
@@ -143,12 +148,13 @@ class QualityDataset(RawDataset):
                 self.data[SplitType.VAL].append(row)
         self.data[SplitType.TEST] = test_data
 
-    def __dedupe_rows(self, rows: list[DataRow], dedupe_dataset: Optional[QualityDebatesDataset] = None) -> None:
+    def __dedupe_rows(self, rows: list[DataRow], dedupe_dataset: Optional[list[QualityDebatesDataset]] = None) -> None:
         if not dedupe_dataset:
             return rows
         used_stories = []
-        for other_split in SplitType:
-            used_stories += [row.story_title for row in dedupe_dataset.get_data(split=other_split)]
+        for ds in dedupe_dataset:
+            for other_split in SplitType:
+                used_stories += [row.story_title for row in ds.get_data(split=other_split)]
 
         return [row for row in filter(lambda x: x.story_title not in used_stories, rows)]
 
@@ -225,11 +231,15 @@ class QualityLoader(RawDataLoader):
             quality_debates_dataset = QualityDebatesLoader.load(
                 full_dataset_filepath=quality_debates_filepath, deduplicate=True
             )
-
+            quality_consultancy_dataset = QualityConsultancyLoader.load(
+                full_dataset_filepath=quality_debates_filepath, deduplicate=True
+            )
         return QualityDataset(
             train_data=train_split,
             val_data=val_split,
             test_data=test_split,
             allow_multiple_positions_per_question=allow_multiple_positions_per_question,
-            dedupe_dataset=quality_debates_dataset if deduplicate_with_quality_debates else None,
+            dedupe_dataset=[quality_debates_dataset, quality_consultancy_dataset]
+            if deduplicate_with_quality_debates
+            else None,
         )
