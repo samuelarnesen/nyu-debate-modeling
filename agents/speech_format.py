@@ -76,8 +76,8 @@ class SpeechFormatStructure(Enum):
         True,
     )
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         value: int,
         debater_format: SpeechFormatType,
         judge_format: SpeechFormatType,
@@ -85,12 +85,14 @@ class SpeechFormatStructure(Enum):
         num_participants: int,
         flip_position_order: bool,
     ):
-        self._value_ = value
-        self.debater_format = debater_format
-        self.judge_format = judge_format
-        self.default_prompt_name = default_prompt_name
-        self.num_participants = num_participants
-        self.flip_position_order = flip_position_order
+        obj = object.__new__(cls)
+        obj._value_ = value
+        obj.debater_format = debater_format
+        obj.judge_format = judge_format
+        obj.default_prompt_name = default_prompt_name
+        obj.num_participants = num_participants
+        obj.flip_position_order = flip_position_order
+        return obj
 
 
 class SpeechFormat:
