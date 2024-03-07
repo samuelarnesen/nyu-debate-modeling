@@ -547,7 +547,9 @@ class ExperimentLoader:
                     best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                 )
 
-            if experiment.agents.debaters[debater_idxs[0]].best_of_n and not first_offline_file_path:
+            if experiment.agents.debaters[debater_idxs[0]].best_of_n and (
+                not first_offline_file_path or experiment.agents.debaters[debater_idxs[0]].best_of_n.recompute
+            ):
                 debate_round.set_first_debater(
                     BestOfNDebater(
                         debater=debate_round.first_debater,
@@ -566,7 +568,9 @@ class ExperimentLoader:
                         background_text=question_metadata.background_text,
                     )
                 )
-            if experiment.agents.debaters[debater_idxs[1]].best_of_n and not second_offline_file_path:
+            if experiment.agents.debaters[debater_idxs[1]].best_of_n and (
+                not second_offline_file_path or experiment.agents.debaters[debater_idxs[1]].best_of_n.recompute
+            ):
                 debate_round.set_second_debater(
                     BestOfNDebater(
                         debater=debate_round.second_debater,

@@ -157,6 +157,62 @@ class OfflineModel(Model):
         raise Exception("Cannot merge across models")
 
 
+class BestOfNOfflineModel(Model):
+    def __init__(
+        self,
+        alias: str,
+        speeches: list[list[str]],
+        opponent_speeches: list[list[str]],
+        **kwargs,
+    ):
+        """
+        An offline model returns the text that was previously generated during an earlier Best of N run. This is useful if you
+        want to re-judge a round.
+
+        NOTE: ONLY USE THIS MODEL IF YOU WANT TO RECOMPUTE THE BEST_OF_N SCORES. IF YOU WANT TO USE THE SAME
+        BEST_OF_N SCORES AS DURING THE INITIAL RUN, THEN A NORMAL OFFLINE MODEL WILL SUFFICE
+
+        Args:
+            alias: String that identifies the model for metrics and deduplication
+            speeches: a list of strings corresponding to the speeches the model will output.
+            opponent_speeches: a list of strings corresponding to the speeches that are forecast for the opponent.
+                The dimensions for both this and speeches is: speeches_per_round x N/M.
+        """
+        super().__init__(alias=alias, is_debater=True)
+        self.speech_idx = 0
+        self.speeches = speeches
+        self.opponent_speeches = opponent_speeches
+        self.use_opponent_speeches = False
+
+    def predict(self, inputs: list[list[ModelInput] | str], **kwargs) -> ModelResponse:
+        """Generates a list of texts in response to the given input."""
+        sample_set = self.speeches if not self.use_opponent_speeches else self.opponent_speeches
+        speech = [s for s in sample_set[self.speech_idx]]
+        if self.use_opponent_speeches:
+            self.speech_idx += 1
+        self.use_opponent_speeches = not self.use_opponent_speeches
+        return [
+            ModelResponse(speech=speech[i], prompt="\n".join(model_input.content for model_input in inputs[i]))
+            for i in range(len(speech))
+        ]
+
+    def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> OfflineModel:
+        """Generates a deepcopy of this model"""
+        return OfflineModel(alias=alias, speeches=self.speeches)
+
+    def can_merge(self, other: Model) -> bool:
+        """Determines whether this model can be 'merged' (aka the model associated with one element of the
+        batch can be combined with the model associated with another element so that one can do batch
+        processing."""
+        return isinstance(other, BestOfNOfflineModel)
+
+    def merge(self, other: Model) -> Model:
+        if self.can_merge(other):
+            self.speeches.extend(other.speeches)
+            return self
+        raise Exception("Cannot merge across models")
+
+
 class OfflineModelHelper:
     def __init__(self, file_path_prefix: str, dataset: RawDataset):
         """
@@ -275,7 +331,6 @@ class OfflineModelHelper:
         idx: int,
         positions: tuple[str, str],
         best_of_n_config: Optional[BestOfNConfig] = None,
-        identifier: str = "",
     ) -> OfflineModel:
         """
         Generates an OfflineModel
@@ -321,6 +376,8 @@ class OfflineModelHelper:
             speech for speech in filter(lambda x: self.parser.get_speaker_name(x) == debater_name_to_use, all_speeches)
         ]
         selected_speeches = []
+        contender_speeches = []
+        opponent_speeches = []
         if best_of_n_config:
             for speech in relevant_speeches:
                 supplemental = speech["supplemental"]
@@ -330,8 +387,13 @@ class OfflineModelHelper:
                 options = random.sample(contenders, k=best_of_n_config.n)
                 best_option = sorted(options, key=lambda x: float(x[1]), reverse=True)[0][0]
                 selected_speeches.append(best_option)
+                contender_speeches.append([c[0] for c in contenders])
+                opponent_speeches.append([resp["speech"] for resp in supplemental["bon_opposing_model_responses"]])
         else:
             selected_speeches = [self.parser.get_text(speech) for speech in relevant_speeches]
+
+        if best_of_n_config and best_of_n_config.recompute:
+            return BestOfNOfflineModel(alias=alias, speeches=contender_speeches, opponent_speeches=opponent_speeches)
 
         return OfflineModel(
             alias=alias,

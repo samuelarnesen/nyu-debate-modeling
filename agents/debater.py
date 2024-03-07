@@ -152,6 +152,8 @@ class BestOfNDebater(Debater):
             for opposing_response in opposing_debater_responses
         ]
 
+        print(len(speeches), len(opposing_speeches))
+
         judge_inputs = []
         for speech in speeches:
             for opposing_speech in opposing_speeches:
@@ -182,6 +184,7 @@ class BestOfNDebater(Debater):
         scores = [min(option) if self.config.maxmin else sum(option) / len(option) for option in split_judge_response]
         selection_idx = sorted(zip(scores, range(len(model_responses))), key=lambda x: x[0], reverse=True)[0][1]
         best_model_response = model_responses[selection_idx]
+        best_model_response.bon_opposing_model_responses = opposing_debater_responses
 
         for i, (model_response, score) in enumerate(zip(model_responses, scores)):
             model_response.preference = score

@@ -14,6 +14,7 @@ class BestOfNConfig(BaseModel):
     n: int
     opponent_n: int
     maxmin: bool
+    recompute: bool = False
 
 
 class ModelInput(BaseModel):
@@ -27,6 +28,7 @@ class ModelResponse(BaseModel):
     probabilistic_decision: Optional[dict[str, float]] = None
     preference: Optional[float] = None
     rejected_responses: list[ModelResponse] = []
+    bon_opposing_model_responses: list[ModelResponse] = []
     bon_probabilistic_preferences: list[float] = []
     internal_representations: str = ""
     prompt: str = ""
