@@ -162,9 +162,8 @@ class RowConverter:
                     winner = "A" if speech.probabilities[0] > 0.5 else "B"
                     loser = "B" if speech.probabilities[0] > 0.5 else "A"
                     max_probability = max(speech.probabilities)
-                    speech_texts = [f"Debater_{winner}"] + [
-                        f"Debater_{winner}" if max_probability >= 0.75 else f"Debater_{loser}"
-                    ]
+                    clean_percent = round(100 * max_probability)
+                    speech_texts = [f"Debater_{winner} | {clean_percent}%"]
 
             local_llm_input_list = [
                 llm_class.generate_llm_input_from_model_inputs(

@@ -8,7 +8,7 @@ import backoff
 import openai
 
 from concurrent.futures import ThreadPoolExecutor
-from typing import Union
+from typing import Union, Optional
 import logging
 import os
 import math
@@ -21,9 +21,9 @@ class OpenAIModel(Model):
 
     MAX_PARALLEL_REQUESTS = 16
     INSTRUCTION_SUFFIX = ""
-    OPENAI_MODEL_ENDPOINT = "ft:gpt-4-0613:nyu-arg::8ytKWgRW"  # "gpt-4-0125-preview"  # "ft:gpt-4-0613:nyu-arg::8xhmtfJz"
+    DEFAULT_OPENAI_MODEL_ENDPOINT = "gpt-4-0125-preview"
 
-    def __init__(self, alias: str, is_debater: bool = True, **kwargs):
+    def __init__(self, alias: str, is_debater: bool = True, endpoint: Optional[str] = None, **kwargs):
         """
         An OpenAIModel calls GPT4 to generate the appropriate text.
 
@@ -34,6 +34,7 @@ class OpenAIModel(Model):
         super().__init__(alias=alias, is_debater=is_debater)
         self.__configure()
         self.client = openai.OpenAI()
+        self.endpoint = endpoint if endpoint else OpenAIModel.DEFAULT_OPENAI_MODEL_ENDPOINT
         self.logger = LoggerUtils.get_default_logger(__name__)
 
     def __configure(self):
@@ -159,7 +160,7 @@ class OpenAIModel(Model):
         self, messages: list[dict[str, str]], speech_structure: SpeechStructure, max_new_tokens: int
     ) -> openai.ChatCompletion:
         return self.client.chat.completions.create(
-            model=OpenAIModel.OPENAI_MODEL_ENDPOINT,
+            model=self.endpoint,
             messages=messages,
             max_tokens=max_new_tokens,
             logprobs=(speech_structure != SpeechStructure.OPEN_ENDED),

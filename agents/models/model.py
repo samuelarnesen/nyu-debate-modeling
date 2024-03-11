@@ -12,8 +12,8 @@ from typing import Literal, Optional
 
 class BestOfNConfig(BaseModel):
     n: int
-    opponent_n: int
-    maxmin: bool
+    opponent_n: int = 0
+    maxmin: bool = False
     recompute: bool = False
 
 

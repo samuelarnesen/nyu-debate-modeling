@@ -4,7 +4,7 @@ from agents.agent import Agent, ScratchpadConfig
 from agents.models import BestOfNConfig, HumanModel, Model, ModelResponse, SpeechStructure
 from agents.speech_format import SpeechFormat, SpeechFormatType, SpeechFormatStructure
 from agents.transcript import SpeechFormat, Transcript
-from prompts import Prompt, PromptTag
+from prompts import Prompt
 from utils import LoggerUtils, QuoteUtils
 import utils.constants as constants
 
@@ -139,18 +139,22 @@ class BestOfNDebater(Debater):
             for response in model_responses
         ]
 
-        opposing_debater_responses = self.model.predict(
-            inputs=[self.base_opponent_transcript.to_model_input() for _ in range(self.config.opponent_n)],
-            max_new_tokens=300,
-            debater_name=self.opposing_debater.name,
-        )
-
-        opposing_speeches = [
-            QuoteUtils.validate_and_replace_quotes(
-                speech_content=str(opposing_response.speech), background_text=self.background_text
+        if self.config.opponent_n:
+            opposing_debater_responses = self.model.predict(
+                inputs=[self.base_opponent_transcript.to_model_input() for _ in range(self.config.opponent_n)],
+                max_new_tokens=300,
+                debater_name=self.opposing_debater.name,
             )
-            for opposing_response in opposing_debater_responses
-        ]
+
+            opposing_speeches = [
+                QuoteUtils.validate_and_replace_quotes(
+                    speech_content=str(opposing_response.speech), background_text=self.background_text
+                )
+                for opposing_response in opposing_debater_responses
+            ]
+        else:
+            opposing_debater_responses = [None]
+            opposing_speeches = [None]
 
         judge_inputs = []
         for speech in speeches:
@@ -158,15 +162,15 @@ class BestOfNDebater(Debater):
                 judge_transcript = Transcript(
                     name=self.judge.transcripts[0].name,
                     prompt=self.judge.transcripts[0].prompt,
-                    speech_format=SpeechFormatType.DEFAULT_DEBATE_JUDGE.get_speech_format(
-                        name=constants.DEFAULT_JUDGE_NAME, num_speeches=self.judge.num_speeches, use_scratchpad=False
-                    ),
+                    speech_format=self.judge.speech_format,
                 )
                 if self.name == constants.DEFAULT_DEBATER_A_NAME:
                     judge_transcript.add_speech(speaker=self.name, content=speech)
-                    judge_transcript.add_speech(speaker=self.opposing_debater.name, content=opposing_speech)
+                    if opposing_speech:
+                        judge_transcript.add_speech(speaker=self.opposing_debater.name, content=opposing_speech)
                 else:
-                    judge_transcript.add_speech(speaker=self.opposing_debater.name, content=opposing_speech)
+                    if opposing_speech:
+                        judge_transcript.add_speech(speaker=self.opposing_debater.name, content=opposing_speech)
                     judge_transcript.add_speech(speaker=self.name, content=speech)
 
                 judge_inputs.append(judge_transcript.to_model_input())
@@ -177,9 +181,11 @@ class BestOfNDebater(Debater):
 
         split_judge_response = [
             [resp.probabilistic_decision[self.name] for resp in judge_model_response[i : i + self.config.opponent_n]]
-            for i in range(0, len(judge_model_response), self.config.opponent_n)
+            for i in range(0, len(judge_model_response), max(self.config.opponent_n, 1))
         ]
-        scores = [min(option) if self.config.maxmin else sum(option) / len(option) for option in split_judge_response]
+        scores = [
+            min(option) if self.config.maxmin else sum(option) / max(len(option), 1) for option in split_judge_response
+        ]
         selection_idx = sorted(zip(scores, range(len(model_responses))), key=lambda x: x[0], reverse=True)[0][1]
         best_model_response = model_responses[selection_idx]
         best_model_response.bon_opposing_model_responses = opposing_debater_responses

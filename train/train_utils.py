@@ -53,7 +53,7 @@ class TrainingConfig(BaseModel):
     requires_token: bool = False
     max_length: int = constants.MAX_LENGTH
     scratchpad_config: ScratchpadConfig = ScratchpadConfig()
-    speech_structure: SpeechFormatStructure | list[SpeechFormatStructure] = SpeechFormatStructure.DEFAULT_DEBATE
+    speech_structure: SpeechFormatStructure | list[SpeechFormatStructure] = [SpeechFormatStructure.DEFAULT_DEBATE]
     model_config = ConfigDict(protected_namespaces=("protect_me_", "also_protect_"))
 
     @field_validator("speech_structure", mode="before")

@@ -91,7 +91,11 @@ class Transcript:
             else:
                 if index >= len(self.speeches):
                     break
-                role = RoleType.USER if self.speeches[index].speaker != self.name else RoleType.ASSISTANT
+                role = (
+                    RoleType.USER
+                    if self.speeches[index].speaker != self.name or index < len(self.speeches)
+                    else RoleType.ASSISTANT
+                )
                 add_to_model_inputs(model_inputs, ModelInput(role=role, content=self.speeches[index].content))
                 index += 1
 

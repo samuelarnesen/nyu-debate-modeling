@@ -14,6 +14,7 @@ import torch
 
 from typing import Optional, Type
 import json
+import random
 
 try:
     from utils.flash_attn_utils import replace_attn_with_flash_attn, upcast_layer_for_flash_attention
@@ -78,12 +79,6 @@ class SupervisedTrainer:
                 raise Exception("Data format was invalid")
 
         df = pd.DataFrame(data=llm_inputs)
-
-        str_versions = [json.dumps({"messages": llm_input}) for llm_input in llm_inputs]
-        with open("/Users/samarnesen/nyu/scratch/debates-and-consultancies-combined.jsonl", "w") as f:
-            str_version = "\n".join(str_versions)
-            f.write(str_version)
-
         return Dataset.from_pandas(df).shuffle()
 
     @classmethod
