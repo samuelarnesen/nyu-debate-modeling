@@ -56,6 +56,10 @@ class SpeechFormatType(Enum):
         ),
     )
 
+    EMPTY_ROUND = (auto(), lambda name, **kwargs: SpeechFormat.empty_round_debater_format(name=name))
+
+    EMPTY_ROUND_JUDGE = (auto(), lambda **kwargs: SpeechFormat.empty_round_judge_format())
+
     def __init__(self, value: int, builder_func: Callable):
         self._value_ = value
         self.builder = builder_func
@@ -65,7 +69,14 @@ class SpeechFormatType(Enum):
 
 
 class SpeechFormatStructure(Enum):
-    DEFAULT_DEBATE = (1, SpeechFormatType.DEFAULT_DEBATE, SpeechFormatType.DEFAULT_DEBATE_JUDGE, "Debate Prompt", 2, False)
+    DEFAULT_DEBATE = (
+        1,
+        SpeechFormatType.DEFAULT_DEBATE,
+        SpeechFormatType.DEFAULT_DEBATE_JUDGE,
+        "Debate Prompt",
+        2,
+        False,
+    )
 
     DEFAULT_CONSULTANCY = (
         2,
@@ -75,6 +86,8 @@ class SpeechFormatStructure(Enum):
         1,
         True,
     )
+
+    EMPTY_ROUND = (3, SpeechFormatType.EMPTY_ROUND, SpeechFormatType.EMPTY_ROUND_JUDGE, "Empty Prompt", 0, True)
 
     def __new__(
         cls,
@@ -391,4 +404,19 @@ class SpeechFormat:
             .add_format(speech_format=opening_speech_speech_format)
             .add_format(speech_format=later_speech_format, repeats=(num_speeches - 1))
             .add_format(speech_format=decision_speech_format)
+        )
+
+    @classmethod
+    def empty_round_debater_format(cls, name, **kwargs) -> SpeechFormat:
+        return SpeechFormat(name=name)
+
+    @classmethod
+    def empty_round_judge_format(cls, **kwargs) -> SpeechFormat:
+        return (
+            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
+            .add(prompt_tag=PromptTag.OVERALL_SYSTEM)
+            .add(prompt_tag=PromptTag.JUDGE_SYSTEM)
+            .add(prompt_tag=PromptTag.PRE_DEBATE_JUDGE)
+            .add(prompt_tag=PromptTag.POST_ROUND_JUDGE_WITHOUT_REASONING)
+            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
         )

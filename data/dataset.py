@@ -83,7 +83,7 @@ class SpeechData(BaseModel):
     speaker_type: SpeakerType
     scratchpad: Optional[str] = None
     annotation: Optional[AnnotationData] = None
-    probabilities: Optional[tuple[float, float]]
+    probabilities: Optional[tuple[float, float]] = None
 
 
 class DataRow(BaseModel):

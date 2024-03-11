@@ -46,27 +46,6 @@ class RowConverter:
         )
 
     @classmethod
-    def get_default_speeches(cls) -> list[SpeechData]:
-        """Returns empty speeches"""
-        return [
-            SpeechData(
-                text="",
-                position=0,
-                speaker_type=SpeakerType.DEBATER,
-            ),
-            SpeechData(
-                text="",
-                position=1,
-                speaker_type=SpeakerType.DEBATER,
-            ),
-            SpeechData(
-                text="",
-                position=0,
-                speaker_type=SpeakerType.JUDGE,
-            ),
-        ]
-
-    @classmethod
     def convert_transcript(
         cls,
         row: DataRow,
@@ -104,7 +83,7 @@ class RowConverter:
         previous_speaker_type = SpeakerType.JUDGE
         speeches_so_far = []
         rounds = 1
-        for i, speech in enumerate(row.speeches or RowConverter.get_default_speeches()):
+        for i, speech in enumerate(row.speeches or []):
             # we want to skip whatever judgment the judge made before the round started
             if only_judge_has_spoken and speech.speaker_type == SpeakerType.JUDGE:
                 continue
@@ -188,6 +167,33 @@ class RowConverter:
 
             previous_speaker_type = speech.speaker_type
             speeches_so_far.append(speech)
+
+        # This handles the empty-round-baseline
+        if not row.speeches and not is_debater:
+            prompt = RowConverter.generate_prompt_from_speech(
+                row=row,
+                speech=SpeechData(text="", position=0, speaker_type=SpeakerType.JUDGE),
+                config=config,
+                dataset=dataset,
+                speech_structure=speech_structure,
+            )
+
+            transcript = Transcript(
+                name=constants.DEFAULT_JUDGE_NAME,
+                prompt=prompt,
+                speech_format=(
+                    speech_structure.judge_format.get_speech_format(
+                        name=constants.DEFAULT_JUDGE_NAME, num_speeches=0, use_scratchpad=False, flipped=False
+                    )
+                ),
+            )
+
+            speech_text = "Debater_A | 100%" if row.correct_index == 0 else "Debater_B | 100%"
+            local_llm_input = llm_class.generate_llm_input_from_model_inputs(
+                input_list=transcript.to_model_input(), extra_suffix=speech_text
+            )
+            llm_inputs.append(local_llm_input)
+
         return llm_inputs
 
     @classmethod
