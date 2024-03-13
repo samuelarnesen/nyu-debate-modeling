@@ -519,15 +519,19 @@ class ExperimentLoader:
                     positions=(position, opponent_position),
                     best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                 )
-                flipped_round.second_debater.model = helper.create_offline_model(
-                    alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
-                    debater_name=debate_round.second_debater.name,
-                    idx=i,
-                    positions=(position, opponent_position)
-                    if not experiment.speech_structure.flip_position_order
-                    else (opponent_position, position),
-                    best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
-                )
+                if experiment.flip:
+                    flipped_round.second_debater.model = helper.create_offline_model(
+                        alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
+                        debater_name=debate_round.second_debater.name,
+                        idx=i,
+                        positions=(position, opponent_position)
+                        if not experiment.speech_structure.flip_position_order
+                        else (opponent_position, position),
+                        best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
+                    )
+                elif experiment.speech_structure.flip_position_order and not debate_round.first_debater.model.speeches: # if the first debater speeches are missing in consultancy, then we should expect B to go first
+                    debate_round.judge = flipped_judge
+
             if second_offline_file_path:
                 helper = next((x for x in offline_model_helpers if x.file_path_prefix == second_offline_file_path))
                 debate_round.second_debater.model = helper.create_offline_model(
@@ -537,15 +541,18 @@ class ExperimentLoader:
                     positions=(position, opponent_position),
                     best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                 )
-                flipped_round.first_debater.model = helper.create_offline_model(
-                    alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
-                    debater_name=flipped_round.first_debater.name,
-                    idx=i,
-                    positions=(position, opponent_position)
-                    if not experiment.speech_structure.flip_position_order
-                    else (opponent_position, position),
-                    best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
-                )
+                if experiment.flip:
+                    flipped_round.first_debater.model = helper.create_offline_model(
+                        alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
+                        debater_name=flipped_round.first_debater.name,
+                        idx=i,
+                        positions=(position, opponent_position)
+                        if not experiment.speech_structure.flip_position_order
+                        else (opponent_position, position),
+                        best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
+                    )
+                elif experiment.speech_structure.flip_position_order and not debate_round.first_debater.model.speeches:
+                    debate_round.judge = flipped_judge
 
             if experiment.agents.debaters[debater_idxs[0]].best_of_n and (
                 not first_offline_file_path or experiment.agents.debaters[debater_idxs[0]].best_of_n.recompute
@@ -559,15 +566,16 @@ class ExperimentLoader:
                         background_text=question_metadata.background_text,
                     )
                 )
-                flipped_round.set_second_debater(
-                    BestOfNDebater(
-                        debater=flipped_round.second_debater,
-                        opposing_debater=flipped_round.first_debater,
-                        judge=debate_round.judge,
-                        best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
-                        background_text=question_metadata.background_text,
+                if experiment.flip:
+                    flipped_round.set_second_debater(
+                        BestOfNDebater(
+                            debater=flipped_round.second_debater,
+                            opposing_debater=flipped_round.first_debater,
+                            judge=debate_round.judge,
+                            best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
+                            background_text=question_metadata.background_text,
+                        )
                     )
-                )
             if experiment.agents.debaters[debater_idxs[1]].best_of_n and (
                 not second_offline_file_path or experiment.agents.debaters[debater_idxs[1]].best_of_n.recompute
             ):
@@ -580,15 +588,16 @@ class ExperimentLoader:
                         background_text=question_metadata.background_text,
                     )
                 )
-                flipped_round.set_first_debater(
-                    BestOfNDebater(
-                        debater=flipped_round.first_debater,
-                        opposing_debater=flipped_round.second_debater,
-                        judge=debate_round.judge,
-                        best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
-                        background_text=question_metadata.background_text,
+                if experiment.flip:
+                    flipped_round.set_first_debater(
+                        BestOfNDebater(
+                            debater=flipped_round.first_debater,
+                            opposing_debater=flipped_round.second_debater,
+                            judge=debate_round.judge,
+                            best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
+                            background_text=question_metadata.background_text,
+                        )
                     )
-                )
 
             if experiment.agents.debaters[debater_idxs[0]].model_settings.is_human:
                 debate_round.set_first_debater(HumanDebater(debater=debate_round.first_debater, speeches=speeches))

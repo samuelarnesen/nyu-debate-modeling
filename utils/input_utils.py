@@ -5,6 +5,8 @@ import pandas as pd
 from enum import Enum
 from typing import Union
 import os
+import re
+import sys
 
 
 class InputType(Enum):
@@ -44,13 +46,26 @@ class InputUtils:
             file_texts: A list of transcript contents.
         """
 
+        def get_idxs_of_file(file_name: str) -> tuple[int, int]:
+            suffix_pattern = "_(\d+)_(\d+)\." + input_type.extension
+            suffix = re.search(suffix_pattern, file_name)
+            if suffix:
+                return suffix.group(1), suffix.group(2)
+            return -1, -1
+
+        def sort_files_by_extension(file_names: list[str]) -> list[str]:
+            files_with_idxs = [(file_name, get_idxs_of_file(file_name)) for file_name in file_names]
+            files_with_idxs = sorted(files_with_idxs, key=lambda x: int(x[1][1]))
+            files_with_idxs = sorted(files_with_idxs, key=lambda x: int(x[1][0]))
+            return [x[0] for x in files_with_idxs]
+
         def list_files_with_prefix(directory: str, prefix: str):
             files = os.listdir(directory)
             matching_files = [
                 f"{directory}/{file}"
                 for file in filter(lambda x: x.startswith(prefix) and x.endswith(input_type.extension), files)
             ]
-            return matching_files
+            return sort_files_by_extension(matching_files)
 
         if isinstance(base_path, list):
             input_texts = []

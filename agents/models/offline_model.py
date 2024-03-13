@@ -342,8 +342,6 @@ class OfflineModelHelper:
         for row in self.dataset.get_data(split=split_type):
             if row.story_title.strip() == story_title.strip() and row.question.strip() == question.strip():
                 if row.positions[0] != self.parser.get_first_debater_answer(self.data[idx % len(self.data)]):
-                    if row.speeches:
-                        raise Exception("The speech orders are incompatible")
                     correct_answer = row.positions[row.correct_index]
                     row.positions = (row.positions[1], row.positions[0])
                     row.correct_index = 0 if correct_answer == row.positions[0] else 1
@@ -369,7 +367,7 @@ class OfflineModelHelper:
             alias: The alias of the model
             debater_name: The name of the debater (Debater_A, Debater_B) that will use the model since
                 OfflineModels are single use
-            idx: The index of the original round that was used (not the datsset index)
+            idx: The index of the original round that was used (not the dataset index)
             positions: tuple of (debater_a_position, debater_b_position)
             best_of_n_config: an optional config if one wants to resample from the multiple generated speeches.
                 For example, let's say you generated 16 speeches as part of a best-of-n generation but now want to check
@@ -405,6 +403,7 @@ class OfflineModelHelper:
         relevant_speeches = [
             speech for speech in filter(lambda x: self.parser.get_speaker_name(x) == debater_name_to_use, all_speeches)
         ]
+
         selected_speeches = []
         contender_speeches = []
         opponent_speeches = []
@@ -419,7 +418,12 @@ class OfflineModelHelper:
                 selected_speeches.append(best_option)
                 contender_speeches.append([c[0] for c in contenders])
                 if "bon_opposing_model_responses" in supplemental:
-                    opponent_speeches.append([resp["speech"] for resp in supplemental["bon_opposing_model_responses"]])
+                    opponent_speeches.append(
+                        [
+                            resp["speech"]
+                            for resp in filter(lambda x: x is not None, supplemental["bon_opposing_model_responses"])
+                        ]
+                    )
         else:
             selected_speeches = [self.parser.get_text(speech) for speech in relevant_speeches]
 
