@@ -529,8 +529,12 @@ class ExperimentLoader:
                         else (opponent_position, position),
                         best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                     )
-                elif experiment.speech_structure.flip_position_order and not debate_round.first_debater.model.speeches: # if the first debater speeches are missing in consultancy, then we should expect B to go first
+                elif (
+                    experiment.speech_structure.flip_position_order and not debate_round.first_debater.model.speeches
+                ):  # if the first debater speeches are missing in consultancy, then we should expect B to go first
+                    old_judge = debate_round.judge
                     debate_round.judge = flipped_judge
+                    flipped_round.judge = old_judge
 
             if second_offline_file_path:
                 helper = next((x for x in offline_model_helpers if x.file_path_prefix == second_offline_file_path))
@@ -552,7 +556,9 @@ class ExperimentLoader:
                         best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                     )
                 elif experiment.speech_structure.flip_position_order and not debate_round.first_debater.model.speeches:
+                    old_judge = debate_round.judge
                     debate_round.judge = flipped_judge
+                    flipped_round.judge = old_judge
 
             if experiment.agents.debaters[debater_idxs[0]].best_of_n and (
                 not first_offline_file_path or experiment.agents.debaters[debater_idxs[0]].best_of_n.recompute

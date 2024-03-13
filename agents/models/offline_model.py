@@ -129,7 +129,7 @@ class OfflineModel(Model):
         """
         super().__init__(alias=alias, is_debater=True)
         self.speech_idx = 0
-        self.speeches = speeches if speeches and isinstance(speeches[0], list) else [speeches]
+        self.speeches = speeches if speeches and isinstance(speeches[0], list) else ([speeches] if speeches else [])
 
     def predict(self, inputs: list[list[ModelInput] | str], **kwargs) -> ModelResponse:
         """Generates a list of texts in response to the given input."""
@@ -415,7 +415,8 @@ class OfflineModelHelper:
                     contenders.append((rejected_speech["speech"], rejected_speech["preference"]))
                 options = random.sample(contenders, k=best_of_n_config.n)
                 best_option = sorted(options, key=lambda x: float(x[1]), reverse=True)[0][0]
-                selected_speeches.append(best_option)
+                if best_option:
+                    selected_speeches.append(best_option)
                 contender_speeches.append([c[0] for c in contenders])
                 if "bon_opposing_model_responses" in supplemental:
                     opponent_speeches.append(
