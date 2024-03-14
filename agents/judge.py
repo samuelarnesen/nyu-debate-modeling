@@ -63,12 +63,16 @@ class Judge(Agent):
         self.num_speeches = num_speeches
 
     def generate(
-        self, max_new_tokens: int = 150, speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED
+        self, max_new_tokens: Optional[int] = None, speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED
     ) -> [list[ModelResponse]]:
         """Calls the underlying model to generate text"""
         model_inputs = [transcript.to_model_input() for transcript in self.transcripts]
         max_new_tokens = max_new_tokens if speech_structure == SpeechStructure.OPEN_ENDED else 15
-        return self.model.predict(inputs=model_inputs, max_new_tokens=max_new_tokens, speech_structure=speech_structure)
+        return self.model.predict(
+            inputs=model_inputs,
+            max_new_tokens=max_new_tokens or self.speech_format.tokens_per_speech,
+            speech_structure=speech_structure,
+        )
 
     def __call__(self) -> list[str | bool]:
         """

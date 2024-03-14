@@ -74,27 +74,30 @@ class QuotesCollector:
                 continue
             correct = is_correct(speech.speaker)
             winner = is_winner(speech.speaker)
-            only_one_alias = summary.winning_alias == summary.losing_alias
 
+            num_valid = 0
+            total = 0
             for quote in outputted_quotes:
+                total += 1
                 quote_length = len(quote.split())
                 if QuoteUtils.validate_quote(quote, summary.metadata.background_text, speech.content):
+                    num_valid += 1
                     self.alias_to_results[alias][constants.OVERALL].number_of_valid_quotes += 1
                     self.alias_to_results[alias][constants.OVERALL].total_valid_quote_length += quote_length
                     self.alias_to_results[alias][constants.OVERALL].quote_length_to_accuracy[quote_length][0] += 1
-                    if winner or only_one_alias:
+                    if winner:
                         self.alias_to_results[alias][constants.WINNER].number_of_valid_quotes += 1
                         self.alias_to_results[alias][constants.WINNER].total_valid_quote_length += quote_length
                         self.alias_to_results[alias][constants.WINNER].quote_length_to_accuracy[quote_length][0] += 1
-                    if not winner or only_one_alias:
+                    else:
                         self.alias_to_results[alias][constants.LOSER].number_of_valid_quotes += 1
                         self.alias_to_results[alias][constants.LOSER].total_valid_quote_length += quote_length
                         self.alias_to_results[alias][constants.LOSER].quote_length_to_accuracy[quote_length][0] += 1
-                    if correct or only_one_alias:
+                    if correct:
                         self.alias_to_results[alias][constants.CORRECT].number_of_valid_quotes += 1
                         self.alias_to_results[alias][constants.CORRECT].total_valid_quote_length += quote_length
                         self.alias_to_results[alias][constants.CORRECT].quote_length_to_accuracy[quote_length][0] += 1
-                    if not correct or only_one_alias:
+                    if not correct:
                         self.alias_to_results[alias][constants.INCORRECT].number_of_valid_quotes += 1
                         self.alias_to_results[alias][constants.INCORRECT].total_valid_quote_length += quote_length
                         self.alias_to_results[alias][constants.INCORRECT].quote_length_to_accuracy[quote_length][0] += 1
@@ -103,16 +106,16 @@ class QuotesCollector:
 
                 self.alias_to_results[alias][constants.OVERALL].number_of_quotes += 1
                 self.alias_to_results[alias][constants.OVERALL].quote_length_to_accuracy[quote_length][1] += 1
-                if winner or only_one_alias:
+                if winner:
                     self.alias_to_results[alias][constants.WINNER].number_of_quotes += 1
                     self.alias_to_results[alias][constants.WINNER].quote_length_to_accuracy[quote_length][1] += 1
-                if not winner or only_one_alias:
+                if not winner:
                     self.alias_to_results[alias][constants.LOSER].number_of_quotes += 1
                     self.alias_to_results[alias][constants.LOSER].quote_length_to_accuracy[quote_length][1] += 1
-                if correct or only_one_alias:
+                if correct:
                     self.alias_to_results[alias][constants.CORRECT].number_of_quotes += 1
                     self.alias_to_results[alias][constants.CORRECT].quote_length_to_accuracy[quote_length][1] += 1
-                if not correct or only_one_alias:
+                if not correct:
                     self.alias_to_results[alias][constants.INCORRECT].number_of_quotes += 1
                     self.alias_to_results[alias][constants.CORRECT].quote_length_to_accuracy[quote_length][1] += 1
 

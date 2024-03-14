@@ -611,8 +611,8 @@ class ResultsCollector:
                 axs[i].set_xlabel("Features")
             axs[i].legend()
 
-        plt.show()
         self.__save_graph("Features")
+        plt.show()
         return {"average": average, "lower": lower, "upper": upper}
 
     def __organize_into_df(self):
@@ -715,7 +715,7 @@ class ResultsCollector:
                 with open(f"{self.stats_path_prefix}.json", "w") as f:
                     json.dump(all_stats, f)
         except:
-            print("huh we got an exception")
+            self.logger.error("huh we got an exception")
 
         self.__organize_into_df()
 

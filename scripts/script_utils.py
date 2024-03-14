@@ -59,11 +59,11 @@ class ScriptUtils:
         if requested == "debug":
             specified = logging.DEBUG
         elif requested == "info":
-            specified == logging.INFO
+            specified = logging.INFO
         elif requested == "warn":
-            specified == logging.WARN
+            specified = logging.WARN
         elif requested == "error":
-            specified == logging.ERROR
+            specified = logging.ERROR
         else:
             raise Exception(f"Request log level {requested} is not eligible")
 

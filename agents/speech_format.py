@@ -109,15 +109,17 @@ class SpeechFormatStructure(Enum):
 
 
 class SpeechFormat:
-    def __init__(self, name: str):
+    def __init__(self, name: str, tokens_per_speech: int = 300):
         """
         A structure corresponding to the order of speeches and prompts that are expected to be delivered.
 
         Params:
             name: The name of the debater who is using this structure.
+            tokens_per_speech: The length of each speech in tokens
         """
         self.progression = []
         self.name = name
+        self.tokens_per_speech = tokens_per_speech
 
     def add(
         self,
@@ -245,7 +247,7 @@ class SpeechFormat:
         )
 
         return (
-            SpeechFormat(name)
+            SpeechFormat(name=name, tokens_per_speech=300)
             .add_format(speech_format=pre_debate)
             .add_format(speech_format=opening_statements)
             .add_format(speech_format=later_arguments, repeats=(num_speeches - 1))
@@ -296,7 +298,7 @@ class SpeechFormat:
         ).add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
 
         return (
-            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
+            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME, tokens_per_speech=150)
             .add_format(speech_format=pre_debate_speech_format)
             .add_format(speech_format=opening_speech_speech_format)
             .add_format(speech_format=argument_speech_format, repeats=(num_speeches - 1))
@@ -346,7 +348,7 @@ class SpeechFormat:
         )
 
         return (
-            SpeechFormat(name)
+            SpeechFormat(name=name, tokens_per_speech=600)
             .add_format(speech_format=pre_debate)
             .add_format(speech_format=opening_statements)
             .add_format(speech_format=later_arguments, repeats=(num_speeches - 1))
@@ -399,7 +401,7 @@ class SpeechFormat:
         ).add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
 
         return (
-            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
+            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME, tokens_per_speech=150)
             .add_format(speech_format=pre_debate_speech_format)
             .add_format(speech_format=opening_speech_speech_format)
             .add_format(speech_format=later_speech_format, repeats=(num_speeches - 1))
@@ -413,7 +415,7 @@ class SpeechFormat:
     @classmethod
     def empty_round_judge_format(cls, **kwargs) -> SpeechFormat:
         return (
-            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
+            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME, tokens_per_speech=150)
             .add(prompt_tag=PromptTag.OVERALL_SYSTEM)
             .add(prompt_tag=PromptTag.JUDGE_SYSTEM)
             .add(prompt_tag=PromptTag.PRE_DEBATE_JUDGE)

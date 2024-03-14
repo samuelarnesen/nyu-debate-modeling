@@ -58,11 +58,14 @@ class Debater(Agent):
         self.quotes_require_validation = quotes_require_validation
         self.logger = LoggerUtils.get_default_logger(__name__)
 
-    def generate(self, max_new_tokens=300, round_idx: int = 0) -> Optional[list[ModelResponse]]:
+    def generate(self, max_new_tokens: Optional[int] = None, round_idx: int = 0) -> Optional[list[ModelResponse]]:
         """Generates new text using the pre-existing transcript as input"""
         model_inputs = [transcript.to_model_input() for transcript in self.transcripts]
         return self.model.predict(
-            inputs=model_inputs, max_new_tokens=max_new_tokens, debater_name=self.name, round_idx=round_idx
+            inputs=model_inputs,
+            max_new_tokens=max_new_tokens or self.speech_format.tokens_per_speech,
+            debater_name=self.name,
+            round_idx=round_idx,
         )
 
     def copy(
@@ -94,7 +97,7 @@ class Debater(Agent):
                 super().receive_message(speaker=self.name, content=reasoning, idx=i)
                 self.logger.debug(reasoning)
 
-        generation = self.generate(max_new_tokens=300)
+        generation = self.generate()
         all_speeches = [gen.speech for gen in generation]
 
         if self.scratchpad_config.use_scratchpad and self.scratchpad_config.scratchpad_public:
@@ -131,7 +134,7 @@ class BestOfNDebater(Debater):
         # just doing round 1 for now and unbatched inputs
         model_responses = self.model.predict(
             inputs=[self.transcripts[0].to_model_input() for _ in range(self.config.n)],
-            max_new_tokens=300,
+            max_new_tokens=self.speech_format.tokens_per_speech,
             debater_name=self.name,
         )
         speeches = [
@@ -142,7 +145,7 @@ class BestOfNDebater(Debater):
         if self.config.opponent_n:
             opposing_debater_responses = self.model.predict(
                 inputs=[self.base_opponent_transcript.to_model_input() for _ in range(self.config.opponent_n)],
-                max_new_tokens=300,
+                max_new_tokens=self.speech_format.tokens_per_speech,
                 debater_name=self.opposing_debater.name,
             )
 

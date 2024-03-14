@@ -211,7 +211,7 @@ class LLModel(Model):
     def predict(
         self,
         inputs: list[list[ModelInput]],
-        max_new_tokens=300,
+        max_new_tokens: int = 300,
         speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED,
         num_return_sequences: int = 1,
         **kwargs,
