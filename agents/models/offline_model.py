@@ -12,6 +12,7 @@ import copy
 import json
 import os
 import random
+import sys
 
 
 class OfflineDataFormatParser(ABC):
@@ -389,10 +390,12 @@ class OfflineModelHelper:
         debater_a_position = self.parser.get_first_debater_answer(entry)
         debater_b_position = self.parser.get_second_debater_answer(entry)
 
+        all_speakers = set([self.parser.get_speaker_name(speech) for speech in all_speeches])  # needed for consultancy
+
         is_flipped = debater_a_position == positions[1] and debater_b_position == positions[0]
         debater_name_to_use = (
             debater_name
-            if not is_flipped
+            if not is_flipped or constants.DEFAULT_DEBATER_A_NAME not in all_speakers
             else (
                 constants.DEFAULT_DEBATER_A_NAME
                 if debater_name == constants.DEFAULT_DEBATER_B_NAME

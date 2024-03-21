@@ -126,8 +126,17 @@ class OpenAIModel(Model):
             completion = self.call_openai(
                 messages=messages, max_new_tokens=max_new_tokens, speech_structure=speech_structure
             )
-        except Exception as e:
-            self.logger.warn("Received an exception while calling OpenAI")
+        except openai.APIError as e:
+            self.logger.warn(f"OpenAI API returned an API Error: {e}")
+            self.logger.warn(e)
+            return ModelResponse(failed=True)
+        except openai.APIConnectionError as e:
+            self.logger.warn(f"Failed to connect to OpenAI API: {e}")
+            self.logger.warn(e)
+            return ModelResponse(failed=True)
+        except openai.RateLimitError as e:
+            self.logger.warn(f"OpenAI API request exceeded rate limit: {e}")
+            self.logger.warn(e)
             return ModelResponse(failed=True)
 
         message = completion.choices[0].message.content
@@ -155,7 +164,7 @@ class OpenAIModel(Model):
 
         return ModelResponse(speech=message, prompt="\n".join(model_input.content for model_input in model_input_list))
 
-    @backoff.on_exception(backoff.expo, backoff.on_exception, max_tries=1)
+    @backoff.on_exception(backoff.expo, backoff.on_exception, max_tries=4)
     def call_openai(
         self, messages: list[dict[str, str]], speech_structure: SpeechStructure, max_new_tokens: int
     ) -> openai.ChatCompletion:

@@ -183,7 +183,7 @@ class BestOfNDebater(Debater):
         )
 
         split_judge_response = [
-            [resp.probabilistic_decision[self.name] for resp in judge_model_response[i : i + self.config.opponent_n]]
+            [resp.probabilistic_decision[self.name] for resp in judge_model_response[i : i + max(self.config.opponent_n, 1)]]
             for i in range(0, len(judge_model_response), max(self.config.opponent_n, 1))
         ]
         scores = [

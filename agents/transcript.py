@@ -109,6 +109,10 @@ class Transcript:
                 return speech
         return ""
 
+    def get_speakers(self) -> set[str]:
+        """Gets a list of all the speakers who appear in the transcript"""
+        return set([speech.speaker for speech in self.speeches])
+
     def get_next_expected_speaker(self) -> Optional[str]:
         """Gets the name of the next agent that is expected to deliver a speech"""
         expected_speakers = [expected_speaker for _, _, _, expected_speaker in filter(lambda x: x[-1], self.speech_format)]

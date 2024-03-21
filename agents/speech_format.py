@@ -348,7 +348,7 @@ class SpeechFormat:
         )
 
         return (
-            SpeechFormat(name=name, tokens_per_speech=600)
+            SpeechFormat(name=name, tokens_per_speech=300)
             .add_format(speech_format=pre_debate)
             .add_format(speech_format=opening_statements)
             .add_format(speech_format=later_arguments, repeats=(num_speeches - 1))

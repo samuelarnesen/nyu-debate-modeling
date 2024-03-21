@@ -37,6 +37,8 @@ class DebateRoundSummary(BaseModel):
     winning_debater_prob: float = 1.0
     first_debater_win_prob: float = 0.5
     second_debater_win_prob: float = 0.5
+    first_debater_speaks: bool = True
+    second_debater_speaks: bool = True
     failed: bool = False
 
 
@@ -161,6 +163,8 @@ class DebateRound:
                 second_debater_win_prob=(1 - winning_probability_list[i])
                 if first_debater_wins
                 else winning_probability_list[i],
+                first_debater_speaks=constants.DEFAULT_DEBATER_A_NAME in self.judge.get_transcript(idx=i).get_speakers(),
+                second_debater_speaks=constants.DEFAULT_DEBATER_B_NAME in self.judge.get_transcript(idx=i).get_speakers(),
                 failed=failed_list[i],
             )
             for i, first_debater_wins in enumerate(first_debater_win_list)
