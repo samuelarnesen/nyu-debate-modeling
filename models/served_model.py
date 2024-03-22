@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from models.model import Model, ModelInput, ModelResponse, SpeechStructure
 from models.llm_model import GenerationParams, LLModel
-from utils import LoggerUtils, timer
+from utils import logger_utils, timer
 
 from pydantic import BaseModel
 import requests
@@ -38,7 +38,7 @@ class ServedModel(Model):
         """
         super().__init__(alias=base_model.alias, is_debater=base_model.is_debater)
         self.base_model = base_model
-        self.logger = LoggerUtils.get_default_logger(__name__)
+        self.logger = logger_utils.get_default_logger(__name__)
 
     def fetch(self, input_string: str) -> str:
         """Hits the default endpoint for the served model"""

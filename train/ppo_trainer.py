@@ -4,7 +4,7 @@ from data import DataRow, RawDataset, SplitType
 from models import OpenAIModel, RandomModel, SpeechStructure
 from train.row_converter import RowConverter
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
-from utils import LoggingCallback, LoggerUtils, StringUtils
+from utils import LoggingCallback, logger_utils, string_utils
 import utils.constants as constants
 
 from datasets import Dataset
@@ -164,7 +164,7 @@ class PPOTrainerWrapper:
             use_cache=True,
             pad_token_id=self.ppo_trainer.tokenizer.eos_token_id,
         )
-        self.logger = LoggerUtils.get_default_logger(__name__)
+        self.logger = logger_utils.get_default_logger(__name__)
 
     def train(self):
         """Runs the training loop for 1 epoch"""
@@ -192,13 +192,13 @@ class PPOTrainerWrapper:
 
             reward_tensors = []
             for j in range(len(response_tensors)):
-                decoded = StringUtils.clean_string(
+                decoded = string_utils.clean_string(
                     self.ppo_trainer.tokenizer.decode(
                         response_tensors[j, -PPOTrainerWrapper.MAX_GENERATION_LENGTH :].to("cpu")
                     )
                 )
 
-                opponent_decoded = StringUtils.clean_string(
+                opponent_decoded = string_utils.clean_string(
                     self.ppo_trainer.tokenizer.decode(
                         opponent_response_tensors[i, -PPOTrainerWrapper.MAX_GENERATION_LENGTH :].to("cpu")
                     )

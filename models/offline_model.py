@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from data import DataRow, RawDataset, SplitType
 from models.model import BestOfNConfig, Model, ModelInput, ModelResponse
-from utils import InputType, InputUtils
+from utils import InputType, input_utils
 import utils.constants as constants
 
 from abc import ABC, abstractmethod
@@ -229,11 +229,11 @@ class OfflineModelHelper:
 
         self.data = []
 
-        json_texts = InputUtils.read_file_texts(base_path=file_path_prefix, input_type=InputType.JSON_TRANSCRIPT)
+        json_texts = input_utils.read_file_texts(base_path=file_path_prefix, input_type=InputType.JSON_TRANSCRIPT)
         if json_texts:
             self.data.extend([json.loads(text) for text in json_texts])
 
-        jsonl_texts = InputUtils.read_file_texts(base_path=file_path_prefix, input_type=InputType.JSON_LIST)
+        jsonl_texts = input_utils.read_file_texts(base_path=file_path_prefix, input_type=InputType.JSON_LIST)
         if jsonl_texts:
             self.data.extend([json.loads(line) for line in filter(lambda x: x, jsonl_texts[0].split("\n"))])
 

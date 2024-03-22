@@ -3,7 +3,7 @@ from __future__ import annotations
 from models.model import Model, ModelInput, ModelResponse, ProbeHyperparams, SpeechStructure
 from models.openai_model import OpenAIModel
 from prompts import RoleType
-from utils import LoggerUtils, StringUtils, timer
+from utils import logger_utils, string_utils, timer
 import utils.constants as constants
 
 from pydantic import BaseModel
@@ -72,7 +72,7 @@ class LLModel(Model):
         """
         super().__init__(alias=alias, is_debater=is_debater)
         torch.cuda.empty_cache()
-        self.logger = LoggerUtils.get_default_logger(__name__)
+        self.logger = logger_utils.get_default_logger(__name__)
         self.instruction_prefix = instruction_prefix
         self.instruction_suffix = instruction_suffix
         self.instantiated_model = False
@@ -283,7 +283,7 @@ class LLModel(Model):
             if self.is_debater or speech_structure != SpeechStructure.DECISION:
                 decoded = self.tokenizer.decode(sequences[i][input_lengths[min(i, len(input_lengths) - 1)] :])
                 new_tokens = decoded.split(constants.INSTRUCTION_SUFFIX)[-1]
-                decoded_outputs.append(ModelResponse(speech=StringUtils.clean_string(new_tokens), prompt=input_strs[i]))
+                decoded_outputs.append(ModelResponse(speech=string_utils.clean_string(new_tokens), prompt=input_strs[i]))
             else:
                 internal_representations = []
                 if isinstance(self.model, LLModuleWithLinearProbe):

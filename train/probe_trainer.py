@@ -3,7 +3,7 @@ from __future__ import annotations
 from data import JudgingProbeDataRow, QualityJudgingDataset, RawDataset, SplitType
 from models import LLModuleWithLinearProbe, ProbeHyperparams
 from train.train_utils import TrainingConfig, TrainUtils
-from utils import LoggerUtils
+from utils import logger_utils
 
 from pydantic import BaseModel
 import torch.nn as nn
@@ -21,7 +21,7 @@ class ProbeTrainer:
         self.probe = model
         self.dataset = dataset
         self.config = config
-        self.logger = LoggerUtils.get_default_logger(__name__)
+        self.logger = logger_utils.get_default_logger(__name__)
         # self.loss_func = nn.CrossEntropyLoss()
         self.loss_func = nn.BCEWithLogitsLoss()
 

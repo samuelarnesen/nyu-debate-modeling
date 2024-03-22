@@ -3,7 +3,7 @@ from script_utils import ScriptUtils
 ScriptUtils.setup_script()
 
 from experiments import ExperimentLoader, ResultsCollector
-from utils import LoggerUtils
+from utils import logger_utils
 
 from tqdm import tqdm
 
@@ -12,7 +12,7 @@ from datetime import datetime
 args = ScriptUtils.get_args()
 config = ScriptUtils.get_debate_round_script_config(args)
 start_time = str(datetime.now()).replace(" ", "_")
-logger = LoggerUtils.get_default_logger(__name__)
+logger = logger_utils.get_default_logger(__name__)
 should_save = not args.local
 
 debate_rounds, experiment = ExperimentLoader.generate_debate_rounds(

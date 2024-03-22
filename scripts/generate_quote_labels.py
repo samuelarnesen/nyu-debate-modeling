@@ -5,7 +5,7 @@ ScriptUtils.setup_script()
 from data import QuoteRelevanceLoader, QuoteRelevanceDataset, QuoteRelevanceProcessedBatchItem, QuoteRelevanceTopicInfo
 from models import OpenAIModel, ModelInput
 from prompts import RoleType
-from utils import InputUtils
+from utils import input_utils
 import utils.constants as constants
 
 from pydantic import BaseModel
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     model = OpenAIModel(alias="relevance-judge", is_debater=False) if not args.test else FakeOpenAIModel()
-    input_texts = InputUtils.read_file_texts(base_path=f"{root}outputs/transcripts/{args.timestamp}")
+    input_texts = input_utils.read_file_texts(base_path=f"{root}outputs/transcripts/{args.timestamp}")
 
     results = []
     current_batch = []

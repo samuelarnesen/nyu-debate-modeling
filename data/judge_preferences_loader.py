@@ -1,6 +1,6 @@
 from data.dataset import DataRow, DatasetType, JudgePreferenceDataRow, RawDataLoader, RawDataset, SplitType
 from data.quality_loader import QualityLoader
-from utils import InputType, InputUtils, QuoteUtils
+from utils import InputType, input_utils, quote_utils
 import utils.constants as constants
 
 from typing import Any, Optional
@@ -65,10 +65,10 @@ class JudgePreferencesLoader(RawDataLoader):
             speech = speech.replace(constants.INVALID_QUOTE_TAG, constants.QUOTE_TAG).replace(
                 constants.INVALID_UNQUOTE_TAG, constants.UNQUOTE_TAG
             )
-            return QuoteUtils.clean_up_quotes(speech_content=speech)
+            return quote_utils.clean_up_quotes(speech_content=speech)
 
         train_data = []
-        input_texts = InputUtils.read_file_texts(base_path=full_dataset_filepath, input_type=InputType.JSON_TRANSCRIPT)
+        input_texts = input_utils.read_file_texts(base_path=full_dataset_filepath, input_type=InputType.JSON_TRANSCRIPT)
         for text in input_texts:
             data = json.loads(text)
             for selected in filter(

@@ -1,6 +1,6 @@
 from data.dataset import DataRow, DatasetType, JudgingProbeDataRow, RawDataLoader, RawDataset, SplitType
 from data.quality_loader import QualityLoader
-from utils import InputType, InputUtils
+from utils import InputType, input_utils
 import utils.constants as constants
 
 import torch
@@ -88,7 +88,7 @@ class QualityJudgingLoader(RawDataLoader):
         quality_dataset = QualityLoader.load(full_dataset_filepath=quality_filepath)
 
         data_list = []
-        input_texts = InputUtils.read_file_texts(base_path=full_dataset_filepath, input_type=InputType.JSON_TRANSCRIPT)
+        input_texts = input_utils.read_file_texts(base_path=full_dataset_filepath, input_type=InputType.JSON_TRANSCRIPT)
         for text in input_texts:
             data = json.loads(text)
             row = get_original_data_row(data=data, dataset=quality_dataset)

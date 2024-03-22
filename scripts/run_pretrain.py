@@ -4,7 +4,7 @@ ScriptUtils.setup_script()
 
 from data import AnnotatedQualityDebatesLoader, QualityDebatesLoader, RawDataset
 from train import PretrainTrainer, TrainUtils
-from utils import SaveUtils
+from utils import save_utils
 
 args = ScriptUtils.get_args()
 script_config = ScriptUtils.get_training_run_script_config(args, train_type=TrainType.PRETRAIN)
@@ -16,7 +16,7 @@ trainer.save_model()
 
 if config.logging_and_saving_config.merge_output_dir:
     trainer = None
-    SaveUtils.save(
+    save_utils.save(
         base_model_name=config.model_name,
         adapter_name=config.logging_and_saving_config.output_dir,
         merge_name=config.logging_and_saving_config.merge_output_dir,

@@ -1,6 +1,6 @@
 from debate import DebateRoundSummary
 from experiments.experiment_loader import ExperimentConfig, ExperimentLoader
-from utils import LoggerUtils, QuoteUtils
+from utils import logger_utils, quote_utils
 import utils.constants as constants
 
 from pydantic import BaseModel
@@ -22,7 +22,7 @@ class QuotesCollector:
 
     def __init__(self, experiment: ExperimentConfig):
         """Collects metrics about quotation usage from debate rounds"""
-        self.logger = LoggerUtils.get_default_logger(__name__)
+        self.logger = logger_utils.get_default_logger(__name__)
         self.dataset = ExperimentLoader.create_dataset(experiment)
         self.alias_to_results = {}
 
@@ -68,7 +68,7 @@ class QuotesCollector:
             add_new_alias(summary.second_debater_alias)
 
         for speech in summary.transcript.speeches:
-            outputted_quotes = QuoteUtils.extract_quotes(speech.content)
+            outputted_quotes = quote_utils.extract_quotes(speech.content)
             alias = get_alias_from_speaker(speech.speaker)
             if alias == constants.DEFAULT_JUDGE_NAME:
                 continue
@@ -80,7 +80,7 @@ class QuotesCollector:
             for quote in outputted_quotes:
                 total += 1
                 quote_length = len(quote.split())
-                if QuoteUtils.validate_quote(quote, summary.metadata.background_text, speech.content):
+                if quote_utils.validate_quote(quote, summary.metadata.background_text, speech.content):
                     num_valid += 1
                     self.alias_to_results[alias][constants.OVERALL].number_of_valid_quotes += 1
                     self.alias_to_results[alias][constants.OVERALL].total_valid_quote_length += quote_length

@@ -2,7 +2,7 @@ from debate import DebateRoundSummary, QuestionMetadata
 from experiments.annotator import Annotator
 from experiments.experiment_loader import ExperimentConfig, ExperimentLoader
 from experiments.quotes_collector import QuotesCollector
-from utils import InputType, InputUtils, LoggerUtils
+from utils import InputType, input_utils, logger_utils
 import utils.constants as constants
 
 from pydantic import BaseModel
@@ -82,7 +82,7 @@ class ResultsCollector:
             stats_path_prefix: the directory and experiment name where the summary stats are to be saved
             should_save: whether or not to actually save the metrics
         """
-        self.logger = LoggerUtils.get_default_logger(__name__)
+        self.logger = logger_utils.get_default_logger(__name__)
         self.quotes_collector = QuotesCollector(experiment=experiment) if experiment else None
         self.annotator = Annotator(model_path=experiment.annotations_classifier_file_path) if should_save else None
         self.experiment = experiment
@@ -729,7 +729,7 @@ class ResultsCollector:
 
         summaries = []
         for fp in self.experiment.previous_run.file_path:
-            offline_file_path_prefix = InputUtils.get_full_filepath(base_path=fp, input_type=InputType.RUN)
+            offline_file_path_prefix = input_utils.get_full_filepath(base_path=fp, input_type=InputType.RUN)
             df = pd.read_csv(f"{offline_file_path_prefix}_run.csv")
             for i, row in df.iterrows():
                 summary = DebateRoundSummary(

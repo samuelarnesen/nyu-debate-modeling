@@ -28,10 +28,10 @@ try:
 except Exception:
     raise ModuleNotFoundError("Please install einops first, e.g., with pip install einops")
 
-from utils.logger_utils import LoggerUtils
+from utils.logger_utils import logger_utils
 
 
-LOGGER = LoggerUtils.get_default_logger(__name__)
+LOGGER = logger_utils.get_default_logger(__name__)
 
 
 # Disable the transformation of the attention mask in LlamaModel as the flash attention

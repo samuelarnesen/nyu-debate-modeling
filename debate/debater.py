@@ -5,7 +5,7 @@ from models import BestOfNConfig, HumanModel, Model, ModelResponse, SpeechStruct
 from debate.speech_format import SpeechFormat, SpeechFormatType, SpeechFormatStructure
 from debate.transcript import SpeechFormat, Transcript
 from prompts import Prompt
-from utils import LoggerUtils, QuoteUtils
+from utils import logger_utils, quote_utils
 import utils.constants as constants
 
 from pydantic import BaseModel
@@ -56,7 +56,7 @@ class Debater(Agent):
         )
         self.scratchpad_config = scratchpad_config
         self.quotes_require_validation = quotes_require_validation
-        self.logger = LoggerUtils.get_default_logger(__name__)
+        self.logger = logger_utils.get_default_logger(__name__)
 
     def generate(self, max_new_tokens: Optional[int] = None, round_idx: int = 0) -> Optional[list[ModelResponse]]:
         """Generates new text using the pre-existing transcript as input"""
@@ -138,7 +138,9 @@ class BestOfNDebater(Debater):
             debater_name=self.name,
         )
         speeches = [
-            QuoteUtils.validate_and_replace_quotes(speech_content=str(response.speech), background_text=self.background_text)
+            quote_utils.validate_and_replace_quotes(
+                speech_content=str(response.speech), background_text=self.background_text
+            )
             for response in model_responses
         ]
 
@@ -150,7 +152,7 @@ class BestOfNDebater(Debater):
             )
 
             opposing_speeches = [
-                QuoteUtils.validate_and_replace_quotes(
+                quote_utils.validate_and_replace_quotes(
                     speech_content=str(opposing_response.speech), background_text=self.background_text
                 )
                 for opposing_response in opposing_debater_responses

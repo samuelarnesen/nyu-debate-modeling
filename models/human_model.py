@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from models.model import Model, ModelInput, ModelResponse
 from data import SpeakerType, SpeechData
-from utils import LoggerUtils
+from utils import logger_utils
 import utils.constants as constants
 
 from typing import Union, Optional
@@ -26,7 +26,7 @@ class HumanModel(Model):
         ]
         self.speech_idx = 0
         self.debater_name = debater_name
-        self.logger = LoggerUtils.get_default_logger(__name__)
+        self.logger = logger_utils.get_default_logger(__name__)
 
     def predict(self, inputs: list[list[ModelInput]], **kwargs) -> ModelResponse:
         """

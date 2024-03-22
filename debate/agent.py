@@ -1,7 +1,7 @@
 from debate.transcript import SpeechFormat, Transcript
 from models import BestOfNConfig, Model, ModelSettings
 from prompts import Prompt
-from utils import LoggerUtils
+from utils import logger_utils
 
 from pydantic import BaseModel, ConfigDict, model_validator
 

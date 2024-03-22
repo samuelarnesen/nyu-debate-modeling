@@ -5,7 +5,7 @@ from debate.speech_format import SpeechFormat, SpeechFormatType
 from debate.transcript import SpeechFormat, SpeechType, Transcript
 from models import Model, ModelResponse, SpeechStructure
 from prompts import Prompt, PromptTag
-from utils import LoggerUtils
+from utils import logger_utils
 import utils.constants as constants
 
 from enum import Enum
@@ -56,7 +56,7 @@ class Judge(Agent):
                 name=name, num_speeches=num_speeches, use_scratchpad=scratchpad_config.use_scratchpad
             ),
         )
-        self.logger = LoggerUtils.get_default_logger(__name__)
+        self.logger = logger_utils.get_default_logger(__name__)
         self.speech_structure = speech_structure
         self.expected_saver = expected_saver
         self.scratchpad_config = scratchpad_config

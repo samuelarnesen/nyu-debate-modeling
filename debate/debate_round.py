@@ -4,7 +4,7 @@ from debate.judge import Judge
 from debate.transcript import Transcript
 from models import ModelResponse
 from prompts import Prompt, PromptConfig, PromptParser
-from utils import LoggerUtils, QuoteUtils
+from utils import logger_utils, quote_utils
 import utils.constants as constants
 
 from pydantic import BaseModel
@@ -65,7 +65,7 @@ class DebateRound:
             self.second_debater.name: self.second_debater,
             self.judge.name: self.judge,
         }
-        self.logger = LoggerUtils.get_default_logger(__name__)
+        self.logger = logger_utils.get_default_logger(__name__)
 
     def set_first_debater(self, debater: Debater):
         """Changes the identity of the first debater in the debate."""
@@ -105,7 +105,7 @@ class DebateRound:
             for idx, (response, output) in enumerate(zip(batch_response, model_output)):
                 validated_response = str(response)
                 if speaker.quotes_require_validation:
-                    validated_response = QuoteUtils.validate_and_replace_quotes(
+                    validated_response = quote_utils.validate_and_replace_quotes(
                         speech_content=str(response),
                         background_text=self.metadata[min(idx, len(self.metadata) - 1)].background_text,
                     )

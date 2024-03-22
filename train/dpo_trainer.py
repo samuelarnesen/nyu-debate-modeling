@@ -1,7 +1,7 @@
 from data import DataRow, RawDataset, SplitType
 from train.row_converter import RowConverter
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
-from utils import LoggingCallback, LoggerUtils
+from utils import LoggingCallback, logger_utils
 import utils.constants as constants
 
 from datasets import Dataset

@@ -12,7 +12,7 @@ from debate import (
 from data import DatasetConfig, DatasetType, LoaderUtils, RawDataLoader, RawDataset, SplitType
 from models import Model, ModelSettings, ModelType, ModelUtils, OfflineModelHelper, ServedModel
 from prompts import Prompt, PromptConfig, PromptLoadingConfig, PromptParser
-from utils import LoggerUtils
+from utils import logger_utils
 import utils.constants as constants
 
 from pydantic import BaseModel, model_validator, field_validator
@@ -195,7 +195,7 @@ class ExperimentLoader:
         """
 
         # create logger
-        logger = LoggerUtils.get_default_logger(__name__)
+        logger = logger_utils.get_default_logger(__name__)
 
         first_alias = experiment.agents.debaters[debater_idxs[0]].model_settings.alias
         second_alias = experiment.agents.debaters[debater_idxs[1]].model_settings.alias

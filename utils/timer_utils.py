@@ -1,4 +1,4 @@
-from utils.logger_utils import LoggerUtils
+import utils.logger_utils as logger_utils
 
 from functools import wraps
 import time
@@ -15,7 +15,7 @@ def timer(custom_name: str = None):
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
             name = custom_name if custom_name else func.__name__
-            LoggerUtils.get_default_logger(__name__).debug(f"{name} completed in {elapsed_time:.1f} seconds")
+            logger_utils.get_default_logger(__name__).debug(f"{name} completed in {elapsed_time:.1f} seconds")
             return result
 
         return wrapper

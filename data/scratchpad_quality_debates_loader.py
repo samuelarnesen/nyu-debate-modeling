@@ -1,6 +1,6 @@
 from data.dataset import DataRow, DatasetType, RawDataLoader, SpeechData, SplitType
 from data.quality_debates_loader import QualityDebatesLoader, QualityDebatesDataset, QualityTranscriptsLoader
-from utils import QuoteUtils
+from utils import quote_utils
 import utils.constants as constants
 
 from tqdm import tqdm
@@ -34,9 +34,9 @@ class ScratchpadQualityDebatesDataset(QualityDebatesDataset):
                     self._generate_scratchpad(speech=speech, row=row)
 
     def _generate_scratchpad(self, speech: SpeechData, row: DataRow) -> Optional[str]:
-        original_quotes = QuoteUtils.extract_quotes(speech.text)
+        original_quotes = quote_utils.extract_quotes(speech.text)
         contexts = [
-            QuoteUtils.extract_quote_context(
+            quote_utils.extract_quote_context(
                 quote_text=quote,
                 background_text=row.background_text,
                 context_size=ScratchpadQualityDebatesDataset.CONTEXT_SIZE,

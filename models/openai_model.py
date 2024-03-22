@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from models.model import Model, ModelInput, ModelResponse, RoleType, SpeechStructure
-from utils import LoggerUtils
+from utils import logger_utils
 import utils.constants as constants
 
 import backoff
@@ -35,7 +35,7 @@ class OpenAIModel(Model):
         self.__configure()
         self.client = openai.OpenAI()
         self.endpoint = endpoint if endpoint else OpenAIModel.DEFAULT_OPENAI_MODEL_ENDPOINT
-        self.logger = LoggerUtils.get_default_logger(__name__)
+        self.logger = logger_utils.get_default_logger(__name__)
 
     def __configure(self):
         openai.organization = os.getenv("OPENAI_ORGANIZATION")

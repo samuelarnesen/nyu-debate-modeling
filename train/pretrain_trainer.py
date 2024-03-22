@@ -1,6 +1,6 @@
 from data import RawDataset, SplitType
 from train.train_utils import TrainUtils, TrainingConfig
-from utils import LoggingCallback, LoggerUtils, StringUtils
+from utils import LoggingCallback, logger_utils
 
 from datasets import Dataset
 from peft import prepare_model_for_kbit_training, get_peft_model
@@ -71,7 +71,7 @@ class PretrainTrainer:
         Returns:
             trainer: One can call trainer.train() to then run the training loop.
         """
-        logger = LoggerUtils.get_default_logger(__name__)
+        logger = logger_utils.get_default_logger(__name__)
         if not raw_dataset:
             raw_dataset = TrainUtils.create_dataset(config=config)
 
