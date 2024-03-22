@@ -89,7 +89,7 @@ Offline_Test:
       - model_settings:
           alias: first-debater
           model_type: offline
-          offline_file_path: 2024-01-22_10:29:41.012114
+          offline_file_path: 2024-01-30_18_00_30.899060
     judge:
       model_settings:
         model_type: random
@@ -98,6 +98,7 @@ Offline_Test:
         use_scratchpad: True
   dataset:
     dataset_type: quality
+    split_type: val
 Quality_Test:
   batch_size: 1
   num_speeches: 1
@@ -195,9 +196,9 @@ Previous_Run_To_Replicate_Test:
   flip: True
   enable_self_debate: True
   previous_run:
-    file_path: 2024-02-02_15:40:51.184947
+    file_path: 2024-01-30_18_00_30.899060
     replicate_topics: True
-    merge_results: True
+    merge_results: False
   agents:
     debaters:
       - model_settings:
@@ -242,7 +243,7 @@ Stub_LLM_Test:
   num_speeches: 1
   flip: False
   enable_self_debate: True
-  speech_structure: default_consultancy
+  speech_structure: default_debate
   agents:
     debaters:
       - model_settings:
@@ -250,12 +251,12 @@ Stub_LLM_Test:
           alias: stub_llm_one
         best_of_n:
           n: 8
-          opponent_n: 0
+          opponent_n: 2
           maxmin: False
     judge:
       model_settings:
-        model_type: deterministic
-        alias: deterministic-judge
+        model_type: random
+        alias: random-judge
   dataset:
     dataset_type: quality_debates
     split_type: val
