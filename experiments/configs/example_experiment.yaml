@@ -2,27 +2,23 @@ MyExperiment: # The name of your experiment
   batch_size: 1 # Number of rounds to be processed simultaneously
   num_speeches: 1 # Number of speeches that each debater will give per round
   flip: True # Whether each debater will debate each side of the debate
+  enable_self_debate: True # Whether self-play is allowed or just cross-play
+  speech_structure: default_debate # This references the specific speech ordering you want to use. Defaults to default_debate. Other option at the moment is default_consultancy.
+  previous_run: # Config that lets you reuse information from previous runs
+    file_path: path-to-previous-run # path to the previous run you want to use
+    replicate_topics: True # whether you want to use the same questions as the previous run (useful for making performance comparisons)
+    merge_results: False # whether you want to merge the results of the previous run in the final results csv and graphs
   prompt_config: # Specifies which set of prompts to use -- if not specified, the defaults will be used
     file_path: /path/to/source/code/prompts/configs/prompts.yaml # Path to prompts file
     default_prompt_name: Base Prompt # Name of the specific set of prompts to use
-    use_dynamic_prompt: False # Whether one wants to use a "dynamic" prompt (where the prompt changes depending on attributes of the question -- only works with quality_debates dataset)
-    dynamic_prompts_config: # Configuration for the dynamic prompts (not needed if use_dynamic_prompts is false or if default is preferred)
-      dynamic_prompts_file_path: /path/to/source/code/prompts/configs/dynamic_prompts.yaml # Path to dynamic prompts file 
-      dynamic_prompt_name: Default Dynamic Prompt # Name of the specific set of dynamic prompts to use
     use_hardcoded_topics: False # Whether one wants to hard code the topics to debate
-    hardcoded_topic_config: # Specifies the configuration if one wants to hardcode prompts (not needed if use_hardcoded_topics is false)
-      topic: # The question the debaters will be debating
-      positions: # a tuple of the sides the debaters will take
+    hardcoded_topic_config: null # The specific config that's used if use_hardcoded_topics is True
   agents: # The configuration for the debaters and judges that will be participating in the debate round
     debaters: # The configuration for the debaters. You must specify at least 1. If only 1 is specified, the model will debate itself. If more than 2 are specified, then a round robin will be performed.
     - model_settings: # specifies the configuration to be used for the model this debater will use
         model_type: llama # The type of model that is to be used. See the README for a comprehensive list of options
         model_file_path: /path/to/llama/directory # The path to the model weights. Not needed if the model doesn't have weights
         alias: model-name # A name to identify the model. If this name is duplicated, then stats for those debaters will be aggregated
-      scratchpad:
-        use_scratchpad: True # Whether the debater gets access to a scratchpad (default to false)
-        scratchpad_word_limit: 100 # Number of words that the debater can use a scratchpad for (0 or None disables scratchpad usage)
-        scratchpad_public: False # Whether the scratchpad generations are exposed to the other participants
     - model_settings:
         model_type: deterministic # The type of model for the second debater 
         alias: model-name-2 # Alias for the second debater
@@ -33,10 +29,15 @@ MyExperiment: # The name of your experiment
         n: 4 # the number of samples to draw
         opponent_n: 2 # the number of opponent samples to test against
         maxmin: True # whether to select the speech with the best minimum score or the best average score
+        recompute: False # whether to rejudge each speech to see which is the best
     - model_settings:
         model_type: random # the type of the third debater
         alias: random-model # the name of the third debater
         offline_file_path: offline-data-prefix # either the timestamp of the offline debate run (if the transcript is in the default output folder) or the full path to all the offline debates (Only needed if one is recreating a previously-run debate)
+      scratchpad:
+        use_scratchpad: True # Whether the debater gets access to a scratchpad (default to false)
+        scratchpad_word_limit: 100 # Number of words that the debater can use a scratchpad for (0 or None disables scratchpad usage)
+        scratchpad_public: False # Whether the scratchpad generations are exposed to the other participants
     judge:
       model_settings:
         model_type: llama # The model type for the judge
@@ -50,5 +51,9 @@ MyExperiment: # The name of your experiment
     test_file_path: null # path to a file that stores the training dataset. Not needed if the dataset is not pre-split or if defaults are used
     supplemental_file_paths: null # set of additional kwargs that are specific to individual dataset
     split_type: train # the split of the data to actually use
-  annotations_classifier_file_path: /path/to/annotator/model.p # path to annotations model. Uses default if unspecified.
-  is_memorized: False # whether the model has been trained to memorize the stories (in which case the stories will not be passed in). Defaults false
+  tournament: # a configuration that lets you specify the type of tournament you want to run. Not needed if you're using a round robin
+    tournament_type: custom # other options include round_robin (default) and self_play_only. Power pairing is still being implemented so is not supported at the moment
+    custom_matchups: # for the custom tournament type specifically, these are the aliases that you want to debate against each other
+      - ["model-name", "model-name-2"]
+      - ["model-name", "random"]
+
