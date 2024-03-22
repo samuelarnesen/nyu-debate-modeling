@@ -1,21 +1,16 @@
-from agents import (
+from debate import (
     AgentConfig,
     BestOfNDebater,
     Debater,
     DebateRound,
     HumanDebater,
     Judge,
-    Model,
-    ModelSettings,
-    ModelType,
-    ModelUtils,
-    OfflineModelHelper,
     QuestionMetadata,
-    ServedModel,
     SpeechFormatType,
     SpeechFormatStructure,
 )
 from data import DatasetConfig, DatasetType, LoaderUtils, RawDataLoader, RawDataset, SplitType
+from models import Model, ModelSettings, ModelType, ModelUtils, OfflineModelHelper, ServedModel
 from prompts import Prompt, PromptConfig, PromptLoadingConfig, PromptParser
 from utils import LoggerUtils
 import utils.constants as constants
@@ -51,11 +46,6 @@ class TournamentType(Enum):
     ROUND_ROBIN = auto()
     SELF_PLAY_ONLY = auto()
     CUSTOM = auto()
-
-
-class RoundStructure(Enum):
-    DEBATE = auto()
-    CONSULTANCY = auto()
 
 
 class TournamentConfig(BaseModel):
@@ -338,6 +328,15 @@ class ExperimentLoader:
                 background_text=background_text if not experiment.prompt_config.is_memorized else title,
             )
 
+            config_b_first = PromptConfig(
+                name=constants.DEFAULT_DEBATER_B_NAME,
+                opponent_name=constants.DEFAULT_DEBATER_A_NAME,
+                position=position,
+                opponent_position=opponent_position,
+                topic=topic,
+                background_text=background_text if not experiment.prompt_config.is_memorized else title,
+            )
+
             prompt_a = PromptParser.parse(
                 prompt_config=config_a,
                 prompts_file_path=experiment.prompt_config.file_path,
@@ -377,7 +376,7 @@ class ExperimentLoader:
             )
 
             flipped_prompt_judge = PromptParser.parse(
-                prompt_config=config_a if not experiment.speech_structure.flip_position_order else config_b,
+                prompt_config=config_a if not experiment.speech_structure.flip_position_order else config_b_first,
                 prompts_file_path=experiment.prompt_config.file_path,
                 name=experiment.speech_structure.default_prompt_name or experiment.prompt_config.default_prompt_name,
             )
@@ -535,6 +534,7 @@ class ExperimentLoader:
                     old_judge = debate_round.judge
                     debate_round.judge = flipped_judge
                     flipped_round.judge = old_judge
+                    pass
 
             if second_offline_file_path:
                 helper = next((x for x in offline_model_helpers if x.file_path_prefix == second_offline_file_path))
@@ -555,7 +555,11 @@ class ExperimentLoader:
                         else (opponent_position, position),
                         best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                     )
-                elif experiment.speech_structure.flip_position_order and not debate_round.first_debater.model.speeches:
+                elif (
+                    experiment.speech_structure.flip_position_order
+                    and not debate_round.first_debater.model.speeches
+                    and not first_offline_file_path
+                ):
                     old_judge = debate_round.judge
                     debate_round.judge = flipped_judge
                     flipped_round.judge = old_judge

@@ -2,8 +2,8 @@ from script_utils import ScriptUtils
 
 ScriptUtils.setup_script()
 
-from agents import OpenAIModel, ModelInput
 from data import QuoteRelevanceLoader, QuoteRelevanceDataset, QuoteRelevanceProcessedBatchItem, QuoteRelevanceTopicInfo
+from models import OpenAIModel, ModelInput
 from prompts import RoleType
 from utils import InputUtils
 import utils.constants as constants

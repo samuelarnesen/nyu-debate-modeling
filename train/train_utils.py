@@ -1,5 +1,6 @@
-from agents import LLMType, LLModel, ModelStub, ScratchpadConfig, SpeechFormatStructure, TokenizerStub
 from data import DatasetConfig, DatasetType, LoaderUtils, RawDataset
+from debate import ScratchpadConfig, SpeechFormatStructure
+from models import LLMType, LLModel, ModelStub, TokenizerStub
 from prompts import PromptLoadingConfig
 import utils.constants as constants
 

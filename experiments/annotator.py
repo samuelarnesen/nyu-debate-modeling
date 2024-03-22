@@ -1,4 +1,4 @@
-from agents import DebateRoundSummary
+from debate import DebateRoundSummary
 import utils.constants as constants
 
 from pydantic import BaseModel

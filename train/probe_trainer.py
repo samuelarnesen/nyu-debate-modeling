@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from agents import LLModuleWithLinearProbe, ProbeHyperparams
 from data import JudgingProbeDataRow, QualityJudgingDataset, RawDataset, SplitType
+from models import LLModuleWithLinearProbe, ProbeHyperparams
 from train.train_utils import TrainingConfig, TrainUtils
 from utils import LoggerUtils
 
@@ -22,12 +22,15 @@ class ProbeTrainer:
         self.dataset = dataset
         self.config = config
         self.logger = LoggerUtils.get_default_logger(__name__)
-        self.loss_func = nn.CrossEntropyLoss()
+        # self.loss_func = nn.CrossEntropyLoss()
+        self.loss_func = nn.BCEWithLogitsLoss()
 
     def train(self):
         for name, param in self.probe.named_parameters():
             self.logger.info(f"Name: {name}, Param: {param}")
-        optimizer = optim.AdamW(params=self.probe.parameters(), lr=self.config.training_hyperparameters.learning_rate)
+        optimizer = optim.AdamW(
+            params=self.probe.parameters(), lr=self.config.training_hyperparameters.learning_rate, weight_decay=1e-5
+        )
         for epoch in range(self.config.training_hyperparameters.num_train_epochs):
             train_loss = self.train_batch(
                 batch=self.dataset.get_data(split=SplitType.TRAIN),

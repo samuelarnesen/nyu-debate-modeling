@@ -5,7 +5,6 @@ Test:
     requires_token: True
     opening_speeches_only: True
     llm_type: openai
-    speech_structure: default_consultancy
     training_hyperparameters:
         num_train_epochs: 4
         per_device_train_batch_size: 4
@@ -20,8 +19,9 @@ Test:
         logging_steps: 10
         output_dir: stub_model
     dataset:
-        - dataset_type: quality_consultancy
-        - dataset_type: quality_debates
+        - dataset_type: quality
+    speech_structure: 
+        - empty_round
 Train - 13B - Alpaca:
     model_name: Yukang/LongAlpaca-13B
     target: debater
@@ -88,13 +88,40 @@ Train - Mixtral - Unified:
     dataset:
         dataset_type: quality_debates
         full_dataset_file_path: /home/spa9663/debate-data/mega_human_and_gpt4_debates.jsonl
+Train - Mixtral - Consultant:
+    model_name: /vast/spa9663/models/base_models/mixtral-8x7b
+    llm_type: mistral
+    target: debater
+    opening_speeches_only: False
+    max_length: 32986
+    training_hyperparameters:
+        num_train_epochs: 3
+        per_device_train_batch_size: 4
+        gradient_accumulation_steps: 4
+        optim: paged_adamw_32bit
+        learning_rate: 2e-4
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+    logging_and_saving_config:
+        logging_steps: 10
+        output_dir: /vast/spa9663/models/trained_models/mixtral-consultant-adapter
+        merge_output_dir: /vast/spa9663/models/trained_models/mixtral-consultant-adapter
+    dataset:
+        - dataset_type: quality_consultancy
+          merge_train_and_val: True
+          full_dataset_file_path: /home/spa9663/debate-data/human_and_gpt4_debates_and_consultancies.jsonl
+    speech_structure: 
+        - default_consultancy
 Data Generation:
     model_name: blank
     llm_type: openai
     target: judge
     max_length: 4096
     requires_token: True
-    opening_speeches_only: True
+    opening_speeches_only: False
+    llm_type: openai
     training_hyperparameters:
         num_train_epochs: 4
         per_device_train_batch_size: 4
@@ -107,8 +134,12 @@ Data Generation:
         peft_type: lora
     logging_and_saving_config:
         logging_steps: 10
-        output_dir: blank
+        output_dir: stub_model
     dataset:
-        dataset_type: quality_debates
-        full_dataset_file_path: /Users/samarnesen/nyu/scratch/binned_human_and_gpt4_debates.jsonl
-        split_type: val 
+        - dataset_type: quality_debates
+          merge_train_and_val: False
+        - dataset_type: quality_consultancy
+          merge_train_and_val: False
+    speech_structure: 
+        - default_debate
+        - default_consultancy

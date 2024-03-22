@@ -1,4 +1,4 @@
-from agents import DebateRoundSummary, QuestionMetadata
+from debate import DebateRoundSummary, QuestionMetadata
 from experiments.annotator import Annotator
 from experiments.experiment_loader import ExperimentConfig, ExperimentLoader
 from experiments.quotes_collector import QuotesCollector
@@ -59,6 +59,8 @@ class ResultsRow(BaseModel):
     correct_side_win_prob: float
     incorrect_side_win_prob: float
     correct_side_wins: bool
+    first_debater_speaks: bool = True
+    second_debater_speaks: bool = True
 
 
 class ResultsCollector:
@@ -318,20 +320,20 @@ class ResultsCollector:
             if summary.second_debater_alias not in alias_to_stats:
                 alias_to_stats[summary.second_debater_alias] = WinStats()
 
-            alias_to_stats[summary.first_debater_alias].matches += 1
-            alias_to_stats[summary.second_debater_alias].matches += 1
+            if summary.first_debater_speaks:
+                alias_to_stats[summary.first_debater_alias].matches += 1
+                alias_to_stats[summary.first_debater_alias].first_matches += 1
+                alias_to_stats[summary.first_debater_alias].wins += summary.first_debater_win_prob
+                alias_to_stats[summary.first_debater_alias].first_wins += summary.first_debater_win_prob
 
-            alias_to_stats[summary.first_debater_alias].first_matches += 1
+            if summary.second_debater_speaks:
+                alias_to_stats[summary.second_debater_alias].matches += 1
+                alias_to_stats[summary.second_debater_alias].wins += summary.second_debater_win_prob
 
-            alias_to_stats[summary.first_debater_alias].wins += summary.first_debater_win_prob
-            alias_to_stats[summary.second_debater_alias].wins += summary.second_debater_win_prob
-
-            alias_to_stats[summary.first_debater_alias].first_wins += summary.first_debater_win_prob
-
-            if summary.metadata.first_debater_correct:
+            if summary.metadata.first_debater_correct and summary.first_debater_speaks:
                 alias_to_stats[summary.first_debater_alias].correct_matches += 1
                 alias_to_stats[summary.first_debater_alias].correct_wins += summary.first_debater_win_prob
-            else:
+            if not summary.metadata.first_debater_correct and summary.second_debater_speaks:
                 alias_to_stats[summary.second_debater_alias].correct_matches += 1
                 alias_to_stats[summary.second_debater_alias].correct_wins += summary.second_debater_win_prob
 
@@ -653,6 +655,8 @@ class ResultsCollector:
                     correct_side_wins=summary.first_debater_wins
                     if summary.metadata.first_debater_correct
                     else not summary.first_debater_wins,
+                    first_debater_speaks=summary.first_debater_speaks,
+                    second_debater_speaks=summary.second_debater_speaks,
                 ).dict()
             )
 

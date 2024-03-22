@@ -1,8 +1,8 @@
-from agents.agent import Agent
-from agents.debater import Debater
-from agents.judge import Judge
-from agents.models import ModelResponse
-from agents.transcript import Transcript
+from debate.agent import Agent
+from debate.debater import Debater
+from debate.judge import Judge
+from debate.transcript import Transcript
+from models import ModelResponse
 from prompts import Prompt, PromptConfig, PromptParser
 from utils import LoggerUtils, QuoteUtils
 import utils.constants as constants

@@ -1,3 +1,24 @@
+Test - Consultancy:
+    model_name: stub_model
+    target: debater
+    llm_type: stub_llm
+    speech_structure: default_consultancy
+    training_hyperparameters:
+        num_train_epochs: 2
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 8
+        optim: paged_adamw_32bit
+        learning_rate: 10e-6
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /fake/file/path
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: 2024-03-15_16:08:55.960902
 Test:
     model_name: stub_model
     target: debater
@@ -17,7 +38,7 @@ Test:
         output_dir: /fake/file/path
     dataset:
         dataset_type: judge_preferences
-        full_dataset_file_path: 2024-01-25_23_36_24.541209
+        full_dataset_file_path: 2024-03-11_00:19:01.230232
 Mixtral:
     model_name: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
     target: debater
@@ -34,7 +55,28 @@ Mixtral:
         peft_type: lora
     logging_and_saving_config:
         logging_steps: 1
-        output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-no-filter
+        output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-315
     dataset:
         dataset_type: judge_preferences
-        full_dataset_file_path: 2024-02-15_12:21
+        full_dataset_file_path: 2024-03-11_00:19:01.230232
+Mixtral - Consultant:
+    model_name: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+    target: debater
+    llm_type: mistral
+    speech_structure: default_consultancy
+    training_hyperparameters:
+        num_train_epochs: 4
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 8
+        optim: paged_adamw_32bit
+        learning_rate: 10e-6
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-315-consultant
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: 2024-03-15_16:08:55.960902

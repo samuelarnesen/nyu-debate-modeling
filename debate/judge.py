@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from agents.agent import Agent, ScratchpadConfig
-from agents.models import Model, ModelResponse, SpeechStructure
-from agents.speech_format import SpeechFormat, SpeechFormatType
-from agents.transcript import SpeechFormat, SpeechType, Transcript
+from debate.agent import Agent, ScratchpadConfig
+from debate.speech_format import SpeechFormat, SpeechFormatType
+from debate.transcript import SpeechFormat, SpeechType, Transcript
+from models import Model, ModelResponse, SpeechStructure
 from prompts import Prompt, PromptTag
 from utils import LoggerUtils
 import utils.constants as constants

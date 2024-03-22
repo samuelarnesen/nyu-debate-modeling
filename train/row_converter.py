@@ -1,5 +1,6 @@
-from agents import Debater, Judge, LLMInput, LLMType, SpeechFormatType, SpeechFormatStructure, Transcript
+from debate import Debater, Judge, SpeechFormatType, SpeechFormatStructure, Transcript
 from data import DataRow, DatasetType, RawDataset, SpeakerType, SpeechData, SplitType
+from models import LLMInput, LLMType
 from prompts import Prompt, PromptParser, PromptTag
 from train.train_utils import TrainingConfig, TrainingTarget
 import utils.constants as constants

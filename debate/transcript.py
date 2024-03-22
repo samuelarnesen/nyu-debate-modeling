@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from agents.models import ModelInput, ModelResponse
-from agents.speech_format import Speech, SpeechType, SpeechFormatEntry, SpeechFormat
+from debate.speech_format import Speech, SpeechType, SpeechFormatEntry, SpeechFormat
+from models import ModelInput, ModelResponse
 from prompts import Prompt, RoleType
 import utils.constants as constants
 

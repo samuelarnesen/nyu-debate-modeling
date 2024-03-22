@@ -1,10 +1,10 @@
-from agents.models.model import Model, ModelSettings
-from agents.models.arbitrary_attribute_model import ArbitraryAttributeModel
-from agents.models.deterministic_model import DeterministicModel
-from agents.models.llm_model import LlamaModel, MistralModel, StubLLModel
-from agents.models.openai_model import OpenAIModel
-from agents.models.random_model import RandomModel
-from agents.models.served_model import ServedModel
+from models.model import Model, ModelSettings
+from models.arbitrary_attribute_model import ArbitraryAttributeModel
+from models.deterministic_model import DeterministicModel
+from models.llm_model import LlamaModel, MistralModel, StubLLModel
+from models.openai_model import OpenAIModel
+from models.random_model import RandomModel
+from models.served_model import ServedModel
 
 from pydantic import BaseModel
 

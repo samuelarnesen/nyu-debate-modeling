@@ -47,7 +47,7 @@ class JudgePreferencesDataset(RawDataset):
 
 
 class JudgePreferencesLoader(RawDataLoader):
-    MIN_GAP = 0.0
+    MIN_GAP = 0.05
 
     @classmethod
     def load(cls, full_dataset_filepath: str | list[str], **kwargs) -> JudgePreferencesDataset:
@@ -65,8 +65,6 @@ class JudgePreferencesLoader(RawDataLoader):
             speech = speech.replace(constants.INVALID_QUOTE_TAG, constants.QUOTE_TAG).replace(
                 constants.INVALID_UNQUOTE_TAG, constants.UNQUOTE_TAG
             )
-            punctuation = [">", ".", "?", "!"]
-            speech = speech[: max([speech.rfind(p) for p in punctuation]) + 1]
             return QuoteUtils.clean_up_quotes(speech_content=speech)
 
         train_data = []
@@ -81,7 +79,8 @@ class JudgePreferencesLoader(RawDataLoader):
                 rejected = sorted(selected["supplemental"]["rejected_responses"], key=lambda x: x["preference"])[0]
                 if selected["supplemental"]["preference"] - rejected["preference"] > JudgePreferencesLoader.MIN_GAP:
                     selected_speech = clean_speech(selected["content"])
-                    train_data.append((instruction, selected_speech, rejected["speech"]))
+                    rejected_speech = clean_speech(rejected["speech"])
+                    train_data.append((instruction, selected_speech, rejected_speech))
 
         return JudgePreferencesDataset(
             train_data=train_data,

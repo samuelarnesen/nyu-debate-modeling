@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from agents.models.model import Model, ModelInput, ModelResponse, SpeechStructure
-from agents.models.llm_model import GenerationParams, LLModel
+from models.model import Model, ModelInput, ModelResponse, SpeechStructure
+from models.llm_model import GenerationParams, LLModel
 from utils import LoggerUtils, timer
 
 from pydantic import BaseModel

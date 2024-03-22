@@ -1,5 +1,5 @@
-from agents.models import BestOfNConfig, Model, ModelSettings
-from agents.transcript import SpeechFormat, Transcript
+from debate.transcript import SpeechFormat, Transcript
+from models import BestOfNConfig, Model, ModelSettings
 from prompts import Prompt
 from utils import LoggerUtils
 

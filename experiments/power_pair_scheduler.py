@@ -1,4 +1,4 @@
-from agents import DebateRound, DebateRoundSummary
+from debate import DebateRound, DebateRoundSummary
 
 
 class PowerPairScheduler:

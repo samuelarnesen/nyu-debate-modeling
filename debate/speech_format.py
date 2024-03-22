@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.models import ModelResponse
+from models import ModelResponse
 from prompts import Prompt, PromptTag, RoleType
 import utils.constants as constants
 

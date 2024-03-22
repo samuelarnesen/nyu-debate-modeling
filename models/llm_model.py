@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from agents.models.model import Model, ModelInput, ModelResponse, ProbeHyperparams, SpeechStructure
-from agents.models.openai_model import OpenAIModel
+from models.model import Model, ModelInput, ModelResponse, ProbeHyperparams, SpeechStructure
+from models.openai_model import OpenAIModel
 from prompts import RoleType
 from utils import LoggerUtils, StringUtils, timer
 import utils.constants as constants

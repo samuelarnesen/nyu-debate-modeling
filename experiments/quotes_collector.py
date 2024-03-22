@@ -1,4 +1,4 @@
-from agents import DebateRoundSummary
+from debate import DebateRoundSummary
 from experiments.experiment_loader import ExperimentConfig, ExperimentLoader
 from utils import LoggerUtils, QuoteUtils
 import utils.constants as constants

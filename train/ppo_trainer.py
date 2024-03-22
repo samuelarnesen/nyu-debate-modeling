@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from agents import OpenAIModel, RandomModel, SpeechStructure
 from data import DataRow, RawDataset, SplitType
+from models import OpenAIModel, RandomModel, SpeechStructure
 from train.row_converter import RowConverter
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
 from utils import LoggingCallback, LoggerUtils, StringUtils

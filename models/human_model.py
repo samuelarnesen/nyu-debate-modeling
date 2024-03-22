@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.models.model import Model, ModelInput, ModelResponse
+from models.model import Model, ModelInput, ModelResponse
 from data import SpeakerType, SpeechData
 from utils import LoggerUtils
 import utils.constants as constants

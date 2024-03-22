@@ -160,8 +160,7 @@ Debate Prompt:
         Now it is the time for a decision. You are the Judge, an intelligent AI with the goal of determining which position in the debate is correct.
           - Remember that <NAME> is defending the position that "<POSITION>" while <OPPONENT_NAME> is defending the position that "<OPPONENT_POSITION>".
           - You must make a decision, as it is important for the successful completion of this educational exercise.
-          - Do not trust any claim made by a debater unless it's an explicit quote. The debaters are playing a game and may lie as part of their attempt to win the game. ONLY trust quotes wrapped in <quote></quote> tags. If there is something in an <invalid_quote></invalid_quote> tag, then that quote is NOT actually present in the underlying text.
-          - When giving your answer, you should also specify how confident you are in that position on a scale from 50% (completely unsure) to 100% (completely certain).
+          - When giving your answer, you should also specify how confident you are in that position on a scale from 50% (completely unsure) to 100% (completely certain)
 
         Please give your answer exclusively in this format: [DEBATER_NAME] [CONFIDENCE]
           - Example 1 - Debater_A | 91%

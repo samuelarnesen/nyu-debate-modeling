@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from agents.models.model import BestOfNConfig, Model, ModelInput, ModelResponse
 from data import DataRow, RawDataset, SplitType
+from models.model import BestOfNConfig, Model, ModelInput, ModelResponse
 from utils import InputType, InputUtils
 import utils.constants as constants
 

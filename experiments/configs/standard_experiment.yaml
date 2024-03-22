@@ -1,74 +1,83 @@
-Quality Debates:
+Data Generation - DPO:
   batch_size: 1
   num_speeches: 1
-  flip: True
+  flip: False
+  enable_self_debate: True
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
   agents:
     debaters:
       - model_settings:
-          model_type: llama
-          model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
-          alias: "merged-4"
-      - model_settings:
-          model_type: llama
-          model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
-          alias: "merged-4"
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-315
+          alias: "dpo"
+        best_of_n:
+          n: 8
+          opponent_n: 2
+          maxmin: False
     judge:
       model_settings:
         model_type: openai
-        alias: "openai-judge"
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
   dataset:
-    dataset_type: quality_debates
+    dataset_type: quality
     split_type: val
-Served Test:
-  batch_size: 4
+Data Generation - SFT:
+  batch_size: 1
   num_speeches: 1
-  flip: True
+  flip: False
+  enable_self_debate: True
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
   agents:
     debaters:
       - model_settings:
           model_type: mistral
-          model_file_path: null
-          alias: "merged-4"
-          served: True
-      - model_settings:
-          model_type: mistral
-          model_file_path: null
-          alias: "merged-4"
-          served: True
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+          alias: "sft"
+        best_of_n:
+          n: 8
+          opponent_n: 2
+          maxmin: False
     judge:
       model_settings:
         model_type: random
         alias: "random-judge"
   dataset:
     dataset_type: quality
-    split_type: train
-Quality:
+    split_type: val
+Data Generation - Human:
   batch_size: 1
   num_speeches: 1
-  flip: True
-  enable_self_debate: False
+  flip: False
+  enable_self_debate: True
   previous_run:
-    file_path: 2024-02-17_10:24:38.891468
-    replicate_topics: False
-    merge_results: True
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
   agents:
     debaters:
       - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-1/checkpoint-69
-          alias: dpo
-      - model_settings:
-          model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-no-filter
-          alias: dpo-no-filter
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b
+          alias: "sft"
+        best_of_n:
+          n: 8
+          opponent_n: 2
+          maxmin: False
     judge:
       model_settings:
-        model_type: openai
-        alias: openai_judge
+        model_type: random
+        alias: "random-judge"
   dataset:
     dataset_type: quality
     split_type: val
-Tournament - Data Generation - Llama:
+Data Generation - Llama:
   batch_size: 1
   num_speeches: 1
   flip: False
@@ -94,83 +103,130 @@ Tournament - Data Generation - Llama:
   dataset:
     dataset_type: quality
     split_type: val
-Tournament:
+Data Generation - Consultant:
   batch_size: 1
   num_speeches: 1
   flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
   agents:
     debaters:
       - model_settings:
           model_type: mistral
-          alias: 16
-          model_type: offline
-          offline_file_path: 2024-01-30_18:00:30.899060
-        best_of_n:
-          n: 16
-          opponent_n: 1
-          maxmin: True
-      - model_settings:
-          model_type: mistral
-          alias: 8
-          model_type: offline
-          offline_file_path: 2024-01-30_18:00:30.899060
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-consultant-adapter
+          alias: "sft-consultant"
         best_of_n:
           n: 8
-          opponent_n: 1
-          maxmin: True
-      - model_settings:
-          model_type: mistral
-          alias: 4
-          model_type: offline
-          offline_file_path: 2024-01-30_18:00:30.899060
-        best_of_n:
-          n: 4
-          opponent_n: 1
-          maxmin: True
-      - model_settings:
-          model_type: mistral
-          alias: 2
-          model_type: offline
-          offline_file_path: 2024-01-30_18:00:30.899060
-        best_of_n:
-          n: 2
-          opponent_n: 1
-          maxmin: True
-      - model_settings:
-          model_type: mistral
-          alias: 1
-          model_type: offline
-          offline_file_path: 2024-01-30_18:00:30.899060
-        best_of_n:
-          n: 1
-          opponent_n: 1
-          maxmin: True
+          opponent_n: 0
+          maxmin: False
     judge:
       model_settings:
         model_type: random
-        alias: random-judge
+        alias: "random-judge"
   dataset:
     dataset_type: quality
-    split_type: val
-Judge:
+    split_type: train
+Data Validation - Consultant:
   batch_size: 1
   num_speeches: 1
-  flip: False
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
   agents:
     debaters:
       - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-          alias: sft
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-consultant-adapter
+          alias: "sft-consultant"
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: False
     judge:
       model_settings:
+        model_type: random
+        alias: "random-judge"
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Generation - DPO - Consultant:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/base_models/mixtral-8x7b
-          alias: mistral-judge
-          probe_hyperparams:
-            file_path: /vast/spa9663/models/trained_models/mixtral-linear-probe/probe.pth
-            linear_idxs:
-              - -1
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-315-consultant
+          alias: "dpo-consultant"
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: "openai-judge"
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+Mini Tourney:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: False
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-315
+          alias: "dpo"
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+          alias: "sft"
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+Mini Tourney - Old:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: False
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-1
+          alias: "dpo-old"
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+          alias: "sft"
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
   dataset:
     dataset_type: quality
     split_type: val
