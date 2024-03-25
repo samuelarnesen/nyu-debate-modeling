@@ -534,7 +534,6 @@ class ExperimentLoader:
                     old_judge = debate_round.judge
                     debate_round.judge = flipped_judge
                     flipped_round.judge = old_judge
-                    pass
 
             if second_offline_file_path:
                 helper = next((x for x in offline_model_helpers if x.file_path_prefix == second_offline_file_path))

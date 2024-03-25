@@ -325,7 +325,6 @@ class ResultsCollector:
                 alias_to_stats[summary.first_debater_alias].first_matches += 1
                 alias_to_stats[summary.first_debater_alias].wins += summary.first_debater_win_prob
                 alias_to_stats[summary.first_debater_alias].first_wins += summary.first_debater_win_prob
-
             if summary.second_debater_speaks:
                 alias_to_stats[summary.second_debater_alias].matches += 1
                 alias_to_stats[summary.second_debater_alias].wins += summary.second_debater_win_prob

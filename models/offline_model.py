@@ -320,10 +320,12 @@ class OfflineModelHelper:
                     return True
             return False
 
+        if not self.data:
+            raise Exception("No eligible data was found (prior to pruning)")
         idxs_to_keep = [validate_idx(idx) for idx in range(len(self.data))]
         self.data = [row for idx, row in filter(lambda x: idxs_to_keep[x[0]], enumerate(self.data))]
         if not self.data:
-            raise Exception("No eligible data was found")
+            raise Exception("No eligible data was found (post pruning)")
 
     def get_example(self, idx: int, split_type: SplitType = SplitType.TRAIN) -> DataRow:
         """
@@ -416,6 +418,7 @@ class OfflineModelHelper:
                 contenders = [(supplemental["speech"], supplemental["preference"])]
                 for rejected_speech in supplemental["rejected_responses"]:
                     contenders.append((rejected_speech["speech"], rejected_speech["preference"]))
+
                 options = random.sample(contenders, k=best_of_n_config.n)
                 best_option = sorted(options, key=lambda x: float(x[1]), reverse=True)[0][0]
                 if best_option:

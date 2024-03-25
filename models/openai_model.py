@@ -178,7 +178,7 @@ class OpenAIModel(Model):
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> OpenAIModel:
         """Generates a deepcopy of this model"""
-        return OpenAIModel(alias=alias, is_debater=is_debater)
+        return OpenAIModel(alias=alias, is_debater=is_debater, endpoint=self.endpoint)
 
     @classmethod
     def generate_llm_input_from_model_inputs(
