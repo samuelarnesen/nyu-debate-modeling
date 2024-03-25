@@ -1,4 +1,5 @@
 from data import DataRow, RawDataset, SplitType
+from train.impl import SmoothedDPOTrainer
 from train.row_converter import RowConverter
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
 from utils import LoggingCallback, logger_utils
@@ -45,6 +46,7 @@ class DirectPreferenceTrainer:
         raw_datasets: Optional[list[RawDataset]] = None,
         is_local: bool = False,
         is_test: bool = False,
+        smooth: bool = False,
     ) -> Optional[DPOTrainer]:
         """
         Generates a Trainer object.
@@ -91,7 +93,8 @@ class DirectPreferenceTrainer:
             model = upcast_layer_for_flash_attention(model, torch.bfloat16)
 
         if not is_test:
-            trainer = DPOTrainer(
+            trainer_cls = SmoothedDPOTrainer if smooth else DPOTrainer
+            trainer = trainer_cls(
                 model=model,
                 ref_model=None,
                 max_length=16384,

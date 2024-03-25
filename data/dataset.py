@@ -100,6 +100,7 @@ class JudgePreferenceDataRow(BaseModel):
     prompt: str
     chosen: str
     rejected: str
+    preference: float = 1.0
 
 
 @dataclass

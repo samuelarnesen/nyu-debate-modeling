@@ -28,11 +28,6 @@ try:
 except Exception:
     raise ModuleNotFoundError("Please install einops first, e.g., with pip install einops")
 
-from utils.logger_utils import logger_utils
-
-
-LOGGER = logger_utils.get_default_logger(__name__)
-
 
 # Disable the transformation of the attention mask in LlamaModel as the flash attention
 # requires the attention mask to be the same as the key_padding_mask
@@ -63,12 +58,6 @@ def flash_attn_forward_without_dropout(
 
 def replace_attn_with_flash_attn(disable_dropout: bool = False):
     cuda_major, cuda_minor = torch.cuda.get_device_capability()
-    if cuda_major < 8:
-        LOGGER.info(
-            "Flash attention is only supported on Ampere or Hopper GPU during training due to head dim > 64 backward."
-            "ref: https://github.com/HazyResearch/flash-attention/issues/190#issuecomment-1523359593"
-        )
-    LOGGER.info("Attempting to replace with flash attention")
     transformers.models.llama.modeling_llama.LlamaModel._prepare_decoder_attention_mask = _prepare_decoder_attention_mask
     if disable_dropout:
         transformers.models.llama.modeling_llama.LlamaModel.LlamaFlashAttention2.forward = flash_attn_forward_without_dropout

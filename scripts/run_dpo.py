@@ -10,7 +10,7 @@ args = ScriptUtils.get_args()
 script_config = ScriptUtils.get_training_run_script_config(args, train_type=TrainType.DPO)
 
 config = TrainUtils.parse_config(config_name=script_config.config_name, config_filepath=script_config.config_filepath)
-trainer = DirectPreferenceTrainer.get_trainer(config=config, is_local=args.local, is_test=args.test)
+trainer = DirectPreferenceTrainer.get_trainer(config=config, is_local=args.local, is_test=args.test, smooth=True)
 
 if not args.load_only:
     trainer.train()

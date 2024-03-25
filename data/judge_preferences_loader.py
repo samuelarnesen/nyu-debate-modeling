@@ -39,15 +39,15 @@ class JudgePreferencesDataset(RawDataset):
         """Returns an individual row in the dataset"""
         return self.data[split][idx % len(self.data[split])]
 
-    def __convert_batch_to_rows(self, train_data: list[tuple[str, str, str]]):
+    def __convert_batch_to_rows(self, train_data: list[tuple[str, str, str, float]]):
         return [
-            JudgePreferenceDataRow(prompt=instruction, chosen=chosen, rejected=rejected)
-            for instruction, chosen, rejected in train_data
+            JudgePreferenceDataRow(prompt=instruction, chosen=chosen, rejected=rejected, preference=preference)
+            for instruction, chosen, rejected, preference in train_data
         ]
 
 
 class JudgePreferencesLoader(RawDataLoader):
-    MIN_GAP = 0.05
+    MIN_GAP = 0.00
 
     @classmethod
     def load(cls, full_dataset_filepath: str | list[str], **kwargs) -> JudgePreferencesDataset:
@@ -80,7 +80,10 @@ class JudgePreferencesLoader(RawDataLoader):
                 if selected["supplemental"]["preference"] - rejected["preference"] > JudgePreferencesLoader.MIN_GAP:
                     selected_speech = clean_speech(selected["content"])
                     rejected_speech = clean_speech(rejected["speech"])
-                    train_data.append((instruction, selected_speech, rejected_speech))
+                    preference = selected["supplemental"]["preference"] / (
+                        rejected["preference"] + selected["supplemental"]["preference"]
+                    )
+                    train_data.append((instruction, selected_speech, rejected_speech, preference))
 
         return JudgePreferencesDataset(
             train_data=train_data,
