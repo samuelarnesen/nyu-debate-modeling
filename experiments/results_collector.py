@@ -387,10 +387,10 @@ class ResultsCollector:
                 losses = win_rate_map.get(second, {}).get(first, 0)
                 win_rate_matrix[-1].append((wins / (wins + losses)) if (wins + losses > 0) else 0.5)
 
-        sns.heatmap(win_rate_matrix, annot=True, fmt=".1%", cmap="coolwarm_r", cbar=False, ax=ax2)
+        sns.heatmap(np.flip(win_rate_matrix, axis=0), annot=True, fmt=".1%", cmap="coolwarm_r", cbar=False, ax=ax2)
 
         ax2.set_xticklabels(self.aliases)
-        ax2.set_yticklabels(self.aliases)
+        ax2.set_yticklabels([self.aliases[len(self.aliases) - 1 - i] for i in range(len(self.aliases))])
         ax2.set_xlabel("Losing Team")
         ax2.set_ylabel("Winning Team")
         ax2.set_title("Head to Head Win Rates")
@@ -426,7 +426,7 @@ class ResultsCollector:
 
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
 
-        categories = [str(key) for key in debater_skills]
+        categories = sorted([str(key) for key in debater_skills])
         values = [value for _, value in debater_skills.items()]
         ax1.bar(categories, values)
         ax1.set_title("Bradley-Terry Scores")
@@ -441,10 +441,11 @@ class ResultsCollector:
                     else 0.5
                 )
                 computed_win_rate_matrix[-1].append(computed_win_rate)
-        sns.heatmap(computed_win_rate_matrix, annot=True, fmt=".1%", cmap="coolwarm_r", cbar=False, ax=ax2)
+
+        sns.heatmap(np.flip(computed_win_rate_matrix, axis=0), annot=True, fmt=".1%", cmap="coolwarm_r", cbar=False, ax=ax2)
 
         ax2.set_xticklabels(categories)
-        ax2.set_yticklabels(categories)
+        ax2.set_yticklabels([categories[len(categories) - 1 - i] for i in range(len(categories))])
         ax2.set_xlabel("Losing Team")
         ax2.set_ylabel("Winning Team")
         ax2.set_title("Computed Win Rates")
