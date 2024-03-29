@@ -427,7 +427,7 @@ class ResultsCollector:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
 
         categories = sorted([str(key) for key in debater_skills])
-        values = [value for _, value in debater_skills.items()]
+        values = [debater_skills[category] for category in categories]
         ax1.bar(categories, values)
         ax1.set_title("Bradley-Terry Scores")
 

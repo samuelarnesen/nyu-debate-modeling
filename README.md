@@ -9,7 +9,7 @@ Note: Given the current state of this project, this README will just give an ove
 2. Install the dependencies using `pip install -r requirements.txt`
 3. Run the setup script `bash bash_scripts/setup.sh`
 4. Create an `.env` file that, at a minimum, contains an entry called `SRC_ROOT` that contains the file path of the root of this code base.
-4. If you want to use the OpenAI models, add `OPENAI_API_KEY` and `OPENAI_ORGANIZATION` to your `.env`. Similarly, if you want to use a model that requires access to one of Meta's models (e.g. Llama 2), add `META_ACCESS_KEY` to your `.env` file as well.
+4. If you want to use the OpenAI models, add `OPENAI_API_KEY` and `OPENAI_ORGANIZATION` to your `.env`. Similarly, if you want to use a model that requires access to one of Meta's models (e.g. Llama 2), add `META_ACCESS_KEY` to your `.env` file as well. If you want to use an Anthropic model, you'll also have to add an `ANTHROPIC_API_KEY`.
 
 ### HPC Setup
 1. Follow the HPC's guide to setup a Singularity container. Remember to install the dependencies in the virtual environment in that container.
@@ -72,6 +72,7 @@ This module also contains the `Model` abstraction that is used to generate text.
 * **LLM Model**: This model generates text by invoking a model from Huggingface (yes I know the "M" in LLM stands for "model" but "ll_model" looked strange). It has child classes for different flavors of Huggingface models that have different input formats. At the moment, those two implementing classes are for Llama and Mistral models. This also contains logic for implementing a Linear Probe judge (aka a judge that adds a linear layer on top of the activations of another model), however this is less tested.
 * **Offline Model**: This model just repeats the text from a text transcript that it is provided. This is useful if one wants to re-evaluate the debate with a different judge than the one originally used.
 * **OpenAI Model**: This model generates text by calling OpenAI.
+* **Anthropic Model**: This model generates text by calling Anthropic's Claude model.
 * **Random Model**: This model generates random strings of text. It is useful when testing.
 * **Served Model**: This model makes requests to a localhost destination where it expects a model to be hosted (this can speed up inference dramatically if the model is hosted using an inference engine).
 

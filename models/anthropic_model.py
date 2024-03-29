@@ -4,8 +4,8 @@ from models.model import Model, ModelInput, ModelResponse, RoleType, SpeechStruc
 from utils import logger_utils
 import utils.constants as constants
 
+import anthropic
 import backoff
-import openai
 
 from concurrent.futures import ThreadPoolExecutor
 from typing import Union, Optional
@@ -16,28 +16,24 @@ import random
 import re
 
 
-class OpenAIModel(Model):
+class AnthropicModel(Model):
 
     MAX_PARALLEL_REQUESTS = 16
-    DEFAULT_MODEL_ENDPOINT = "gpt-4-0125-preview"
+    DEFAULT_MODEL_ENDPOINT = "claude-3-opus-20240229"
 
     def __init__(self, alias: str, is_debater: bool = True, endpoint: Optional[str] = None, **kwargs):
         """
-        An OpenAIModel calls GPT4 to generate the appropriate text.
+        An AnthropicModel calls Claude to generate the appropriate text.
 
         Args:
             alias: String that identifies the model for metrics and deduplication
             is_debater: Boolean indicating whether the model is a debater (true) or judge (false)
         """
         super().__init__(alias=alias, is_debater=is_debater)
-        self.__configure()
-        self.client = openai.OpenAI()
-        self.endpoint = endpoint if endpoint else OpenAIModel.DEFAULT_MODEL_ENDPOINT
+        self.client = anthropic.Anthropic()
+        self.endpoint = endpoint if endpoint else AnthropicModel.DEFAULT_MODEL_ENDPOINT
         self.logger = logger_utils.get_default_logger(__name__)
 
-    def __configure(self):
-        openai.organization = os.getenv("OPENAI_ORGANIZATION")
-        openai.api_key = os.getenv("OPENAI_API_KEY")
 
     def predict(
         self,
@@ -60,7 +56,7 @@ class OpenAIModel(Model):
         Returns:
             A list of model responses, with one string for each entry in the batch.
         """
-        with ThreadPoolExecutor(max_workers=OpenAIModel.MAX_PARALLEL_REQUESTS) as executor:
+        with ThreadPoolExecutor(max_workers=AnthropicModel.MAX_PARALLEL_REQUESTS) as executor:
             futures = [
                 executor.submit(
                     self.predict_single_input,
@@ -103,41 +99,29 @@ class OpenAIModel(Model):
                 return default
 
         def process_logprobs(completion: dict) -> tuple[float, float]:
-            debater_suffixes = ["_A", "_B"]
-            logprobs = completion.choices[0].logprobs.content
-            for entry in logprobs:
-                if entry.token in debater_suffixes:
-                    scores = {suffix: 0 for suffix in debater_suffixes}
-                    for option in filter(lambda x: x.token in debater_suffixes, entry.top_logprobs):
-                        scores[option.token] = math.exp(float(option.logprob))
-                    total_probs = sum(scores.values())
-                    renormalized_scores = {suffix: scores[suffix] / total_probs for suffix in scores}
-                    return (
-                        renormalized_scores[debater_suffixes[0]],
-                        renormalized_scores[debater_suffixes[1]],
-                    )
+            """ This exists to maintain parity with the OpenAI model functionality even though the Anthropic API
+            does not support logprobs yet"""
+
+            if re.search(constants.DEFAULT_DEBATER_A_NAME, completion.content[0].text):
+                return 1.0, 0.0
+            elif re.search(constants.DEFAULT_DEBATER_B_NAME, completion.content[0].text):
+                return 0.0, 1.0
+            print("uh oh!", completion.content[0].text)
             return 0.5, 0.5
 
-        messages = OpenAIModel.generate_llm_input_from_model_inputs(input_list=model_input_list)
+        system, messages = AnthropicModel.generate_llm_input_from_model_inputs(input_list=model_input_list)
 
         try:
-            completion = self.call_openai(
-                messages=messages, max_new_tokens=max_new_tokens, speech_structure=speech_structure
+            completion = self.call_anthropic(
+                system=system, messages=messages, max_new_tokens=max_new_tokens, speech_structure=speech_structure
             )
-        except openai.APIError as e:
-            self.logger.warn(f"OpenAI API returned an API Error: {e}")
-            self.logger.warn(e)
-            return ModelResponse(failed=True)
-        except openai.APIConnectionError as e:
-            self.logger.warn(f"Failed to connect to OpenAI API: {e}")
-            self.logger.warn(e)
-            return ModelResponse(failed=True)
-        except openai.RateLimitError as e:
-            self.logger.warn(f"OpenAI API request exceeded rate limit: {e}")
+        except Exception as e:
+            self.logger.warn(f"Anthropic API returned an API Error: {e}")
             self.logger.warn(e)
             return ModelResponse(failed=True)
 
-        message = completion.choices[0].message.content
+
+        message = completion.content[0].text
 
         if speech_structure == SpeechStructure.DECISION:
             a_odds, b_odds = process_logprobs(completion)
@@ -162,29 +146,30 @@ class OpenAIModel(Model):
 
         return ModelResponse(speech=message, prompt="\n".join(model_input.content for model_input in model_input_list))
 
-    @backoff.on_exception(backoff.expo, backoff.on_exception, max_tries=4)
-    def call_openai(
-        self, messages: list[dict[str, str]], speech_structure: SpeechStructure, max_new_tokens: int
-    ) -> openai.ChatCompletion:
-        return self.client.chat.completions.create(
-            model=self.endpoint,
-            messages=messages,
+    #@backoff.on_exception(backoff.expo, backoff.on_exception, max_tries=4)
+    def call_anthropic(
+        self, system: str, messages: list[dict[str, str]], speech_structure: SpeechStructure, max_new_tokens: int
+    ):
+        return self.client.messages.create(
+            model=self.endpoint, #"claude-3-haiku-20240307", #"claude-3-opus-20240229",
             max_tokens=max_new_tokens,
-            logprobs=(speech_structure != SpeechStructure.OPEN_ENDED),
-            top_logprobs=5 if (speech_structure != SpeechStructure.OPEN_ENDED) else None,
+            system=system,
+            messages=messages,
+            temperature=0.0 if speech_structure == SpeechStructure.DECISION else 0.5
         )
 
-    def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> OpenAIModel:
+    def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> AnthropicModel:
         """Generates a deepcopy of this model"""
-        return OpenAIModel(alias=alias, is_debater=is_debater, endpoint=self.endpoint)
+        return AnthropicModel(alias=alias, is_debater=is_debater, endpoint=self.endpoint)
 
     @classmethod
     def generate_llm_input_from_model_inputs(
         cls, input_list: list[ModelInput], extra_suffix: str = ""
-    ) -> dict[str, list[dict[str, str]]]:
-        """Converts a ModelInput into the format that the OpenAI API expects"""
+    ) -> tuple[str, dict[str, list[dict[str, str]]]]:
+        """Converts a ModelInput into the format that the Anthropic API expects. The first output
+        is the system prompt and the second is the messages list"""
 
-        def model_input_to_openai_format(model_input: ModelInput | str) -> dict[str, str]:
+        def model_input_to_anthropic_format(model_input: ModelInput | str) -> dict[str, str]:
             if isinstance(model_input, str):
                 return {"role": RoleType.USER.name.lower(), "content": model_input}
             return {"role": model_input.role.name.lower(), "content": model_input.content}
@@ -192,7 +177,10 @@ class OpenAIModel(Model):
         def add_actual_speech(messages: list[dict[str, str]], actual_speech: str) -> None:
             messages.append({"role": "assistant", "content": actual_speech})
 
-        messages = [model_input_to_openai_format(model_input) for model_input in input_list]
+        messages = [model_input_to_anthropic_format(model_input) for model_input in input_list]
         if extra_suffix:
             add_actual_speech(messages=messages, actual_speech=extra_suffix)
-        return messages
+
+        if messages[0]["role"] == RoleType.SYSTEM.name.lower():
+            return messages[0]["content"], messages[1:]
+        return "", messages
