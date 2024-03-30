@@ -1,3 +1,4 @@
+anthropic
 backoff==2.2.1
 datasets
 einops==0.6.1
@@ -9,7 +10,7 @@ optimum==1.13.2
 pandas==1.5.3
 peft==0.5.0
 protobuf==4.24.3
-pydantic==1.10.7
+pydantic==2.6.0
 python-dotenv==1.0.0
 pyyaml==6.0.1
 seaborn

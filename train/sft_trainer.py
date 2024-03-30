@@ -80,12 +80,6 @@ class SupervisedTrainer:
 
         df = pd.DataFrame(data=llm_inputs)
 
-        str_versions = [json.dumps({"messages": llm_input}) for llm_input in llm_inputs]
-        random.shuffle(str_versions)
-        with open("/Users/samarnesen/nyu/scratch/nyu-blind-rounds.jsonl", "w") as f:
-            str_version = "\n".join(str_versions)
-            f.write(str_version)
-
         return Dataset.from_pandas(df).shuffle()
 
     @classmethod
