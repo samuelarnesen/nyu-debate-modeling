@@ -278,9 +278,9 @@ class ExperimentLoader:
             if experiment.prompt_config.use_hardcoded_topics:
                 count = 1
             elif offline_model_helpers:
-                count = offline_model_helpers[0].get_size()
+                count = offline_model_helpers[0].get_size() * abs(count)
             else:
-                count = len(dataset.get_data())
+                count = len(dataset.get_data()) * abs(count)
 
         logger.info(f"Creating {count} rounds between {first_alias} and {second_alias}")
 
