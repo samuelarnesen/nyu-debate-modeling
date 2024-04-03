@@ -17,7 +17,6 @@ import re
 
 
 class AnthropicModel(Model):
-
     MAX_PARALLEL_REQUESTS = 16
     DEFAULT_MODEL_ENDPOINT = "claude-3-opus-20240229"
 
@@ -33,7 +32,6 @@ class AnthropicModel(Model):
         self.client = anthropic.Anthropic()
         self.endpoint = endpoint if endpoint else AnthropicModel.DEFAULT_MODEL_ENDPOINT
         self.logger = logger_utils.get_default_logger(__name__)
-
 
     def predict(
         self,
@@ -99,7 +97,7 @@ class AnthropicModel(Model):
                 return default
 
         def process_logprobs(completion: dict) -> tuple[float, float]:
-            """ This exists to maintain parity with the OpenAI model functionality even though the Anthropic API
+            """This exists to maintain parity with the OpenAI model functionality even though the Anthropic API
             does not support logprobs yet"""
 
             if re.search(constants.DEFAULT_DEBATER_A_NAME, completion.content[0].text):
@@ -119,7 +117,6 @@ class AnthropicModel(Model):
             self.logger.warn(f"Anthropic API returned an API Error: {e}")
             self.logger.warn(e)
             return ModelResponse(failed=True)
-
 
         message = completion.content[0].text
 
@@ -146,16 +143,16 @@ class AnthropicModel(Model):
 
         return ModelResponse(speech=message, prompt="\n".join(model_input.content for model_input in model_input_list))
 
-    #@backoff.on_exception(backoff.expo, backoff.on_exception, max_tries=4)
+    # @backoff.on_exception(backoff.expo, backoff.on_exception, max_tries=4)
     def call_anthropic(
         self, system: str, messages: list[dict[str, str]], speech_structure: SpeechStructure, max_new_tokens: int
     ):
         return self.client.messages.create(
-            model=self.endpoint, #"claude-3-haiku-20240307", #"claude-3-opus-20240229",
+            model=self.endpoint,  # "claude-3-haiku-20240307", #"claude-3-opus-20240229",
             max_tokens=max_new_tokens,
             system=system,
             messages=messages,
-            temperature=0.0 if speech_structure == SpeechStructure.DECISION else 0.5
+            temperature=0.0 if speech_structure == SpeechStructure.DECISION else 0.5,
         )
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, **kwargs) -> AnthropicModel:

@@ -17,7 +17,6 @@ import re
 
 
 class OpenAIModel(Model):
-
     MAX_PARALLEL_REQUESTS = 16
     DEFAULT_MODEL_ENDPOINT = "gpt-4-0125-preview"
 

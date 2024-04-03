@@ -877,9 +877,7 @@ class SmoothedDPOTrainer(Trainer):
                 preference = torch.FloatTensor(preference).to("cuda")
                 label_smoothing = 1 - preference
                 pref = preference.item()
-                self.logger.info(
-                    f"New label smoothing is {pref}"
-                )
+                self.logger.info(f"New label smoothing is {pref}")
             losses = (
                 -F.logsigmoid(self.beta * logits) * (1 - label_smoothing)
                 - F.logsigmoid(-self.beta * logits) * label_smoothing
