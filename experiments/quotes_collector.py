@@ -44,13 +44,43 @@ class QuotesCollector:
             self.alias_to_results[alias][constants.INCORRECT] = copy.deepcopy(default)
 
         def is_correct(speaker: str):
-            return (speaker == constants.DEFAULT_DEBATER_A_NAME and summary.metadata.first_debater_correct) or (
-                speaker != constants.DEFAULT_DEBATER_A_NAME and not summary.metadata.first_debater_correct
+            return (
+                speaker == constants.DEFAULT_DEBATER_A_NAME
+                and summary.metadata.first_debater_correct
+                and summary.first_debater_speaks
+            ) or (
+                speaker == constants.DEFAULT_DEBATER_B_NAME
+                and not summary.metadata.first_debater_correct
+                and summary.second_debater_speaks
+            )
+
+        def is_incorrect(speaker: str):
+            return (
+                speaker == constants.DEFAULT_DEBATER_A_NAME
+                and not summary.metadata.first_debater_correct
+                and summary.first_debater_speaks
+            ) or (
+                speaker == constants.DEFAULT_DEBATER_B_NAME
+                and summary.metadata.first_debater_correct
+                and summary.second_debater_speaks
             )
 
         def is_winner(speaker: str):
-            return (speaker == constants.DEFAULT_DEBATER_A_NAME and summary.first_debater_wins) or (
-                speaker != constants.DEFAULT_DEBATER_A_NAME and not summary.first_debater_wins
+            return (
+                speaker == constants.DEFAULT_DEBATER_A_NAME and summary.first_debater_wins and summary.first_debater_speaks
+            ) or (
+                speaker == constants.DEFAULT_DEBATER_B_NAME
+                and not summary.first_debater_wins
+                and summary.second_debater_speaks
+            )
+
+        def is_loser(speaker: str):
+            return (
+                speaker == constants.DEFAULT_DEBATER_A_NAME
+                and not summary.first_debater_wins
+                and summary.first_debater_speaks
+            ) or (
+                speaker == constants.DEFAULT_DEBATER_B_NAME and summary.first_debater_wins and summary.second_debater_speaks
             )
 
         def get_alias_from_speaker(speaker: str):
@@ -73,7 +103,9 @@ class QuotesCollector:
             if alias == constants.DEFAULT_JUDGE_NAME:
                 continue
             correct = is_correct(speech.speaker)
+            incorrect = is_incorrect(speech.speaker)
             winner = is_winner(speech.speaker)
+            loser = is_loser(speech.speaker)
 
             num_valid = 0
             total = 0
@@ -89,7 +121,7 @@ class QuotesCollector:
                         self.alias_to_results[alias][constants.WINNER].number_of_valid_quotes += 1
                         self.alias_to_results[alias][constants.WINNER].total_valid_quote_length += quote_length
                         self.alias_to_results[alias][constants.WINNER].quote_length_to_accuracy[quote_length][0] += 1
-                    else:
+                    if loser:
                         self.alias_to_results[alias][constants.LOSER].number_of_valid_quotes += 1
                         self.alias_to_results[alias][constants.LOSER].total_valid_quote_length += quote_length
                         self.alias_to_results[alias][constants.LOSER].quote_length_to_accuracy[quote_length][0] += 1
@@ -97,7 +129,7 @@ class QuotesCollector:
                         self.alias_to_results[alias][constants.CORRECT].number_of_valid_quotes += 1
                         self.alias_to_results[alias][constants.CORRECT].total_valid_quote_length += quote_length
                         self.alias_to_results[alias][constants.CORRECT].quote_length_to_accuracy[quote_length][0] += 1
-                    if not correct:
+                    if incorrect:
                         self.alias_to_results[alias][constants.INCORRECT].number_of_valid_quotes += 1
                         self.alias_to_results[alias][constants.INCORRECT].total_valid_quote_length += quote_length
                         self.alias_to_results[alias][constants.INCORRECT].quote_length_to_accuracy[quote_length][0] += 1
@@ -109,13 +141,13 @@ class QuotesCollector:
                 if winner:
                     self.alias_to_results[alias][constants.WINNER].number_of_quotes += 1
                     self.alias_to_results[alias][constants.WINNER].quote_length_to_accuracy[quote_length][1] += 1
-                if not winner:
+                if loser:
                     self.alias_to_results[alias][constants.LOSER].number_of_quotes += 1
                     self.alias_to_results[alias][constants.LOSER].quote_length_to_accuracy[quote_length][1] += 1
                 if correct:
                     self.alias_to_results[alias][constants.CORRECT].number_of_quotes += 1
                     self.alias_to_results[alias][constants.CORRECT].quote_length_to_accuracy[quote_length][1] += 1
-                if not correct:
+                if incorrect:
                     self.alias_to_results[alias][constants.INCORRECT].number_of_quotes += 1
                     self.alias_to_results[alias][constants.CORRECT].quote_length_to_accuracy[quote_length][1] += 1
 

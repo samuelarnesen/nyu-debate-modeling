@@ -331,8 +331,8 @@ class ExperimentLoader:
             config_b_first = PromptConfig(
                 name=constants.DEFAULT_DEBATER_B_NAME,
                 opponent_name=constants.DEFAULT_DEBATER_A_NAME,
-                position=position,
-                opponent_position=opponent_position,
+                position=opponent_position if experiment.flip else position,
+                opponent_position=position if experiment.flip else opponent_position,
                 topic=topic,
                 background_text=background_text if not experiment.prompt_config.is_memorized else title,
             )
@@ -445,9 +445,7 @@ class ExperimentLoader:
             )
 
             flipped_question_metadata = QuestionMetadata(
-                first_debater_correct=correct_index == 0
-                if not experiment.speech_structure.flip_position_order
-                else correct_index != 0,
+                first_debater_correct=correct_index == 0 if not experiment.speech_structure.flip_position_order else correct_index != 0,
                 question_idx=i,
                 background_text=background_text,
                 question=topic,
@@ -534,6 +532,10 @@ class ExperimentLoader:
                     old_judge = debate_round.judge
                     debate_round.judge = flipped_judge
                     flipped_round.judge = old_judge
+                    old_metadata = debate_round.metadata
+                    debate_round.metadata = flipped_round.metadata
+                    flipped_round.metadata = debate_round.metadata
+
 
             if second_offline_file_path:
                 helper = next((x for x in offline_model_helpers if x.file_path_prefix == second_offline_file_path))
@@ -562,6 +564,8 @@ class ExperimentLoader:
                     old_judge = debate_round.judge
                     debate_round.judge = flipped_judge
                     flipped_round.judge = old_judge
+                    debate_round.metadata = flipped_round.metadata
+                    flipped_round.metadata = debate_round.metadata
 
             if experiment.agents.debaters[debater_idxs[0]].best_of_n and (
                 not first_offline_file_path or experiment.agents.debaters[debater_idxs[0]].best_of_n.recompute

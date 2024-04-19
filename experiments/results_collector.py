@@ -405,9 +405,20 @@ class ResultsCollector:
         def log_likelihood(params, indices):
             log_likelihood = 0
             for summary in self.summaries:
-                winner_idx = indices[summary.winning_alias]
-                loser_idx = indices[summary.losing_alias]
-                log_likelihood += params[winner_idx] - np.logaddexp(params[winner_idx], params[loser_idx])
+                winning_param = params[indices[summary.winning_alias]]
+                losing_param = params[indices[summary.losing_alias]]
+                if not summary.first_debater_speaks:
+                    if summary.first_debater_wins:
+                        winning_param = 1
+                    else:
+                        losing_param = 1
+                if not summary.second_debater_speaks:
+                    if summary.first_debater_wins:
+                        losing_param = 1
+                    else:
+                        winning_param = 1
+
+                log_likelihood += winning_param - np.logaddexp(winning_param, losing_param)
             return -log_likelihood
 
         init_params = np.zeros(self.num_debaters)
@@ -469,7 +480,7 @@ class ResultsCollector:
         for name in results:
             win_stats = win_stats_dict[name]
             category_to_counts[name] = {
-                constants.OVERALL: win_stats.matches if self.num_debaters > 1 else int(win_stats.matches / 2),
+                constants.OVERALL: win_stats.matches,
                 constants.WINNER: win_stats.wins,
                 constants.LOSER: win_stats.matches - win_stats.wins,
                 constants.CORRECT: win_stats.correct_matches,
