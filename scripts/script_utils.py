@@ -29,6 +29,7 @@ class TrainType(Enum):
     PPO = 2
     PRETRAIN = 3
     PROBE = 4
+    CUSTOM_KTO = 5
 
 
 class ScriptUtils:
@@ -106,6 +107,8 @@ class ScriptUtils:
             return f"{root}/{default_config_dir}/pretrain_config.yaml"
         elif train_type == TrainType.PROBE:
             return f"{root}/{default_config_dir}/probe_config.yaml"
+        elif train_type == TrainType.CUSTOM_KTO:
+            return f"{root}/{default_config_dir}/custom_kto_config.yaml"
         else:
             raise Exception(f"Train type {train_type} is not recognized")
 

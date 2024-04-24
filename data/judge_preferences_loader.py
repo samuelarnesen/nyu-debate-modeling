@@ -4,7 +4,7 @@ from utils import InputType, input_utils, quote_utils
 import utils.constants as constants
 
 from typing import Any, Optional
-import json
+import json, random
 
 
 class JudgePreferencesDataset(RawDataset):
@@ -20,6 +20,14 @@ class JudgePreferencesDataset(RawDataset):
             SplitType.TEST: self.__convert_batch_to_rows(test_data),
         }
         self.idxs = {SplitType.TRAIN: 0, SplitType.VAL: 0, SplitType.TEST: 0}
+
+        correct_prefs = []
+        incorrect_prefs = []
+        for row in self.data[SplitType.TRAIN]:
+            if row.chosen:
+                correct_prefs.append(row.preference)
+            else:
+                incorrect_prefs.append(row.preference)
 
     def get_data(self, split: SplitType = SplitType.TRAIN) -> list[JudgePreferenceDataRow]:
         """Returns all the data for a given split"""
@@ -84,6 +92,60 @@ class JudgePreferencesLoader(RawDataLoader):
                         rejected["preference"] + selected["supplemental"]["preference"]
                     )
                     train_data.append((instruction, selected_speech, rejected_speech, preference))
+
+        return JudgePreferencesDataset(
+            train_data=train_data,
+            val_data=[],
+            test_data=[],
+        )
+
+
+class CorrectnessJudgePreferencesLoader(RawDataLoader):
+    @classmethod
+    def load(cls, full_dataset_filepath: str | list[str], **kwargs) -> JudgePreferencesDataset:
+        """
+        Constructs a CorrectnessJudgePreferencesDataset. This is a modified JudgePreferencesDataset where a speech is marked
+        as "chosen" if it defends the correct side and "rejected" if it defends the incorrect side. The "preference" is just
+        the outright win probability.
+
+        Params:
+            full_dataset_filepath: This is the *prefix* of the files with all the Best-of-N generations.
+
+        Returns:
+            A JudgePreferencesDataset where each row has a chosen and a rejected speech.
+        """
+
+        def clean_speech(speech: str) -> str:
+            speech = speech.replace(constants.INVALID_QUOTE_TAG, constants.QUOTE_TAG).replace(
+                constants.INVALID_UNQUOTE_TAG, constants.UNQUOTE_TAG
+            )
+            return quote_utils.clean_up_quotes(speech_content=speech)
+
+        train_data = []
+        input_texts = input_utils.read_file_texts(base_path=full_dataset_filepath, input_type=InputType.JSON_TRANSCRIPT)
+        for text in input_texts:
+            data = json.loads(text)
+            for selected in filter(
+                lambda x: x["speaker"] in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME],
+                data["speeches"],
+            ):
+                instruction = selected["supplemental"]["prompt"]
+
+                speech_preference_pairs = [(selected["content"], selected["supplemental"]["preference"])] + [
+                    (rejected["speech"], rejected["preference"])
+                    for rejected in selected["supplemental"]["rejected_responses"]
+                ]
+                random_selected_speech, random_selected_preference = random.choice(speech_preference_pairs)
+
+                is_correct = (
+                    data["metadata"]["first_debater_correct"] and selected["speaker"] == constants.DEFAULT_DEBATER_A_NAME
+                ) or (
+                    not data["metadata"]["first_debater_correct"] and selected["speaker"] == constants.DEFAULT_DEBATER_B_NAME
+                )
+                if is_correct:
+                    train_data.append((instruction, clean_speech(random_selected_speech), "", random_selected_preference))
+                else:
+                    train_data.append((instruction, "", clean_speech(random_selected_speech), random_selected_preference))
 
         return JudgePreferencesDataset(
             train_data=train_data,

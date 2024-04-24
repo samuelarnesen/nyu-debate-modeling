@@ -22,6 +22,7 @@ class DatasetType(Enum):
     QUOTE_RELEVANCE = 6
     JUDGING_PROBE = 7
     QUALITY_CONSULTANCY = 8
+    CORRECTNESS_JUDGE_PREFERENCES = 9
 
 
 class DatasetConfig(BaseModel):

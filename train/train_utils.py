@@ -1,4 +1,4 @@
-from data import DatasetConfig, DatasetType, LoaderUtils, RawDataset
+from data import DatasetConfig, DatasetType, loader_utils, RawDataset
 from debate import ScratchpadConfig, SpeechFormatStructure
 from models import LLMType, LLModel, ModelStub, TokenizerStub
 from prompts import PromptLoadingConfig
@@ -115,7 +115,7 @@ class TrainUtils:
 
         datasets = []
         for dataset_config in dataset_configs:
-            loader_cls = LoaderUtils.get_loader_type(dataset_config.dataset_type)
+            loader_cls = loader_utils.get_loader_type(dataset_config.dataset_type)
             dataset = loader_cls.load(
                 full_dataset_filepath=dataset_config.full_dataset_file_path,
                 train_filepath=dataset_config.train_file_path,

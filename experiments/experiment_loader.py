@@ -9,7 +9,7 @@ from debate import (
     SpeechFormatType,
     SpeechFormatStructure,
 )
-from data import DatasetConfig, DatasetType, LoaderUtils, RawDataLoader, RawDataset, SplitType
+from data import DatasetConfig, DatasetType, loader_utils, RawDataLoader, RawDataset, SplitType
 from models import Model, ModelSettings, ModelType, ModelUtils, OfflineModelHelper, ServedModel
 from prompts import Prompt, PromptConfig, PromptLoadingConfig, PromptParser
 from utils import logger_utils
@@ -148,7 +148,7 @@ class ExperimentLoader:
     @classmethod
     def create_dataset(cls, experiment: ExperimentConfig) -> RawDataset:
         dataset_config = experiment.dataset
-        loader_cls = LoaderUtils.get_loader_type(dataset_config.dataset_type)
+        loader_cls = loader_utils.get_loader_type(dataset_config.dataset_type)
         return loader_cls.load(
             full_dataset_filepath=dataset_config.full_dataset_file_path,
             train_filepath=dataset_config.train_file_path,
@@ -445,7 +445,9 @@ class ExperimentLoader:
             )
 
             flipped_question_metadata = QuestionMetadata(
-                first_debater_correct=correct_index == 0 if not experiment.speech_structure.flip_position_order else correct_index != 0,
+                first_debater_correct=correct_index == 0
+                if not experiment.speech_structure.flip_position_order
+                else correct_index != 0,
                 question_idx=i,
                 background_text=background_text,
                 question=topic,
@@ -535,7 +537,6 @@ class ExperimentLoader:
                     old_metadata = debate_round.metadata
                     debate_round.metadata = flipped_round.metadata
                     flipped_round.metadata = debate_round.metadata
-
 
             if second_offline_file_path:
                 helper = next((x for x in offline_model_helpers if x.file_path_prefix == second_offline_file_path))
