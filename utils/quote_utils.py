@@ -127,6 +127,32 @@ def find_best_match(
     return None
 
 
+def replace_quotes_containing_ellipses(
+    speech_content: str, quote: str, background_text: str, early_stopping_threshold: int = 0.9, min_threshold: int = 0.8
+) -> Optional[str]:
+    """
+    Some quotes may contain ellipses. These quotes may be marked as invalid because they contain words from
+    multiple disparate sections of the text. Here, we will split up the quote based on its ellipses pattern
+    and check if each subcomponent is present in the text. If the quote is partially fixed up, then we will
+    return a quote containing <quote></quote> tags. If not, then we will return None.
+    """
+    ELLIPSES = "..."
+    if ELLIPSES not in quote:
+        return None
+
+    partially_validated = False
+    components = []
+    for subquote in filter(lambda x: len(x.strip()) > 1, quote.split(ELLIPSES)):
+        if validate_quote(quote=subquote.strip(), background_text=background_text):
+            partially_validated = True
+            components.append(f"{constants.QUOTE_TAG}{subquote}{constants.UNQUOTE_TAG}")
+        else:
+            components.append(f"{constants.INVALID_QUOTE_TAG}{subquote}{constants.INVALID_UNQUOTE_TAG}")
+    if partially_validated:
+        return " ".join(components)
+    return None
+
+
 def replace_invalid_quote(
     speech_content: str,
     quote: str,
@@ -150,9 +176,20 @@ def replace_invalid_quote(
         logger.debug(f'Replacing "{quote}" with "{best_replacement}"')
         return re.sub(re.escape(quote), best_replacement, speech_content, flags=re.DOTALL)
     else:
+        potentially_fixed_quote = replace_quotes_containing_ellipses(
+            speech_content=speech_content,
+            quote=quote,
+            background_text=background_text,
+            early_stopping_threshold=early_stopping_threshold,
+            min_threshold=min_threshold,
+        )
+
+        if potentially_fixed_quote:
+            logger.debug(f'Replacing "{quote}" with "{potentially_fixed_quote}"')
+
         return re.sub(
-            f"{re.escape(constants.QUOTE_TAG)}{re.escape(quote)}{re.escape(constants.UNQUOTE_TAG)}",
-            f"{constants.INVALID_QUOTE_TAG}{quote}{constants.INVALID_UNQUOTE_TAG}",
+            f"{re.escape(constants.QUOTE_TAG)}{re.escape(quote)}{re.escape(constants.UNQUOTE_TAG)}|{re.escape(constants.INVALID_QUOTE_TAG)}{re.escape(quote)}{re.escape(constants.INVALID_UNQUOTE_TAG)}",
+            potentially_fixed_quote or f"{constants.INVALID_QUOTE_TAG}{quote}{constants.INVALID_UNQUOTE_TAG}",
             speech_content,
             flags=re.DOTALL,
         )
