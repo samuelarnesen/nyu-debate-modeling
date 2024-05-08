@@ -5,6 +5,8 @@ from difflib import SequenceMatcher
 from typing import Optional
 import re
 
+import fuzzysearch  #  potentially delete
+
 
 def simplify_text(text: str):
     """Strips out characters that are often butchered by different tokenizers"""
@@ -108,9 +110,15 @@ def find_best_match(
         The best matching string that exceeds the min_threshold
     """
 
-    split_background_text = split_text(text=background_text)
     quote_words = re.findall(r"\w+", quote)
+    if not quote_words:
+        return None
 
+    matches = fuzzysearch.find_near_matches(quote, background_text, max_l_dist=max(len(quote) // 10, 3))
+    if matches:
+        return background_text[matches[0].start : matches[0].end]
+
+    split_background_text = split_text(text=background_text)
     max_ratio = 0
     best_match = None
     for i in range(len(split_background_text) - len(quote_words)):
@@ -123,7 +131,6 @@ def find_best_match(
             return best_match
     if max_ratio >= min_threshold:
         return best_match
-
     return None
 
 

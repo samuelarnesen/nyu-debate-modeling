@@ -65,7 +65,7 @@ def read_file_texts(base_path: str | list[str], input_type: InputType = InputTyp
     if isinstance(base_path, list):
         input_texts = []
         for path in base_path:
-            input_texts += input_utils.read_file_texts(base_path=path, extension=input_type.extension)
+            input_texts += read_file_texts(base_path=path, input_type=input_type)
         return input_texts
 
     directory = input_type.location if "/" not in base_path else "/".join(base_path.split("/")[:-1])
