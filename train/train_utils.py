@@ -98,7 +98,7 @@ class TrainingConfig(BaseModel):
 
 class TrainUtils:
     @classmethod
-    def create_datasets(cls, config: TrainingConfig, deduplicate: bool = False, **kwargs) -> RawDataset:
+    def create_datasets(cls, config: TrainingConfig, deduplicate: bool = False, **kwargs) -> list[RawDataset]:
         """
         Constructs a dataset that will later be converted into a training dataset.
 
@@ -107,7 +107,7 @@ class TrainUtils:
             deduplicate: whether only one example from each prompt should be used
 
         Returns:
-            dataset: a dataset object that can later be used as a training dataset
+            dataset: a list of dataset objects that can later be used as training datasets
         """
         dataset_configs = config.dataset
         if isinstance(dataset_configs, DatasetConfig):
@@ -184,19 +184,19 @@ class TrainUtils:
                 file_path=config.model_name, requires_token=config.requires_token, use_cache=False
             )
             model.config.max_position_embeddings = config.max_length
-            model.config.transformers_version = "4.34.0"
-            model.generation_config.transformers_version = "4.34.0"
             if requires_value_head:
-                peft_config = TrainUtils.get_peft_config(config=config)
-                return AutoModelForCausalLMWithValueHead.from_pretrained(
+                local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+                device_map = {"": local_rank}
+                model = AutoModelForCausalLMWithValueHead.from_pretrained(
                     pretrained_model_name_or_path=model,
-                    quantization_config=bnb_config,
-                    use_cache=False,
-                    device_map=device_map,
+                    quantization_config=LLModel.get_bnb_config(),
                     trust_remote_code=True,
                     use_flash_attention_2=True,
-                    peft_config=peft_config,
+                    use_cache=False,
+                    peft_config=TrainUtils.get_peft_config(config=config),
                 )
+            model.config.max_position_embeddings = config.max_length
+            model.config.sliding_window = constants.MAX_LENGTH
             return model
         else:
             return ModelStub()

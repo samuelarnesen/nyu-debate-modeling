@@ -1,10 +1,31 @@
-Train - 13B - Alpaca:
-    model_name: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+Test:
+    model_name: stub_model
     target: debater
-    opening_speeches_only: False
+    llm_type: stub_llm
+    training_hyperparameters:
+        num_train_epochs: 2
+        per_device_train_batch_size: 8
+        gradient_accumulation_steps: 8
+        optim: paged_adamw_32bit
+        learning_rate: 2e-6
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        steps: 100
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /fake/file/path
+    dataset:
+        dataset_type: quality
+        split_type: train
+Train - Experiment:
+    model_name: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+    target: debater
+    opening_speeches_only: True
     training_hyperparameters:
         num_train_epochs: 4
-        per_device_train_batch_size: 1
+        per_device_train_batch_size: 2
         gradient_accumulation_steps: 1
         optim: paged_adamw_32bit
         learning_rate: 2e-4
@@ -15,14 +36,8 @@ Train - 13B - Alpaca:
         steps: 100
     logging_and_saving_config:
         logging_steps: 1
-        output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-PPO/
-        merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-PPO-Merged/
-    prompt_config:
-        prompts_file_path: /home/spa9663/debate/prompts/configs/prompts.yaml
-        prompt_name: Base Prompt
+        output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-PPO/
+        merge_output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-PPO-Merged/
     dataset:
         dataset_type: quality
-        train_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.train
-        val_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.dev
-        test_file_path: /home/spa9663/debate-data/quality/QuALITY.v1.0.1.htmlstripped.test
         split_type: train

@@ -230,15 +230,20 @@ class RowConverter:
 
     @classmethod
     def convert_row(
-        cls, row: DataRow, config: TrainingConfig, dataset: RawDataset, speech_structure: SpeechFormatStructure
+        cls,
+        row: DataRow,
+        config: TrainingConfig,
+        dataset: RawDataset,
+        speech_structure: SpeechFormatStructure,
+        target: Optional[TrainingTarget] = None,
     ) -> list[dict[str, str]]:
         """Returns a list of inputs that can be used as rows in an actual training dataset. See
         convert_transcript() for more details"""
-        if config.target == TrainingTarget.DEBATER:
+        if (target and target == TrainingTarget.DEBATER) or (target is None and config.target == TrainingTarget.DEBATER):
             return RowConverter.convert_all_speeches_for_debater(
                 row=row, config=config, dataset=dataset, speech_structure=speech_structure
             )
-        elif config.target == TrainingTarget.JUDGE:
+        elif (target and target == TrainingTarget.JUDGE) or (target is None and config.target == TrainingTarget.JUDGE):
             return RowConverter.convert_all_speeches_for_judge(
                 row=row, config=config, dataset=dataset, speech_structure=speech_structure
             )

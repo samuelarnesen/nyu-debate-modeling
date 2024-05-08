@@ -1,6 +1,5 @@
 from data import DataRow, RawDataset, SplitType
 from train.impl import SmoothedDPOTrainer
-from train.row_converter import RowConverter
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
 from utils import LoggingCallback, logger_utils
 import utils.constants as constants
@@ -37,7 +36,7 @@ class DirectPreferenceTrainer:
         for raw_dataset in raw_datasets:
             rows += [row.dict() for row in raw_dataset.get_data(split=SplitType.TRAIN)]
         df = pd.DataFrame(data=rows)
-        return Dataset.from_pandas(df)
+        return Dataset.from_pandas(df).shuffle()
 
     @classmethod
     def get_trainer(

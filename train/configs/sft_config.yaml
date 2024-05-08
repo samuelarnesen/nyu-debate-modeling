@@ -43,7 +43,7 @@ Train - 13B - Alpaca:
         merge_output_dir: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Neft-4/
     dataset:
         dataset_type: quality_debates
-Train - Mixtral:
+Train - Mixtral - Human:
     model_name: /vast/spa9663/models/base_models/mixtral-8x7b
     llm_type: mistral
     target: debater
@@ -65,7 +65,7 @@ Train - Mixtral:
         merge_output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-merged
     dataset:
         dataset_type: quality_debates
-Train - Mixtral - Unified:
+Train - Mixtral - Human and GPT:
     model_name: /vast/spa9663/models/base_models/mixtral-8x7b
     llm_type: mistral
     target: debater
@@ -86,9 +86,57 @@ Train - Mixtral - Unified:
         output_dir: /vast/spa9663/models/trained_models/mixtral-mega-adapter
         merge_output_dir: /vast/spa9663/models/trained_models/mixtral-mega
     dataset:
-        dataset_type: quality_debates
-        full_dataset_file_path: /home/spa9663/debate-data/mega_human_and_gpt4_debates.jsonl
-Train - Mixtral - Consultant:
+        - dataset_type: quality_debates
+          full_dataset_file_path: /home/spa9663/debate-data/mega_human_and_gpt4_debates.jsonl
+Train - Mixtral - Consultant - Human:
+    model_name: /vast/spa9663/models/base_models/mixtral-8x7b
+    llm_type: mistral
+    target: debater
+    opening_speeches_only: False
+    max_length: 32986
+    training_hyperparameters:
+        num_train_epochs: 4
+        per_device_train_batch_size: 4
+        gradient_accumulation_steps: 4
+        optim: paged_adamw_32bit
+        learning_rate: 2e-4
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+    logging_and_saving_config:
+        logging_steps: 10
+        output_dir: /vast/spa9663/models/trained_models/mixtral-consultant-adapter-human
+        merge_output_dir: /vast/spa9663/models/trained_models/mixtral-consultant-adapter-human
+    dataset:
+        - dataset_type: quality_consultancy
+    speech_structure: 
+        - default_consultancy
+Train - Mixtral - Consultant - Llama:
+    model_name: Yukang/LongAlpaca-13B
+    llm_type: mistral
+    target: debater
+    opening_speeches_only: False
+    max_length: 32986
+    training_hyperparameters:
+        num_train_epochs: 4
+        per_device_train_batch_size: 4
+        gradient_accumulation_steps: 4
+        optim: paged_adamw_32bit
+        learning_rate: 2e-4
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+    logging_and_saving_config:
+        logging_steps: 10
+        output_dir: /vast/spa9663/models/trained_models/mixtral-consultant-adapter-llama
+        merge_output_dir: /vast/spa9663/models/trained_models/mixtral-consultant-adapter-llama
+    dataset:
+        - dataset_type: quality_consultancy
+    speech_structure: 
+        - default_consultancy
+Train - Mixtral - Consultant - Human and GPT:
     model_name: /vast/spa9663/models/base_models/mixtral-8x7b
     llm_type: mistral
     target: debater
@@ -114,7 +162,7 @@ Train - Mixtral - Consultant:
           full_dataset_file_path: /home/spa9663/debate-data/human_and_gpt4_debates_and_consultancies.jsonl
     speech_structure: 
         - default_consultancy
-Data Generation:
+Data Generation - Judge:
     model_name: blank
     llm_type: openai
     target: judge

@@ -10,10 +10,9 @@ args = ScriptUtils.get_args()
 script_config = ScriptUtils.get_training_run_script_config(args, train_type=TrainType.PPO)
 
 config = TrainUtils.parse_config(config_name=script_config.config_name, config_filepath=script_config.config_filepath)
-dataset = TrainUtils.create_dataset(config=config)
 
-trainer = PPOTrainerWrapper.get_trainer(config=config, raw_dataset=dataset, is_local=args.local)
-trainer.train()
+trainer = PPOTrainerWrapper.get_trainer(config=config, is_local=args.local, is_test=args.test)
+trainer.train(num_iters=10)
 trainer.save_model()
 
 if config.logging_and_saving_config.merge_output_dir:

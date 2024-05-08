@@ -1,6 +1,5 @@
 from data import DataRow, RawDataset, SplitType
-from train.impl import SmoothedKTOTrainer
-from train.row_converter import RowConverter
+from train.impl import BCOTrainer, SmoothedKTOTrainer
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
 from utils import LoggingCallback, logger_utils
 import utils.constants as constants
@@ -45,7 +44,7 @@ class CustomKTOTrainer:
                         {"prompt": row.prompt, "completion": row.rejected, "label": False, "preference": row.preference}
                     )
         df = pd.DataFrame(data=rows)
-        return Dataset.from_pandas(df)
+        return Dataset.from_pandas(df).shuffle()
 
     @classmethod
     def get_trainer(
@@ -54,7 +53,7 @@ class CustomKTOTrainer:
         raw_datasets: Optional[list[RawDataset]] = None,
         is_local: bool = False,
         is_test: bool = False,
-    ) -> Optional[SmoothedKTOTrainer]:
+    ) -> Optional[BCOTrainer]:  # changed to BCO Trainer
         """
         Generates a Trainer object.
 
@@ -105,7 +104,7 @@ class CustomKTOTrainer:
             model = upcast_layer_for_flash_attention(model, torch.bfloat16)
 
         if not is_test:
-            trainer = SmoothedKTOTrainer(
+            trainer = BCOTrainer(
                 model=model,
                 ref_model=None,
                 args=training_args,
