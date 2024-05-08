@@ -1,7 +1,7 @@
 from models.anthropic_model import AnthropicModel
 from models.arbitrary_attribute_model import ArbitraryAttributeModel
 from models.deterministic_model import DeterministicModel
-from models.llm_model import LlamaModel, MistralModel, StubLLModel
+from models.llm_model import LlamaModel, Llama3Model, MistralModel, StubLLModel
 from models.model import Model, ModelSettings
 from models.openai_model import OpenAIModel
 from models.random_model import RandomModel
@@ -24,6 +24,7 @@ class ModelType(Enum):
     STUB_LLM = 8
     ARBITRARY_ATTRIBUTE = 9
     ANTHROPIC = 10
+    LLAMA3 = 11
 
 
 class ModelUtils:
@@ -60,6 +61,14 @@ class ModelUtils:
             )
         elif model_type == ModelType.MISTRAL:
             model = MistralModel(
+                alias=model_settings.alias,
+                file_path=model_settings.model_file_path,
+                is_debater=is_debater,
+                nucleus=model_settings.nucleus,
+                probe_hyperparams=model_settings.probe_hyperparams,
+            )
+        elif model_type == ModelType.LLAMA3:
+            model = Llama3Model(
                 alias=model_settings.alias,
                 file_path=model_settings.model_file_path,
                 is_debater=is_debater,

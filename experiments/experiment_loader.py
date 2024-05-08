@@ -6,7 +6,6 @@ from debate import (
     HumanDebater,
     Judge,
     QuestionMetadata,
-    SpeechFormatType,
     SpeechFormatStructure,
 )
 from data import DatasetConfig, DatasetType, loader_utils, RawDataLoader, RawDataset, SplitType

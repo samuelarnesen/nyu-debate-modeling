@@ -56,6 +56,8 @@ class LLModel(Model):
         requires_file_path: bool = True,
         probe_hyperparams: Optional[ProbeHyperparams] = None,
         max_mini_batch_size: Optional[int] = None,
+        has_chat_template: bool = False,
+        tokenizer_file_path: Optional[str] = None,
     ):
         """
         An LLModel uses a large language model (currently Llama 2 or Mistral) to generate text.
@@ -69,6 +71,10 @@ class LLModel(Model):
             instruction_suffix: the suffix to use after the instructions that get passed to the model
             requires_file_path: whether a file path is needed to instantiate the model
             probe_hyperparams: configuration for a linear probe judge
+            max_mini_batch_size: maximum number of elements before the batch gets split
+            has_chat_template: if the tokenizer has a chat template by default
+            tokenizer_file_path: if the tokenizer has a separate file path, fill this in.
+                Defaults to the same as the file_path
         """
         super().__init__(alias=alias, is_debater=is_debater)
         torch.cuda.empty_cache()
@@ -77,24 +83,16 @@ class LLModel(Model):
         self.instruction_suffix = instruction_suffix
         self.instantiated_model = False
         self.max_mini_batch_size = max_mini_batch_size or LLModel.MAX_MINI_BATCH_SIZE
+        self.has_chat_template = has_chat_template
         if file_path or not requires_file_path:
             self.instantiated_model = True
             self.is_debater = is_debater
+            self.tokenizer_file_path = tokenizer_file_path or file_path
 
-            self.tokenizer, self.model = self.instantiate_tokenizer_and_hf_model(file_path=file_path)
-            self.generation_config = GenerationConfig(
-                max_new_tokens=LLModel.DEFAULT_GENERATION_PARAMS.max_new_tokens,
-                temperature=LLModel.DEFAULT_GENERATION_PARAMS.temperature,
-                top_p=LLModel.DEFAULT_GENERATION_PARAMS.top_p,
-                num_return_sequences=1,
-                output_scores=True,
-                return_dict_in_generate=True,
-                repetition_penalty=LLModel.DEFAULT_GENERATION_PARAMS.repetition_penalty,
-                do_sample=LLModel.DEFAULT_GENERATION_PARAMS.do_sample,
-                use_cache=True,
-                pad_token_id=self.tokenizer.eos_token_id,
-                output_hidden_states=not is_debater,
+            self.tokenizer, self.model = self.instantiate_tokenizer_and_hf_model(
+                file_path=file_path, tokenizer_file_path=tokenizer_file_path
             )
+            self.generation_config = self.create_default_generation_config(is_debater=is_debater)
 
             if not nucleus:
                 self.generation_config.num_beams = 2
@@ -111,12 +109,28 @@ class LLModel(Model):
                     )
                 else:
                     self.logger.warn("Probe hyperparameters were passed in for a debater model. This is not supported.")
-
         else:
             self.is_debater = False
             self.tokenizer = None
             self.model = None
             self.generation_config = None
+
+    def create_default_generation_config(self, is_debater: bool = True) -> GenerationConfig:
+        """Creates a default generation config so that the model can generate text"""
+        return GenerationConfig(
+            max_new_tokens=LLModel.DEFAULT_GENERATION_PARAMS.max_new_tokens,
+            temperature=LLModel.DEFAULT_GENERATION_PARAMS.temperature,
+            top_p=LLModel.DEFAULT_GENERATION_PARAMS.top_p,
+            num_return_sequences=1,
+            output_scores=True,
+            return_dict_in_generate=True,
+            repetition_penalty=LLModel.DEFAULT_GENERATION_PARAMS.repetition_penalty,
+            do_sample=LLModel.DEFAULT_GENERATION_PARAMS.do_sample,
+            use_cache=True,
+            pad_token_id=self.tokenizer.eos_token_id,
+            eos_token_id=[self.tokenizer.eos_token_id],
+            output_hidden_states=not is_debater,
+        )
 
     @classmethod
     def instantiate_tokenizer(
@@ -131,26 +145,39 @@ class LLModel(Model):
         return tokenizer
 
     @classmethod
-    def instantiate_hf_model(
-        self, file_path: str, requires_token: bool = False, use_cache: bool = True
-    ) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
-        local_rank = int(os.environ.get("LOCAL_RANK", "0"))
-        device_map = {"": local_rank}
-        bnb_config = BitsAndBytesConfig(
+    def get_bnb_config(cls) -> BitsAndBytesConfig:
+        return BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_use_double_quant=True,
             bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.bfloat16,
         )
+
+    @classmethod
+    def instantiate_hf_model(
+        self, file_path: str, requires_token: bool = False, use_cache: bool = True
+    ) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
+        local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+        device_map = {"": local_rank}
         return AutoModelForCausalLM.from_pretrained(
             pretrained_model_name_or_path=file_path,
             device_map=device_map,
-            quantization_config=bnb_config,
             trust_remote_code=True,
             use_flash_attention_2=True,
             use_cache=use_cache,
             token=os.getenv("META_ACCESS_TOKEN") if requires_token else None,
+            torch_dtype=torch.bfloat16, # TODO: remove
         )
+        #quantization_config=LLModel.get_bnb_config(),
+
+
+    def instantiate_tokenizer_and_hf_model(
+        self, file_path: str, requires_token: bool = False, tokenizer_file_path: Optional[str] = ""
+    ) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
+        """Constructs the tokenizer and huggingface model at the specified filepath"""
+        tokenizer = LLModel.instantiate_tokenizer(file_path=tokenizer_file_path or file_path, requires_token=requires_token)
+        hf_model = LLModel.instantiate_hf_model(file_path=file_path, requires_token=requires_token)
+        return tokenizer, hf_model
 
     @classmethod
     def generate_llm_input_from_model_inputs(cls, input_list: list[ModelInput], extra_suffix: str = "") -> LLMInput:
@@ -174,37 +201,43 @@ class LLModel(Model):
             (" " + llm_input.extra_suffix) if llm_input.extra_suffix else "",
         )
 
-    def instantiate_tokenizer_and_hf_model(
-        self, file_path: str, requires_token: bool = False
-    ) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
-        """Constructs the tokenizer and huggingface model at the specified filepath"""
-        tokenizer = LLModel.instantiate_tokenizer(file_path=file_path, requires_token=requires_token)
-        hf_model = LLModel.instantiate_hf_model(file_path=file_path, requires_token=requires_token)
-        return tokenizer, hf_model
+    def generate_input_str_with_chat_template(self, model_inputs: list[ModelInput], extra_suffix: str) -> str:
+        """Transforms a LLMInput into a standardized format"""
+        return (
+            self.tokenizer.apply_chat_template(
+                [{"role": mi.role.name.lower(), "content": mi.content} for mi in model_inputs],
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+            + extra_suffix
+        )
 
-    def generate_input_strs(
-        self, inputs: list[list[ModelInput]], speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED
-    ) -> list[str]:
-        """Converts a list of model inputs into a list of strings that can be tokenized"""
+    def convert_to_input_string(self, input_list: list[ModelInput], speech_structure: SpeechStructure) -> str:
+        """Converts the list of model inputs to a string"""
 
         def get_extra_suffix(speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED):
             if speech_structure == SpeechStructure.DECISION:
                 return "\n\n" + constants.JUDGING_PREFIX
             return ""
 
-        input_strs = []
-        for input_list in inputs:
-            input_strs.append(
-                LLModel.generate_input_str(
-                    llm_input=LLModel.generate_llm_input_from_model_inputs(
-                        input_list=input_list, extra_suffix=get_extra_suffix(speech_structure)
-                    ),
-                    instruction_prefix=self.instruction_prefix,
-                    instruction_suffix=self.instruction_suffix,
-                )
+        if self.has_chat_template:
+            return self.generate_input_str_with_chat_template(input_list, get_extra_suffix(speech_structure))
+        else:
+            return LLModel.generate_input_str(
+                llm_input=LLModel.generate_llm_input_from_model_inputs(
+                    input_list=input_list, extra_suffix=get_extra_suffix(speech_structure)
+                ),
+                instruction_prefix=self.instruction_prefix,
+                instruction_suffix=self.instruction_suffix,
             )
 
-        return input_strs
+    def generate_input_strs(
+        self, inputs: list[list[ModelInput]], speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED
+    ) -> list[str]:
+        """Converts a list of model inputs into a list of strings that can be tokenized"""
+        return [
+            self.convert_to_input_string(input_list=input_list, speech_structure=speech_structure) for input_list in inputs
+        ]
 
     @timer("llm inference")
     @torch.inference_mode()
@@ -401,6 +434,50 @@ class MistralModel(LLModel):
         return copy
 
 
+class Llama3Model(LLModel):
+    INSTRUCTION_PREFIX = ""
+    INSTRUCTION_SUFFIX = ""
+    TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj"]
+    LINEAR_IDXS = [31, 16]
+
+    def __init__(
+        self,
+        alias: str,
+        file_path: Optional[str] = None,
+        is_debater: bool = True,
+        nucleus: bool = True,
+        probe_hyperparams: Optional[ProbeHyperparams] = None,
+    ):
+        super().__init__(
+            alias=alias,
+            file_path=file_path,
+            is_debater=is_debater,
+            nucleus=nucleus,
+            instruction_prefix="",
+            instruction_suffix="",
+            requires_file_path=True,
+            probe_hyperparams=probe_hyperparams,
+            max_mini_batch_size=1,
+            has_chat_template=True,
+            tokenizer_file_path="meta-llama/Meta-Llama-3-8B-Instruct",  # TODO: remove
+        )
+
+    def copy(self, alias: str, is_debater: Optional[bool] = None, nucleus: bool = False) -> LLModel:
+        """Generates a deepcopy of this model"""
+        copy = Llama3Model(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, nucleus=nucleus)
+        copy.is_debater = self.is_debater if is_debater == None else is_debater
+        copy.tokenizer = self.tokenizer
+        copy.model = self.model
+        copy.generation_config = self.generation_config
+        return copy
+
+    def create_default_generation_config(self, is_debater: bool = True) -> GenerationConfig:
+        """Creates a default generation config so that the model can generate text"""
+        generation_config = super().create_default_generation_config(is_debater=is_debater)
+        generation_config.eos_token_id = [self.tokenizer.eos_token_id, self.tokenizer.convert_tokens_to_ids("<|eot_id|>")]
+        return generation_config
+
+
 class StubLLModel(LLModel):
     def __init__(
         self,
@@ -492,6 +569,7 @@ class LLMType(Enum):
     MISTRAL = auto()
     OPENAI = auto()
     STUB_LLM = auto()
+    LLAMA3 = auto()
 
     def get_llm_class(self) -> Type[LLModel]:
         if self == LLMType.LLAMA:
@@ -502,6 +580,8 @@ class LLMType(Enum):
             return StubLLModel
         elif self == LLMType.OPENAI:
             return OpenAIModel
+        elif self == LLMType.LLAMA3:
+            return Llama3Model
         else:
             raise Exception(f"Model type {self} not recognized")
 
