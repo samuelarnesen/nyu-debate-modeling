@@ -121,7 +121,7 @@ class CorrectnessJudgePreferencesLoader(RawDataLoader):
             )
             return quote_utils.clean_up_quotes(speech_content=speech)
 
-        def get_actual_judge_score(speeches: list[dict[Any, Any]], name: str) -> Optional[float]: 
+        def get_actual_judge_score(speeches: list[dict[Any, Any]], name: str) -> Optional[float]:
             for i in range(len(speeches)):
                 speech = speeches[len(speeches) - i - 1]
                 if speech["speaker"] == constants.DEFAULT_JUDGE_NAME and speech["supplemental"]["probabilistic_decision"]:
@@ -145,7 +145,7 @@ class CorrectnessJudgePreferencesLoader(RawDataLoader):
                 random_selected_speech, random_selected_preference = random.choice(speech_preference_pairs)
 
                 if not selected["supplemental"]["preference"]:
-                    random_selected_preference = get_actual_judge_score(data["speeches"],selected["speaker"])
+                    random_selected_preference = get_actual_judge_score(data["speeches"], selected["speaker"])
 
                 is_correct = (
                     data["metadata"]["first_debater_correct"] and selected["speaker"] == constants.DEFAULT_DEBATER_A_NAME

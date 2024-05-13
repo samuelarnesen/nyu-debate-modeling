@@ -1,5 +1,32 @@
 Test:
     model_name: stub_model
+    target: debater
+    max_length: 4096
+    requires_token: True
+    opening_speeches_only: True
+    llm_type: llama3
+    training_hyperparameters:
+        num_train_epochs: 4
+        per_device_train_batch_size: 4
+        gradient_accumulation_steps: 4
+        optim: paged_adamw_8bit
+        learning_rate: 2e-4
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+    logging_and_saving_config:
+        logging_steps: 10
+        output_dir: stub_model
+    dataset:
+        - dataset_type: quality_debates
+          full_dataset_file_path: /Users/samarnesen/Downloads/human_and_gpt4_debates.jsonl
+        - dataset_type: external_huggingface
+          full_dataset_file_path: yahma/alpaca-cleaned
+    speech_structure: 
+        - default_debate
+Test - Judge:
+    model_name: stub_model
     target: judge
     max_length: 4096
     requires_token: True
@@ -22,6 +49,31 @@ Test:
         - dataset_type: quality
     speech_structure: 
         - empty_round
+Train - Llama3 - Human and GPT:
+    model_name: /vast/spa9663/models/base_models/llama3-8b-262k
+    llm_type: llama3
+    target: debater
+    opening_speeches_only: False
+    max_length: 32986
+    training_hyperparameters:
+        num_train_epochs: 2
+        per_device_train_batch_size: 2
+        gradient_accumulation_steps: 8
+        optim: adamw_hf
+        learning_rate: 2e-4
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+    logging_and_saving_config:
+        logging_steps: 10
+        output_dir: /vast/spa9663/models/trained_models/llama-3-mega
+        merge_output_dir: /vast/spa9663/models/trained_models/llama-3-mega
+    dataset:
+        - dataset_type: quality_debates
+          full_dataset_file_path: /home/spa9663/debate-data/human_and_gpt4_debates.jsonl
+        - dataset_type: external_huggingface
+          full_dataset_file_path: yahma/alpaca-cleaned
 Train - 13B - Alpaca:
     model_name: Yukang/LongAlpaca-13B
     target: debater

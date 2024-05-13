@@ -1,10 +1,12 @@
 from data.dataset import DataRow, DatasetType, RawDataLoader, RawDataset, SpeakerType, SpeechData, SplitType
+from utils import quote_utils
 import utils.constants as constants
 
 from typing import Any, Callable, Optional, Type
 import json
 import os
 import re
+import sys  # TODO: remove
 
 
 class QualityDebatesDataset(RawDataset):
@@ -77,12 +79,12 @@ class QualityDebatesDataset(RawDataset):
 
     def __example_to_row(self, entry: dict[str, Any]) -> tuple[str, Any]:
         return DataRow(
-            background_text=entry["story"],
-            question=entry["question"],
-            positions=entry["answers"],
+            background_text=self.__fix_line_spacing(entry["story"]),
+            question=entry["question"].replace("\n", " "),
+            positions=[x.replace("\n", " ") for x in entry["answers"]],
             speeches=[
                 SpeechData(
-                    text=turn["text"],
+                    text=self.__clean_text(turn["text"]),
                     position=turn["index"] if turn["role"] == "Debater" else -1,
                     speaker_type=SpeakerType.DEBATER if turn["role"] == "Debater" else SpeakerType.JUDGE,
                     probabilities=None if turn["role"] == "Debater" else turn["probabilities"],
@@ -93,6 +95,27 @@ class QualityDebatesDataset(RawDataset):
             debate_id="_".join([entry["storyTitle"], entry["debateId"]]),
             story_title=entry["storyTitle"],
         )
+
+    def __clean_text(self, text):
+        for quote in quote_utils.extract_quotes(text):
+            if "\n" in quote:
+                replacement = re.sub("\n+", "", quote)
+                replacement = re.sub("\t", "", replacement)
+                replacement = re.sub("\s+", " ", replacement).strip()
+                text = re.sub(re.escape(quote), replacement, text, flags=re.DOTALL)
+        return text
+
+    def __fix_line_spacing(self, text: str):
+        """
+        Some stories in QuALITY are in a strange format where each line has a maximum number of words (73),
+        after which there is a newline. This inconsistency in formats makes exact quoting a little trickier
+        so we simplify things by stripping out the excess newlines.
+        """
+        pattern = r"\n+"
+        max_line_length = max([len(line) for line in text.split("\n")])
+        if max_line_length < 100:
+            text = re.sub(pattern, lambda match: " " if len(match.group(0)) == 1 else match.group(0), text)
+        return text
 
 
 class QualityTranscriptsLoader:

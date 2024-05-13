@@ -55,6 +55,7 @@ class TrainingConfig(BaseModel):
     max_length: int = constants.MAX_LENGTH
     scratchpad_config: ScratchpadConfig = ScratchpadConfig()
     speech_structure: SpeechFormatStructure | list[SpeechFormatStructure] = [SpeechFormatStructure.DEFAULT_DEBATE]
+    tokenizer_file_path: Optional[str] = None
     model_config = ConfigDict(protected_namespaces=("protect_me_", "also_protect_"))
 
     @field_validator("speech_structure", mode="before")
@@ -114,7 +115,7 @@ class TrainUtils:
             dataset_configs = [dataset_configs]
 
         datasets = []
-        for dataset_config in dataset_configs:
+        for dataset_config in filter(lambda x: x.dataset_type.is_instantiable, dataset_configs):
             loader_cls = loader_utils.get_loader_type(dataset_config.dataset_type)
             dataset = loader_cls.load(
                 full_dataset_filepath=dataset_config.full_dataset_file_path,
@@ -180,23 +181,26 @@ class TrainUtils:
         """
 
         if not is_local:
+            llm_cls = TrainUtils.get_llm_class(config)
             model = LLModel.instantiate_hf_model(
-                file_path=config.model_name, requires_token=config.requires_token, use_cache=False
+                file_path=config.model_name, requires_token=config.requires_token, use_cache=False, quantize=llm_cls.QUANTIZE
             )
-            model.config.max_position_embeddings = config.max_length
             if requires_value_head:
                 local_rank = int(os.environ.get("LOCAL_RANK", "0"))
                 device_map = {"": local_rank}
                 model = AutoModelForCausalLMWithValueHead.from_pretrained(
                     pretrained_model_name_or_path=model,
-                    quantization_config=LLModel.get_bnb_config(),
                     trust_remote_code=True,
                     use_flash_attention_2=True,
                     use_cache=False,
                     peft_config=TrainUtils.get_peft_config(config=config),
+                    quantization_config=LLModel.get_bnb_config() if llm_cls.QUANTIZE else None,
+                    torch_dtype=None if llm_cls.QUANTIZE else torch.bfloat16,
                 )
+
             model.config.max_position_embeddings = config.max_length
-            model.config.sliding_window = constants.MAX_LENGTH
+            model.config.sliding_window = config.max_length
+            model.config.max_position_embeddings = config.max_length
             return model
         else:
             return ModelStub()

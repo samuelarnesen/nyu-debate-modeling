@@ -14,15 +14,20 @@ class SplitType(Enum):
 
 
 class DatasetType(Enum):
-    QUALITY = 1
-    QUALITY_DEBATES = 2
-    JUDGE_PREFERENCES = 3
-    ANNOTATED_QUALITY_DEBATES = 4
-    SCRATCHPAD_QUALITY_DEBATES = 5
-    QUOTE_RELEVANCE = 6
-    JUDGING_PROBE = 7
-    QUALITY_CONSULTANCY = 8
-    CORRECTNESS_JUDGE_PREFERENCES = 9
+    QUALITY = (1, True)
+    QUALITY_DEBATES = (2, True)
+    JUDGE_PREFERENCES = (3, True)
+    ANNOTATED_QUALITY_DEBATES = (4, True)
+    SCRATCHPAD_QUALITY_DEBATES = (5, True)
+    QUOTE_RELEVANCE = (6, True)
+    JUDGING_PROBE = (7, True)
+    QUALITY_CONSULTANCY = (8, True)
+    CORRECTNESS_JUDGE_PREFERENCES = (9, True)
+    EXTERNAL_HUGGINGFACE = (10, False)
+
+    def __init__(self, idx: int, is_instantiable: bool):
+        self.id = idx
+        self.is_instantiable = is_instantiable
 
 
 class DatasetConfig(BaseModel):

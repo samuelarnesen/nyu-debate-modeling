@@ -1,11 +1,12 @@
 from debate import Debater, Judge, SpeechFormatType, SpeechFormatStructure, Transcript
 from data import DataRow, DatasetType, RawDataset, SpeakerType, SpeechData, SplitType
-from models import LLMInput, LLMType
-from prompts import Prompt, PromptParser, PromptTag
+from models import LLMInput, LLMType, ModelInput
+from prompts import Prompt, PromptParser, PromptTag, RoleType
 from train.train_utils import TrainingConfig, TrainingTarget
 import utils.constants as constants
 
 from typing import Any, Callable, Optional
+import copy
 
 
 class RowConverter:
@@ -57,7 +58,7 @@ class RowConverter:
         speech_structure: SpeechFormatStructure,
         filter_empty_speeches: bool = True,
         use_gold_labels: Optional[bool] = None,
-    ) -> list[LLMInput]:
+    ) -> list[list[ModelInput]]:
         """
         Returns a list of inputs that can be used as rows in an actual training dataset.
 
@@ -74,8 +75,8 @@ class RowConverter:
                 if is_debater is False
 
         Returns:
-            llm_inputs: a list of inputs of type LLMInput that can be easily converted into a dataset that
-                the Trainer objects can process.
+            llm_inputs: a list of inputs of type LLMInput (or ModelInputs) that can be easily converted into a dataset
+                that the Trainer objects can process.
         """
         llm_class = LLMType[config.llm_type.upper()].get_llm_class()
         llm_inputs = []
@@ -127,11 +128,7 @@ class RowConverter:
                     transcript.add_speech(speaker=speaker, content=previous_speech.text)
 
             if config.scratchpad_config.use_scratchpad:
-                llm_inputs.append(
-                    llm_class.generate_llm_input_from_model_inputs(
-                        input_list=transcript.to_model_input(), extra_suffix=speech.scratchpad
-                    ).dict()
-                )
+                llm_inputs.append((transcript.to_model_input(), speech.scratchpad))
                 transcript.add_speech(speaker=name, content=speech.scratchpad)
 
             speech_texts = [speech.text]
@@ -145,24 +142,17 @@ class RowConverter:
                     clean_percent = round(100 * max_probability)
                     speech_texts = [f"Debater_{winner} | {clean_percent}%"]
 
-            local_llm_input_list = [
-                llm_class.generate_llm_input_from_model_inputs(
-                    input_list=transcript.to_model_input(), extra_suffix=speech_text
-                )
-                for speech_text in speech_texts
-            ]
+            local_llm_input_list = []
+            for speech_text in speech_texts:
+                copied_transcript = copy.deepcopy(transcript)
+                local_llm_input_list.append((copied_transcript.to_model_input(), speech_text))
 
             if (
-                isinstance(local_llm_input_list[0], LLMInput)
-                and local_llm_input_list[0].extra_suffix
-                and isinstance(local_llm_input_list[0].extra_suffix, str)
-                or not filter_empty_speeches
-            ):
-                llm_inputs.extend([llm_input.dict() for llm_input in local_llm_input_list])
-            elif (
-                isinstance(local_llm_input_list[0], list)
-                and isinstance(local_llm_input_list[0][-1], dict)
-                and local_llm_input_list[0][-1].get("role", "") == "assistant"
+                isinstance(local_llm_input_list[0], tuple)
+                and isinstance(local_llm_input_list[0][0], list)
+                and isinstance(local_llm_input_list[0][0][0], ModelInput)
+                and isinstance(local_llm_input_list[0][1], str)
+                and (isinstance(local_llm_input_list[0][1], str) or not filter_empty_speeches)
             ):
                 llm_inputs.extend(local_llm_input_list)
 
@@ -190,17 +180,18 @@ class RowConverter:
             )
 
             speech_text = "Debater_A | 100%" if row.correct_index == 0 else "Debater_B | 100%"
-            local_llm_input = llm_class.generate_llm_input_from_model_inputs(
-                input_list=transcript.to_model_input(), extra_suffix=speech_text
-            )
-            llm_inputs.append(local_llm_input)
+            llm_inputs.append(transcript.to_model_input())
 
         return llm_inputs
 
     @classmethod
     def convert_all_speeches_for_debater(
-        cls, row: DataRow, config: TrainingConfig, dataset: RawDataset, speech_structure: SpeechFormatStructure
-    ) -> list[LLMInput]:
+        cls,
+        row: DataRow,
+        config: TrainingConfig,
+        dataset: RawDataset,
+        speech_structure: SpeechFormatStructure,
+    ) -> list[list[ModelInput]]:
         """Returns a list of inputs that can be used as rows in an actual training dataset that can be
         used to train a debater. See convert_transcript() for more details"""
         return RowConverter.convert_transcript(
@@ -214,8 +205,13 @@ class RowConverter:
 
     @classmethod
     def convert_all_speeches_for_judge(
-        cls, row: DataRow, config: TrainingConfig, dataset: RawDataset, speech_structure: SpeechFormatStructure
-    ) -> list[dict[str, str]]:
+        cls,
+        row: DataRow,
+        config: TrainingConfig,
+        dataset: RawDataset,
+        speech_structure: SpeechFormatStructure,
+        use_model_inputs: bool = False,
+    ) -> list[list[ModelInput]]:
         """Returns a list of inputs that can be used as rows in an actual training dataset that can be
         used to train a judge. See convert_transcript() for more details"""
         return RowConverter.convert_transcript(
@@ -236,7 +232,7 @@ class RowConverter:
         dataset: RawDataset,
         speech_structure: SpeechFormatStructure,
         target: Optional[TrainingTarget] = None,
-    ) -> list[dict[str, str]]:
+    ) -> list[list[ModelInput]]:
         """Returns a list of inputs that can be used as rows in an actual training dataset. See
         convert_transcript() for more details"""
         if (target and target == TrainingTarget.DEBATER) or (target is None and config.target == TrainingTarget.DEBATER):

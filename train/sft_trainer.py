@@ -1,20 +1,22 @@
-from data import DataRow, RawDataset, SplitType
-from models import LLMInput, LLModel, LLMType
+from data import DatasetConfig, DataRow, RawDataset, SplitType
+from models import LLMInput, LLModel, LLMType, ModelInput, SpeechStructure
+from prompts import RoleType
 from train.row_converter import RowConverter
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
-from utils import LoggingCallback
+from utils import LoggingCallback, logger_utils  # TODO: REMOVE
 import utils.constants as constants
 
-from datasets import Dataset
 from peft import prepare_model_for_kbit_training, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 from trl import DataCollatorForCompletionOnlyLM, SFTTrainer
 import pandas as pd
+import datasets
 import torch
 
-from typing import Optional, Type
+from typing import Any, Optional, Type
 import json
 import random
+import sys
 
 try:
     from utils.flash_attn_utils import replace_attn_with_flash_attn, upcast_layer_for_flash_attention
@@ -29,58 +31,94 @@ class SupervisedTrainer:
     """Class for training a model using Supervised Fine Tuning"""
 
     @classmethod
-    def format_instruction(cls, llm_dictionary: dict[str, list[str]], llm_class: Type[LLModel]) -> str:
-        """Converts a dataset row into a prompt string"""
-        instructions = []
-        for instruction_val, input_val, extra_suffix in zip(
-            llm_dictionary.get("instruction"), llm_dictionary.get("input"), llm_dictionary.get("extra_suffix")
-        ):
-            instructions.append(
-                llm_class.generate_input_str(
-                    LLMInput(instruction=instruction_val, input=input_val, extra_suffix=extra_suffix),
-                    llm_class.INSTRUCTION_PREFIX,
-                    llm_class.INSTRUCTION_SUFFIX,
-                )
-            )
-        return instructions
-
-    @classmethod
-    def convert_dataset(cls, raw_datasets: list[RawDataset], config: TrainingConfig) -> Dataset:
+    def convert_dataset(
+        cls, raw_datasets: list[RawDataset], config: TrainingConfig, tokenizer: AutoTokenizer
+    ) -> datasets.Dataset:
         """Converts a dataset (abstraction used in this codebase) into a Dataset object (abstraction
         used by huggingface's trainer objects)"""
 
-        llm_inputs = []
+        def validate_structure(val: Any) -> bool:
+            if not isinstance(val, list):
+                return False
+            for item in val:
+                if not isinstance(item, list):
+                    return False
+                for elem in item:
+                    if not isinstance(elem, tuple):
+                        return False
+                    if not isinstance(elem[1], str):
+                        return False
+                    if not isinstance(elem[0], list):
+                        return False
+                    for x in elem[0]:
+                        if not isinstance(x, ModelInput):
+                            return False
+            return True
 
+        dataset_configs = config.dataset
+        if isinstance(dataset_configs, DatasetConfig):
+            dataset_configs = [dataset_configs]
+
+        output_structure = (
+            SpeechStructure.OPEN_ENDED if config.target == TrainingTarget.DEBATER else SpeechStructure.DECISION
+        )
+
+        llm_inputs = []
         for idx, raw_dataset in enumerate(raw_datasets):
             speech_structure = config.speech_structure[idx % len(config.speech_structure)]
-            llm_input_lists = [
+            transcript_lists = [
                 RowConverter.convert_row(row=row, config=config, dataset=raw_dataset, speech_structure=speech_structure)
                 for i, row in enumerate(raw_dataset.get_data(split=config.dataset[idx].split_type))
             ]
 
-            if llm_input_lists and isinstance(llm_input_lists[0], list) and isinstance(llm_input_lists[0][0], dict):
-                llm_inputs += [
-                    item
-                    for llm_input_list in llm_input_lists
-                    for item in filter(lambda x: x["extra_suffix"], llm_input_list)
-                ]
-            elif (
-                llm_input_lists
-                and isinstance(llm_input_lists[0], list)
-                and isinstance(llm_input_lists[0][0], list)
-                and isinstance(llm_input_lists[0][0][0], dict)
-            ):
-                llm_inputs += [
-                    item
-                    for llm_input_list in llm_input_lists
-                    for item in filter(lambda x: x[-1]["role"] == "assistant", llm_input_list)
-                ]
+            if validate_structure(val=transcript_lists):
+                for transcript_list in transcript_lists:
+                    for model_inputs, speech in transcript_list:
+                        llm_inputs.append(
+                            {
+                                "instruction": LLModel.convert_to_input_string(
+                                    input_list=model_inputs,
+                                    tokenizer=tokenizer,
+                                    speech_structure=output_structure,
+                                ),
+                                "output": speech,
+                            }
+                        )
             else:
                 raise Exception("Data format was invalid")
 
-        df = pd.DataFrame(data=llm_inputs)
+        max_instruction_length = int((2 / 3) * len(llm_inputs))
+        instruction_count = 0
+        for dataset_config in filter(lambda x: not x.dataset_type.is_instantiable, dataset_configs):
+            external_dataset = datasets.load_dataset(path=dataset_config.full_dataset_file_path, split="train")
+            external_df = pd.DataFrame(external_dataset)
+            for i, row in external_df.iterrows():
+                if instruction_count < max_instruction_length and (row["instruction"] or row["input"]):
+                    instruction_count += 1
+                    llm_inputs.append(
+                        {
+                            "instruction": LLModel.convert_to_input_string(
+                                input_list=[
+                                    ModelInput(role=RoleType.SYSTEM, content=row["instruction"]),
+                                    ModelInput(role=RoleType.USER, content=row["input"]),
+                                ],
+                                tokenizer=tokenizer,
+                                speech_structure=output_structure,
+                            ),
+                            "output": row["output"],
+                        }
+                    )
 
-        return Dataset.from_pandas(df).shuffle()
+        df = pd.DataFrame(data=llm_inputs)
+        dataset = datasets.Dataset.from_pandas(df).shuffle()
+        return dataset
+
+    @classmethod
+    def formatting_func(cls, llm_dictionary: dict[str, list[str]]) -> str:
+        formatted = []
+        for instruction, output in zip(llm_dictionary["instruction"], llm_dictionary["output"]):
+            formatted.append(instruction + output.strip())
+        return formatted
 
     @classmethod
     def get_trainer(
@@ -138,12 +176,15 @@ class SupervisedTrainer:
 
         train_dataset = SupervisedTrainer.convert_dataset(
             raw_datasets=raw_datasets,
+            tokenizer=tokenizer,
             config=config,
         )
 
         peft_config = TrainUtils.get_peft_config(config) if not is_local else None
         if peft_config:
-            model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
+            # model = get_peft_model(prepare_model_for_kbit_training(model), peft_config)
+            model.enable_input_require_grads()
+            model = get_peft_model(model, peft_config)
             if FLASH_ATTENTION_AVAILABLE:
                 model = upcast_layer_for_flash_attention(model, torch.bfloat16).to("cuda")
 
@@ -154,7 +195,7 @@ class SupervisedTrainer:
                 peft_config=peft_config,
                 tokenizer=tokenizer,
                 data_collator=collator,
-                formatting_func=lambda x: SupervisedTrainer.format_instruction(x, llm_class),
+                formatting_func=SupervisedTrainer.formatting_func,
                 max_seq_length=config.max_length,
                 callbacks=[LoggingCallback],
                 args=training_args,
