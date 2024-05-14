@@ -4,6 +4,7 @@ from .human_model import HumanModel
 from .llm_model import (
     GenerationParams,
     LlamaModel,
+    Llama3Model,
     LLModel,
     LLModuleWithLinearProbe,
     LLMInput,

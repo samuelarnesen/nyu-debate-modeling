@@ -20,15 +20,16 @@ Test:
         dataset_type: quality
         split_type: train
 Train - Experiment:
-    model_name: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
     target: debater
+    llm_type: llama3
     opening_speeches_only: True
     training_hyperparameters:
         num_train_epochs: 4
-        per_device_train_batch_size: 2
-        gradient_accumulation_steps: 1
+        per_device_train_batch_size: 8
+        gradient_accumulation_steps: 8
         optim: paged_adamw_32bit
-        learning_rate: 2e-4
+        learning_rate: 5e-6
         max_grad_norm: 0.3
         warmup_ratio: 0.03
         lr_scheduler_type: constant
@@ -36,8 +37,7 @@ Train - Experiment:
         steps: 100
     logging_and_saving_config:
         logging_steps: 1
-        output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-PPO/
-        merge_output_dir: /vast/spa9663/models/trained_models/mixtral-8x7b-PPO-Merged/
+        output_dir: /vast/spa9663/models/trained_models/llama-3-PPO-513
     dataset:
         dataset_type: quality
         split_type: train

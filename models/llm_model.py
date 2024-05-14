@@ -115,22 +115,25 @@ class LLModel(Model):
             self.model = None
             self.generation_config = None
 
-    def create_default_generation_config(self, is_debater: bool = True) -> GenerationConfig:
+    def create_default_generation_config(self, is_debater: bool = True, do_sample: bool = True) -> GenerationConfig:
         """Creates a default generation config so that the model can generate text"""
-        return GenerationConfig(
-            max_new_tokens=LLModel.DEFAULT_GENERATION_PARAMS.max_new_tokens,
-            temperature=LLModel.DEFAULT_GENERATION_PARAMS.temperature,
-            top_p=LLModel.DEFAULT_GENERATION_PARAMS.top_p,
-            num_return_sequences=1,
-            output_scores=True,
-            return_dict_in_generate=True,
-            repetition_penalty=LLModel.DEFAULT_GENERATION_PARAMS.repetition_penalty,
-            do_sample=LLModel.DEFAULT_GENERATION_PARAMS.do_sample,
-            use_cache=True,
-            pad_token_id=self.tokenizer.eos_token_id,
-            eos_token_id=[self.tokenizer.eos_token_id],
-            output_hidden_states=not is_debater,
-        )
+        config_terms = {
+            "max_new_tokens": LLModel.DEFAULT_GENERATION_PARAMS.max_new_tokens,
+            "num_return_sequences": 1,
+            "output_scores": True,
+            "return_dict_in_generate": True,
+            "repetition_penalty": LLModel.DEFAULT_GENERATION_PARAMS.repetition_penalty,
+            "do_sample": do_sample,
+            "use_cache": True,
+            "pad_token_id": self.tokenizer.eos_token_id,
+            "eos_token_id": [self.tokenizer.eos_token_id],
+            "output_hidden_states": not is_debater,
+        }
+        if do_sample:
+            config_terms["temperature"] = LLModel.DEFAULT_GENERATION_PARAMS.temperature
+            config_terms["top_p"] = LLModel.DEFAULT_GENERATION_PARAMS.top_p
+
+        return GenerationConfig(**config_terms)
 
     @classmethod
     def instantiate_tokenizer(
@@ -484,9 +487,9 @@ class Llama3Model(LLModel):
         copy.generation_config = self.generation_config
         return copy
 
-    def create_default_generation_config(self, is_debater: bool = True) -> GenerationConfig:
+    def create_default_generation_config(self, is_debater: bool = True, do_sample: bool = True) -> GenerationConfig:
         """Creates a default generation config so that the model can generate text"""
-        generation_config = super().create_default_generation_config(is_debater=is_debater)
+        generation_config = super().create_default_generation_config(is_debater=is_debater, do_sample=do_sample)
         generation_config.eos_token_id = [self.tokenizer.eos_token_id, self.tokenizer.convert_tokens_to_ids("<|eot_id|>")]
         return generation_config
 

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from data import DataRow, RawDataset, SplitType
 from debate import Debater, DebateRound, Judge, QuestionMetadata
-from models import OpenAIModel, MistralModel, Model, RandomModel, SpeechStructure
+from models import OpenAIModel, Model, RandomModel, SpeechStructure
 from prompts import Prompt, PromptConfig, PromptLoadingConfig, PromptParser
 from train.row_converter import RowConverter
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
-from utils import LoggingCallback, logger_utils, string_utils
+from utils import LoggingCallback, logger_utils, string_utils, timer
 import utils.constants as constants
 
 from datasets import Dataset
@@ -76,13 +76,13 @@ def batched_forward_pass(
     # This is the only change
     if torch.is_grad_enabled():
         model.train()
-        logger.warn(f"TRAINING")
+        # logger.warn(f"TRAINING")
     else:
         model.eval()
-        logger.warn(f"NOT TRAINING")
+        # logger.warn(f"NOT TRAINING")
 
     is_gradient_checkpointing = model.pretrained_model.is_gradient_checkpointing
-    logger.warn(f"Is gradient checkpointing? {is_gradient_checkpointing}")
+    # logger.warn(f"Is gradient checkpointing? {is_gradient_checkpointing}")
 
     for i in range(math.ceil(bs / fbs)):
         input_kwargs = {key: value[i * fbs : (i + 1) * fbs] for key, value in model_inputs.items()}
@@ -91,7 +91,7 @@ def batched_forward_pass(
         if response_masks is not None:
             response_masks_batch = response_masks[i * fbs : (i + 1) * fbs]
 
-        print_available_memory(logger)
+        # print_available_memory(logger)
         logits, _, values = model(**input_kwargs)
 
         if self.is_encoder_decoder:
@@ -102,8 +102,8 @@ def batched_forward_pass(
             attention_mask = input_kwargs["attention_mask"]
 
         logits_size = logits.shape
-        logger.warn(f"Log prob size is {logits_size}")
-        print_available_memory(logger)
+        # logger.warn(f"Log prob size is {logits_size}")
+        # print_available_memory(logger)
         logprobs = logprobs_from_logits(logits[:, :-1, :], input_ids[:, 1:])
         masks = torch.zeros_like(attention_mask)
         masks[:, :-1] = attention_mask[:, 1:]
@@ -174,17 +174,16 @@ class PPOTrainerWrapper:
 
         self.ppo_trainer = ppo_trainer
 
-        # TODO: change
-        self.internal_model = MistralModel(
+        llm_class = TrainUtils.get_llm_class(config)
+        self.internal_model = llm_class(
             alias=PPOTrainerWrapper.DEFAULT_DEBATER_ALIAS,
             file_path=None,
             is_debater=True,
-            nucleus=True,
         )
         self.internal_model.model = self.ppo_trainer.model.pretrained_model
         self.internal_model.model.config.sliding_window = constants.MAX_LENGTH
         self.internal_model.tokenizer = self.ppo_trainer.tokenizer
-        self.internal_model.generation_config = self.internal_model.create_default_generation_config()
+        self.internal_model.generation_config = self.internal_model.create_default_generation_config(do_sample=False)
         self.internal_model.instantiated_model = True
         self.internal_model.is_debater = True
 
@@ -194,6 +193,7 @@ class PPOTrainerWrapper:
 
         self.logger = logger_utils.get_default_logger(__name__)
 
+    @timer("generate batch samples")
     def get_batch_samples(
         self,
         start_idx: int,
@@ -212,10 +212,13 @@ class PPOTrainerWrapper:
         score_texts = [sample[2] for sample in samples]
         return query_texts, response_texts, score_texts
 
-    def train(self, num_iters: int):
+    def train(self, num_iters: int, save_frequency: int = 10):
         for i in range(num_iters):
             self.train_single_batch(start_idx=(i * self.config.training_hyperparameters.per_device_train_batch_size))
+            if i > 0 and i % save_frequency == 0:
+                self.save_model()
 
+    @timer("train one batch")
     def train_single_batch(self, start_idx: int):
         with torch.no_grad():
             query_texts, response_texts, score_texts = self.get_batch_samples(start_idx=start_idx)
@@ -224,20 +227,40 @@ class PPOTrainerWrapper:
         responses = [
             self.ppo_trainer.tokenizer(rt, return_tensors="pt").input_ids.squeeze().to("cuda") for rt in response_texts
         ]
+        self.logger.info(f"Scores are {score_texts}")
         scores = [x.to("cuda") for x in torch.FloatTensor(score_texts)]
 
-        stats = self.ppo_trainer.step(
-            queries=queries,
-            responses=responses,
-            scores=scores,
-        )
+        with torch.autocast("cuda", dtype=torch.bfloat16):
+            stats = self.ppo_trainer.step(
+                queries=queries,
+                responses=responses,
+                scores=scores,
+            )
 
         self.ppo_trainer.log_stats(stats=stats, batch={"query": queries, "response": responses}, rewards=scores)
+        try:
+            stats_to_log = {
+                k: v
+                for k, v in filter(lambda x: x[0] not in ["objective/logprobs", "objective/ref_logprobs"], stats.items())
+            }
+            self.logger.info(stats_to_log)
+        except:
+            self.logger.warn("Exception when trying to print stats")
 
     def generate_one_round_samples(
         self,
         idx: int,
     ) -> list[tuple[str, str]]:
+        def convert_reward(summary, speech):
+            correct_baseline = 0.67
+            incorrect_baseline = 0.33
+            if speech.speaker == constants.DEFAULT_DEBATER_A_NAME:
+                baseline = correct_baseline if summary[0].metadata.first_debater_correct else incorrect_baseline
+                return summary[0].first_debater_win_prob - baseline
+            else:
+                baseline = incorrect_baseline if summary[0].metadata.first_debater_correct else correct_baseline
+                return summary[0].second_debater_win_prob - baseline
+
         example = self.dataset.get_example(idx=idx, split=SplitType.TRAIN)
 
         topic = example.question
@@ -343,29 +366,21 @@ class PPOTrainerWrapper:
             metadata=[question_metadata],
         )
 
-        self.logger.warn("Starting first round")
+        # self.logger.warn("Starting first round")
         summary = debate_round()
-        self.logger.warn("Ending first round")
+        # self.logger.warn("Ending first round")
 
         samples = []
         for speech in filter(
             lambda x: x.speaker in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME],
             judge.transcripts[0].speeches,
         ):
-            samples.append(
-                (
-                    speech.supplemental.prompt,
-                    speech.content,
-                    summary[0].first_debater_win_prob
-                    if speech.speaker == constants.DEFAULT_DEBATER_A_NAME
-                    else summary[0].second_debater_win_prob,
-                )
-            )
+            samples.append((speech.supplemental.prompt, speech.content, convert_reward(summary, speech)))
         return samples
 
     def save_model(self):
         """Saves the model to the specified location"""
-        self.ppo_trainer.save_model(self.config.logging_and_saving_config.output_dir)
+        self.ppo_trainer.save_pretrained(self.config.logging_and_saving_config.output_dir)
 
     @classmethod
     def get_optimizer(cls, model):
@@ -423,21 +438,24 @@ class PPOTrainerWrapper:
         tokenizer = TrainUtils.get_tokenizer(config=config)
         model = TrainUtils.load_model(config=config, is_local=is_local, requires_value_head=True)
 
+        """
         if FLASH_ATTENTION_AVAILABLE:
             model = upcast_layer_for_flash_attention(model, torch.bfloat16)
             model.pretrained_model = upcast_layer_for_flash_attention(model.pretrained_model, torch.bfloat16)
+        """
 
         model.gradient_checkpointing_enable()
         model.pretrained_model.gradient_checkpointing_enable()
+        model.pretrained_model.enable_input_require_grads()
+
+        """
         model.pretrained_model = prepare_model_for_kbit_training(
             model.pretrained_model, use_gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant": False}
-        )
+        )"""
         model.gradient_checkpointing_enable = model.pretrained_model.gradient_checkpointing_enable
 
-        optimizer = PPOTrainerWrapper.get_optimizer(model=model)
-
         ppo_trainer = PPOTrainerWrapper(
-            ppo_trainer=PPOTrainer(model=model, config=ppo_config, tokenizer=tokenizer, optimizer=optimizer),
+            ppo_trainer=PPOTrainer(model=model, config=ppo_config, tokenizer=tokenizer),
             config=config,
             dataset=raw_dataset,
         )
