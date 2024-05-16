@@ -19,7 +19,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
-import math, sys  # Remove sys
+from typing import Optional
+import math
 
 try:
     import bitsandbytes as bnb
@@ -52,6 +53,29 @@ def logprobs_from_logits(logits, labels, gather=True):
         return logp
     logpy = torch.gather(logp, 2, labels.unsqueeze(2)).squeeze(-1)
     return logpy
+
+
+class PPOStats:
+    def __init__(self):
+        self.correct_scores = []
+        self.incorrect_scores = []
+
+    def __get_scores(self, scores: list[float], window: int = -1):
+        if window <= 0:
+            return sum(scores) / len(scores)
+        elif window > len(scores):
+            return sum(scores) / len(scores)
+        else:
+            return sum(scores[-window:]) / window
+
+    def get_correct_scores(self, window: int = -1):
+        return self.__get_scores(self.correct_scores, window)
+
+    def get_incorrect_scores(self, window: int = -1):
+        return self.__get_scores(self.incorrect_scores, window)
+
+    def get_scores(self, window: int = -1):
+        return (1 / 2) * (self.get_correct_scores(window=window) + self.get_incorrect_scores(window=window))
 
 
 # Another function that's just here to get the monkeypatching to work
@@ -174,60 +198,55 @@ class PPOTrainerWrapper:
 
         self.ppo_trainer = ppo_trainer
 
-        llm_class = TrainUtils.get_llm_class(config)
-        self.internal_model = llm_class(
-            alias=PPOTrainerWrapper.DEFAULT_DEBATER_ALIAS,
-            file_path=None,
-            is_debater=True,
-        )
-        self.internal_model.model = self.ppo_trainer.model.pretrained_model
-        self.internal_model.model.config.sliding_window = constants.MAX_LENGTH
-        self.internal_model.tokenizer = self.ppo_trainer.tokenizer
-        self.internal_model.generation_config = self.internal_model.create_default_generation_config(do_sample=False)
-        self.internal_model.instantiated_model = True
-        self.internal_model.is_debater = True
-
-        self.reward_model = OpenAIModel(alias=PPOTrainerWrapper.DEFAULT_JUDGE_ALIAS, is_debater=False)
+        self.reward_model = OpenAIModel(
+            alias=PPOTrainerWrapper.DEFAULT_JUDGE_ALIAS, is_debater=False, endpoint="ft:gpt-4-0613:nyu-arg::90NW3Tbx"
+        )  # make configurable
         self.config = config
         self.dataset = dataset
 
         self.logger = logger_utils.get_default_logger(__name__)
 
     @timer("generate batch samples")
-    def get_batch_samples(
-        self,
-        start_idx: int,
-    ) -> tuple[list[str], list[str], list[float]]:
+    def get_batch_samples(self, start_idx: int, ppo_stats: PPOStats) -> tuple[list[str], list[str], list[float]]:
         samples = []
         for i in range(
             self.config.training_hyperparameters.per_device_train_batch_size // 2
         ):  # TODO: change this when we do multi-turn
-            new_samples = self.generate_one_round_samples(
-                idx=start_idx + i,
-            )
+            new_samples = self.generate_one_round_samples(idx=start_idx + i, ppo_stats=ppo_stats)
             samples.extend(new_samples)
 
         query_texts = [sample[0] for sample in samples]
-        response_texts = [sample[1] for sample in samples]
+        response_texts = [(sample[1] + self.ppo_trainer.tokenizer.eos_token) for sample in samples]
         score_texts = [sample[2] for sample in samples]
         return query_texts, response_texts, score_texts
 
     def train(self, num_iters: int, save_frequency: int = 10):
+        ppo_stats = PPOStats()
         for i in range(num_iters):
-            self.train_single_batch(start_idx=(i * self.config.training_hyperparameters.per_device_train_batch_size))
+            self.train_single_batch(
+                start_idx=(i * self.config.training_hyperparameters.per_device_train_batch_size), ppo_stats=ppo_stats
+            )
+
             if i > 0 and i % save_frequency == 0:
-                self.save_model()
+                self.save_model(checkpoint=i)
 
     @timer("train one batch")
-    def train_single_batch(self, start_idx: int):
+    def train_single_batch(self, start_idx: int, ppo_stats: PPOStats):
         with torch.no_grad():
-            query_texts, response_texts, score_texts = self.get_batch_samples(start_idx=start_idx)
+            query_texts, response_texts, score_texts = self.get_batch_samples(start_idx=start_idx, ppo_stats=ppo_stats)
 
         queries = [self.ppo_trainer.tokenizer(qt, return_tensors="pt").input_ids.squeeze().to("cuda") for qt in query_texts]
         responses = [
             self.ppo_trainer.tokenizer(rt, return_tensors="pt").input_ids.squeeze().to("cuda") for rt in response_texts
         ]
-        self.logger.info(f"Scores are {score_texts}")
+
+        window = self.config.training_hyperparameters.per_device_train_batch_size // 2
+        batch_idx = start_idx // self.config.training_hyperparameters.per_device_train_batch_size
+        overall = ppo_stats.get_scores(window=window)
+        correct_scores = ppo_stats.get_correct_scores(window=window)
+        incorrect_scores = ppo_stats.get_incorrect_scores(window=window)
+        self.logger.warn(f"Batch: {batch_idx}\tCorrect: {correct_scores}\tIncorrect: {incorrect_scores}")
+
         scores = [x.to("cuda") for x in torch.FloatTensor(score_texts)]
 
         with torch.autocast("cuda", dtype=torch.bfloat16):
@@ -243,17 +262,14 @@ class PPOTrainerWrapper:
                 k: v
                 for k, v in filter(lambda x: x[0] not in ["objective/logprobs", "objective/ref_logprobs"], stats.items())
             }
-            self.logger.info(stats_to_log)
+            self.logger.warn(stats_to_log)
         except:
             self.logger.warn("Exception when trying to print stats")
 
-    def generate_one_round_samples(
-        self,
-        idx: int,
-    ) -> list[tuple[str, str]]:
+    def generate_one_round_samples(self, idx: int, ppo_stats: PPOStats) -> list[tuple[str, str]]:
         def convert_reward(summary, speech):
-            correct_baseline = 0.67
-            incorrect_baseline = 0.33
+            correct_baseline = 0.5 #0.67
+            incorrect_baseline = 0.5 #0.33
             if speech.speaker == constants.DEFAULT_DEBATER_A_NAME:
                 baseline = correct_baseline if summary[0].metadata.first_debater_correct else incorrect_baseline
                 return summary[0].first_debater_win_prob - baseline
@@ -261,7 +277,33 @@ class PPOTrainerWrapper:
                 baseline = incorrect_baseline if summary[0].metadata.first_debater_correct else correct_baseline
                 return summary[0].second_debater_win_prob - baseline
 
+        def add_to_ppo_stats(summary, speech):
+            if speech.speaker == constants.DEFAULT_DEBATER_A_NAME:
+                if summary[0].metadata.first_debater_correct:
+                    ppo_stats.correct_scores.append(summary[0].first_debater_win_prob)
+                else:
+                    ppo_stats.incorrect_scores.append(summary[0].first_debater_win_prob)
+            else:
+                if summary[0].metadata.first_debater_correct:
+                    ppo_stats.incorrect_scores.append(summary[0].second_debater_win_prob)
+                else:
+                    ppo_stats.correct_scores.append(summary[0].second_debater_win_prob)
+
         example = self.dataset.get_example(idx=idx, split=SplitType.TRAIN)
+
+        llm_class = TrainUtils.get_llm_class(self.config)
+        internal_model = llm_class(
+            alias=PPOTrainerWrapper.DEFAULT_DEBATER_ALIAS,
+            file_path=None,
+            is_debater=True,
+        )
+        internal_model.model = self.ppo_trainer.model
+        internal_model.tokenizer = self.ppo_trainer.tokenizer
+        internal_model.generation_config = internal_model.create_default_generation_config(
+            is_debater=True, do_sample=True, add_penalties=False
+        )
+        internal_model.instantiated_model = True
+        internal_model.is_debater = True
 
         topic = example.question
         position = example.positions[0]
@@ -323,7 +365,7 @@ class PPOTrainerWrapper:
         debater_a = Debater(
             name=constants.DEFAULT_DEBATER_A_NAME,
             prompt=prompt_a,
-            model=self.internal_model,
+            model=internal_model,
             num_speeches=num_speeches,
             speech_format=self.config.speech_structure[0].debater_format.get_speech_format(
                 name=constants.DEFAULT_DEBATER_A_NAME,
@@ -336,7 +378,7 @@ class PPOTrainerWrapper:
         debater_b = Debater(
             name=constants.DEFAULT_DEBATER_B_NAME,
             prompt=prompt_b,
-            model=self.internal_model,
+            model=internal_model,
             num_speeches=num_speeches,
             speech_format=self.config.speech_structure[0].debater_format.get_speech_format(
                 name=constants.DEFAULT_DEBATER_B_NAME,
@@ -366,9 +408,7 @@ class PPOTrainerWrapper:
             metadata=[question_metadata],
         )
 
-        # self.logger.warn("Starting first round")
         summary = debate_round()
-        # self.logger.warn("Ending first round")
 
         samples = []
         for speech in filter(
@@ -376,11 +416,17 @@ class PPOTrainerWrapper:
             judge.transcripts[0].speeches,
         ):
             samples.append((speech.supplemental.prompt, speech.content, convert_reward(summary, speech)))
+            add_to_ppo_stats(summary, speech)
         return samples
 
-    def save_model(self):
-        """Saves the model to the specified location"""
-        self.ppo_trainer.save_pretrained(self.config.logging_and_saving_config.output_dir)
+    def save_model(self, checkpoint: Optional[int] = None):
+        """Saves the model to the specified location. If a checkpoint number is available, we will save with that
+        checkpoint as prefix"""
+        location = self.config.logging_and_saving_config.output_dir
+        if checkpoint:
+            location += f"/checkpoint-{checkpoint}"
+
+        self.ppo_trainer.save_pretrained(location)
 
     @classmethod
     def get_optimizer(cls, model):
@@ -416,11 +462,6 @@ class PPOTrainerWrapper:
             ppo_trainer: One can call ppo_trainer.train() to then run the training loop.
         """
 
-        """
-        if FLASH_ATTENTION_AVAILABLE:
-            replace_attn_with_flash_attn(disable_dropout=True)
-        """
-
         if not raw_datasets:
             raw_datasets = TrainUtils.create_datasets(config=config)
         raw_dataset = raw_datasets[0]  # we don't support multiple datasets at the moment
@@ -438,20 +479,9 @@ class PPOTrainerWrapper:
         tokenizer = TrainUtils.get_tokenizer(config=config)
         model = TrainUtils.load_model(config=config, is_local=is_local, requires_value_head=True)
 
-        """
-        if FLASH_ATTENTION_AVAILABLE:
-            model = upcast_layer_for_flash_attention(model, torch.bfloat16)
-            model.pretrained_model = upcast_layer_for_flash_attention(model.pretrained_model, torch.bfloat16)
-        """
-
         model.gradient_checkpointing_enable()
         model.pretrained_model.gradient_checkpointing_enable()
         model.pretrained_model.enable_input_require_grads()
-
-        """
-        model.pretrained_model = prepare_model_for_kbit_training(
-            model.pretrained_model, use_gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant": False}
-        )"""
         model.gradient_checkpointing_enable = model.pretrained_model.gradient_checkpointing_enable
 
         ppo_trainer = PPOTrainerWrapper(

@@ -92,7 +92,9 @@ class LLModel(Model):
             self.tokenizer, self.model = self.instantiate_tokenizer_and_hf_model(
                 file_path=file_path, tokenizer_file_path=tokenizer_file_path, quantize=quantize
             )
-            self.generation_config = self.create_default_generation_config(is_debater=is_debater)
+            self.generation_config = self.create_default_generation_config(
+                is_debater=is_debater, do_sample=True, add_penalties=True
+            )
 
             if not nucleus:
                 self.generation_config.num_beams = 2
@@ -115,23 +117,34 @@ class LLModel(Model):
             self.model = None
             self.generation_config = None
 
-    def create_default_generation_config(self, is_debater: bool = True, do_sample: bool = True) -> GenerationConfig:
+    def create_default_generation_config(
+        self, is_debater: bool = True, do_sample: bool = True, add_penalties: bool = False
+    ) -> GenerationConfig:
         """Creates a default generation config so that the model can generate text"""
         config_terms = {
             "max_new_tokens": LLModel.DEFAULT_GENERATION_PARAMS.max_new_tokens,
             "num_return_sequences": 1,
             "output_scores": True,
             "return_dict_in_generate": True,
-            "repetition_penalty": LLModel.DEFAULT_GENERATION_PARAMS.repetition_penalty,
             "do_sample": do_sample,
             "use_cache": True,
             "pad_token_id": self.tokenizer.eos_token_id,
             "eos_token_id": [self.tokenizer.eos_token_id],
             "output_hidden_states": not is_debater,
+            "min_length": -1,
+            "top_k": 0.0,
+            "top_p": 1.0,
         }
         if do_sample:
             config_terms["temperature"] = LLModel.DEFAULT_GENERATION_PARAMS.temperature
             config_terms["top_p"] = LLModel.DEFAULT_GENERATION_PARAMS.top_p
+
+        if add_penalties:
+            config_terms["repetition_penalty"] = LLModel.DEFAULT_GENERATION_PARAMS.repetition_penalty
+            config_terms["exponential_decay_length_penalty"] = (
+                LLModel.DEFAULT_GENERATION_PARAMS.max_new_tokens * 2 // 3,
+                1.1,
+            )
 
         return GenerationConfig(**config_terms)
 
@@ -162,12 +175,6 @@ class LLModel(Model):
     ) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
         local_rank = int(os.environ.get("LOCAL_RANK", "0"))
         device_map = {"": local_rank}
-        try:
-            logger = logger_utils.get_default_logger(__name__)
-            logger.warn(f"Quantize: {quantize}")
-        except:
-            pass
-
         return AutoModelForCausalLM.from_pretrained(
             pretrained_model_name_or_path=file_path,
             device_map=device_map,
@@ -487,9 +494,13 @@ class Llama3Model(LLModel):
         copy.generation_config = self.generation_config
         return copy
 
-    def create_default_generation_config(self, is_debater: bool = True, do_sample: bool = True) -> GenerationConfig:
+    def create_default_generation_config(
+        self, is_debater: bool = True, do_sample: bool = True, add_penalties: bool = False
+    ) -> GenerationConfig:
         """Creates a default generation config so that the model can generate text"""
-        generation_config = super().create_default_generation_config(is_debater=is_debater, do_sample=do_sample)
+        generation_config = super().create_default_generation_config(
+            is_debater=is_debater, do_sample=do_sample, add_penalties=add_penalties
+        )
         generation_config.eos_token_id = [self.tokenizer.eos_token_id, self.tokenizer.convert_tokens_to_ids("<|eot_id|>")]
         return generation_config
 
