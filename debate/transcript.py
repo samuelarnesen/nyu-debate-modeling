@@ -143,7 +143,7 @@ class Transcript:
                 if index >= len(self.speeches):
                     break
                 content = self.speeches[index].content
-                supplemental = self.speeches[index].supplemental
+                supplemental = {k: v for k, v in filter(lambda x: "token" not in x, self.speeches[index].supplemental)}
                 index += 1
             speeches.append(Speech(speaker=expected_speaker or "Prompt", content=content, supplemental=supplemental).dict())
 

@@ -84,7 +84,7 @@ class ResultsCollector:
         """
         self.logger = logger_utils.get_default_logger(__name__)
         self.quotes_collector = QuotesCollector(experiment=experiment) if experiment else None
-        self.annotator = Annotator(model_path=experiment.annotations_classifier_file_path) if should_save else None
+        self.annotator = None  # Annotator(model_path=experiment.annotations_classifier_file_path) if should_save else None
         self.experiment = experiment
         self.graphs_path_prefix = graphs_path_prefix
         self.full_record_path_prefix = full_record_path_prefix

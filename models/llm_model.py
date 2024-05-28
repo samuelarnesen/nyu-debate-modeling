@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig
 import numpy as np
 import torch.nn as nn
+import torch.nn.functional as F
 import torch
 
 from dataclasses import dataclass
@@ -33,7 +34,7 @@ class LLMInput(BaseModel):
 class GenerationParams(BaseModel):
     max_new_tokens: int = 300
     temperature: float = 0.5
-    top_p: float = 0.9
+    top_p: float = 1.0
     repetition_penalty: float = 1.2
     do_sample: bool = True
 
@@ -135,16 +136,17 @@ class LLModel(Model):
             "top_k": 0.0,
             "top_p": 1.0,
         }
-        if do_sample:
-            config_terms["temperature"] = LLModel.DEFAULT_GENERATION_PARAMS.temperature
-            config_terms["top_p"] = LLModel.DEFAULT_GENERATION_PARAMS.top_p
+        if is_debater:
+            if do_sample:
+                config_terms["temperature"] = LLModel.DEFAULT_GENERATION_PARAMS.temperature
+                config_terms["top_p"] = LLModel.DEFAULT_GENERATION_PARAMS.top_p
 
-        if add_penalties:
-            config_terms["repetition_penalty"] = LLModel.DEFAULT_GENERATION_PARAMS.repetition_penalty
-            config_terms["exponential_decay_length_penalty"] = (
-                LLModel.DEFAULT_GENERATION_PARAMS.max_new_tokens * 2 // 3,
-                1.1,
-            )
+            if add_penalties:
+                config_terms["repetition_penalty"] = LLModel.DEFAULT_GENERATION_PARAMS.repetition_penalty
+                config_terms["exponential_decay_length_penalty"] = (
+                    LLModel.DEFAULT_GENERATION_PARAMS.max_new_tokens * 2 // 3,
+                    1.1,
+                )
 
         return GenerationConfig(**config_terms)
 
@@ -225,11 +227,6 @@ class LLModel(Model):
     ) -> str:
         """Converts the list of model inputs to a string"""
 
-        def get_extra_suffix(speech_structure: SpeechStructure = SpeechStructure.OPEN_ENDED):
-            if speech_structure == SpeechStructure.DECISION:
-                return "\n\n" + constants.JUDGING_PREFIX
-            return ""
-
         system = "\n".join(model_input.content for model_input in filter(lambda x: x.role == RoleType.SYSTEM, input_list))
         user = "\n".join(model_input.content for model_input in filter(lambda x: x.role != RoleType.SYSTEM, input_list))
         try:
@@ -238,14 +235,14 @@ class LLModel(Model):
                 tokenize=False,
                 add_generation_prompt=True,
                 chat_template=tokenizer.chat_template,
-            ) + get_extra_suffix(speech_structure)
+            )
             return output
         except Exception as e:
             return LLModel.generate_input_str(
                 llm_input=LLMInput(
                     instruction=system,
                     input=user,
-                    extra_suffix=get_extra_suffix(speech_structure),
+                    extra_suffix="",
                 ),
                 instruction_prefix=cls.INSTRUCTION_PREFIX,
                 instruction_suffix=cls.INSTRUCTION_SUFFIX,
@@ -298,9 +295,11 @@ class LLModel(Model):
             if num_return_sequences > 1 and len(inputs) > 1:
                 raise Exception("You cannot have multiple return sequences and a batch size of >1")
 
-        def get_string_log_prob(target_string: list[str], scores: torch.Tensor, batch_index: int) -> float:
-            tokenized_target = self.tokenizer(target_string).input_ids[-1]
-            return scores[0][batch_index][tokenized_target].item()
+        def get_string_log_prob(target_string: list[str], logits: torch.Tensor, batch_index: int) -> float:
+            prob = 0
+            for i, target in enumerate(self.tokenizer(target_string).input_ids[1:]):
+                prob += F.log_softmax(logits[i][batch_index].squeeze())[target].item()
+            return prob
 
         def normalize_log_probs(a_prob: float, b_prob: float) -> tuple[float, float]:
             exponentiated = [math.exp(logprob) for logprob in [a_prob, b_prob]]
@@ -314,7 +313,7 @@ class LLModel(Model):
 
         def generate_output(input_strs: list[str]):
             sequences = []
-            scores = []
+            logits = []
             input_lengths = []
             minibatches = [
                 input_strs[i : i + self.max_mini_batch_size] for i in range(0, len(input_strs), self.max_mini_batch_size)
@@ -324,32 +323,42 @@ class LLModel(Model):
                 outputs = self.model.generate(**inputs, generation_config=create_new_generation_config())
                 mini_sequences = outputs.sequences if not isinstance(self.model, LLModuleWithLinearProbe) else outputs
                 sequences += [row for row in mini_sequences]
-                scores += [row for row in outputs.scores] if hasattr(outputs, "scores") else []
+                logits += [row for row in outputs.scores] if hasattr(outputs, "scores") else []
                 input_lengths += [elem for elem in (inputs.input_ids != self.tokenizer.pad_token_id).sum(axis=1)]
-            return sequences, torch.stack(input_lengths), torch.stack(scores) if scores else None
+            return (
+                sequences,
+                torch.stack(input_lengths),
+                torch.stack(logits) if logits else None,
+            )
 
         validate()
         self.model.eval()
         device = "cuda" if torch.cuda.is_available() else "cpu"
         input_strs = self.generate_input_strs(inputs=inputs, speech_structure=speech_structure)
-        sequences, input_lengths, scores = generate_output(input_strs=input_strs)
+        sequences, input_lengths, logits = generate_output(input_strs=input_strs)
 
         decoded_outputs = []
         for i, row in enumerate(sequences):
             if self.is_debater or speech_structure != SpeechStructure.DECISION:
-                decoded = self.tokenizer.decode(sequences[i][input_lengths[min(i, len(input_lengths) - 1)] :])
+                prompt_tokens = sequences[i][: input_lengths[i]]
+                response_tokens = sequences[i][input_lengths[i] :]
+                decoded = self.tokenizer.decode(response_tokens, skip_special_tokens=True)
                 new_tokens = decoded.split(constants.INSTRUCTION_SUFFIX)[-1]
-                decoded_outputs.append(ModelResponse(speech=string_utils.clean_string(new_tokens), prompt=input_strs[i]))
+                decoded_outputs.append(
+                    ModelResponse(
+                        speech=string_utils.clean_string(new_tokens),
+                        prompt=input_strs[i],
+                        prompt_tokens=prompt_tokens.squeeze().tolist(),
+                        response_tokens=response_tokens.squeeze().tolist(),
+                    )
+                )
             else:
                 internal_representations = []
                 if isinstance(self.model, LLModuleWithLinearProbe):
                     (a_score, b_score), internal_representations = outputs[i]
                 else:
-                    tokenized_debater_a = self.tokenizer(constants.DEFAULT_DEBATER_A_NAME)
-                    tokenized_debater_b = self.tokenizer(constants.DEFAULT_DEBATER_B_NAME)
-                    decoded = self.tokenizer.decode(sequences[i, input_lengths[i] :])
-                    a_score = get_string_log_prob(constants.DEFAULT_DEBATER_A_NAME, scores, i)
-                    b_score = get_string_log_prob(constants.DEFAULT_DEBATER_B_NAME, scores, i)
+                    a_score = get_string_log_prob(constants.DEFAULT_DEBATER_A_NAME, logits, i)
+                    b_score = get_string_log_prob(constants.DEFAULT_DEBATER_B_NAME, logits, i)
 
                 normalized_a_score, normalized_b_score = normalize_log_probs(a_score, b_score)
                 decoded_outputs.append(
@@ -362,7 +371,7 @@ class LLModel(Model):
                             constants.DEFAULT_DEBATER_B_NAME: normalized_b_score,
                         },
                         prompt=input_strs[i],
-                        internal_representations=internal_representations,
+                        internal_representations=internal_representations if internal_representations else None,
                     )
                 )
 

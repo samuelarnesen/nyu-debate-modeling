@@ -23,7 +23,7 @@ class ArbitraryAttributeModel(Model):
         super().__init__(alias=alias, is_debater=is_debater)
         if is_debater:
             raise Exception("ArbitraryAttributeModel only supports judge mode")
-        self.feature = feature or "<quote>"
+        self.feature = feature or "quote"  # TODO: change
 
     def predict(
         self,
@@ -80,6 +80,9 @@ class ArbitraryAttributeModel(Model):
 
             a_score = a_speech.count(self.feature)
             b_score = b_speech.count(self.feature)
+
+            b_score = 5  # TODO: change this
+
             if a_score + b_score > 0:
                 return constants.DEFAULT_DEBATER_A_NAME if a_score >= b_score else constants.DEFAULT_DEBATER_B_NAME, (
                     a_score / (a_score + b_score),

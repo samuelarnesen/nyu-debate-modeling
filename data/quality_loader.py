@@ -56,6 +56,8 @@ class QualityDataset(RawDataset):
         self.data[SplitType.VAL] = self.__reorder(self.data[SplitType.VAL])
         self.data[SplitType.TEST] = self.__reorder(self.data[SplitType.TEST])
 
+        self.data[SplitType.TRAIN] = self.data[SplitType.TRAIN][0:1]
+
     def get_data(self, split: SplitType = SplitType.TRAIN) -> list[DataRow]:
         """Returns all the data for a given split"""
         if split not in self.data:

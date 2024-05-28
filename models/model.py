@@ -30,7 +30,9 @@ class ModelResponse(BaseModel):
     rejected_responses: list[ModelResponse] = []
     bon_opposing_model_responses: list[ModelResponse] = []
     bon_probabilistic_preferences: list[float] = []
-    internal_representations: str = ""
+    internal_representations: Optional[str] = ""
+    response_tokens: list[int] = []
+    prompt_tokens: list[int] = []
     prompt: str = ""
     failed: bool = False
 

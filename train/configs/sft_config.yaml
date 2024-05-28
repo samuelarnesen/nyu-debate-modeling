@@ -67,8 +67,8 @@ Train - Llama3 - Human and GPT:
         peft_type: lora
     logging_and_saving_config:
         logging_steps: 10
-        output_dir: /vast/spa9663/models/trained_models/llama-3-mega
-        merge_output_dir: /vast/spa9663/models/trained_models/llama-3-mega
+        output_dir: /vast/spa9663/models/trained_models/llama-3-mega-eos
+        merge_output_dir: /vast/spa9663/models/trained_models/llama-3-mega-eos-merged
     dataset:
         - dataset_type: quality_debates
           full_dataset_file_path: /home/spa9663/debate-data/human_and_gpt4_debates.jsonl
