@@ -58,6 +58,24 @@ class JudgePreferencesLoader(RawDataLoader):
     MIN_GAP = 0.00
 
     @classmethod
+    def process_row(data: dict[Any, Any]) -> list[tuple[str, str, str, float]]:
+        outputs = []
+        for selected in filter(
+            lambda x: x["speaker"] in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME],
+            data["speeches"],
+        ):
+            instruction = selected["supplemental"]["prompt"]
+            rejected = sorted(selected["supplemental"]["rejected_responses"], key=lambda x: x["preference"])[0]
+            if selected["supplemental"]["preference"] - rejected["preference"] > JudgePreferencesLoader.MIN_GAP:
+                selected_speech = clean_speech(selected["content"])
+                rejected_speech = clean_speech(rejected["speech"])
+                preference = selected["supplemental"]["preference"] / (
+                    rejected["preference"] + selected["supplemental"]["preference"]
+                )
+                outputs.append((instruction, selected_speech, rejected_speech, preference))
+        return outputs
+
+    @classmethod
     def load(cls, full_dataset_filepath: str | list[str], **kwargs) -> JudgePreferencesDataset:
         """
         Constructs a JudgePreferencesDataset.
@@ -78,20 +96,7 @@ class JudgePreferencesLoader(RawDataLoader):
         train_data = []
         input_texts = input_utils.read_file_texts(base_path=full_dataset_filepath, input_type=InputType.JSON_TRANSCRIPT)
         for text in input_texts:
-            data = json.loads(text)
-            for selected in filter(
-                lambda x: x["speaker"] in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME],
-                data["speeches"],
-            ):
-                instruction = selected["supplemental"]["prompt"]
-                rejected = sorted(selected["supplemental"]["rejected_responses"], key=lambda x: x["preference"])[0]
-                if selected["supplemental"]["preference"] - rejected["preference"] > JudgePreferencesLoader.MIN_GAP:
-                    selected_speech = clean_speech(selected["content"])
-                    rejected_speech = clean_speech(rejected["speech"])
-                    preference = selected["supplemental"]["preference"] / (
-                        rejected["preference"] + selected["supplemental"]["preference"]
-                    )
-                    train_data.append((instruction, selected_speech, rejected_speech, preference))
+            train_data.extend(JudgePreferencesLoader.process_row(json.loads(text)))
 
         return JudgePreferencesDataset(
             train_data=train_data,

@@ -1,5 +1,6 @@
 from .custom_kto_trainer import CustomKTOTrainer
 from .dpo_trainer import DirectPreferenceTrainer
+from .iterative_dpo_trainer import IterativeDirectPreferenceTrainer
 from .probe_trainer import ProbeTrainer
 from .ppo_trainer import PPOTrainerWrapper
 from .pretrain_trainer import PretrainTrainer
