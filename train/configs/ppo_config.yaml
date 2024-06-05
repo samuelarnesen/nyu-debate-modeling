@@ -26,18 +26,18 @@ Train - Experiment:
     opening_speeches_only: True
     training_hyperparameters:
         num_train_epochs: 4
-        per_device_train_batch_size: 16
-        gradient_accumulation_steps: 16
+        per_device_train_batch_size: 64
+        gradient_accumulation_steps: 1
         optim: paged_adamw_32bit
-        learning_rate: 1e-5
+        learning_rate: 3e-5
         max_grad_norm: 0.3
         warmup_ratio: 0.03
         lr_scheduler_type: constant
         peft_type: lora
-        steps: 100
+        steps: 30
     logging_and_saving_config:
         logging_steps: 1
-        output_dir: /vast/spa9663/models/trained_models/llama-3-PPO-524-overfit-2
+        output_dir: /vast/spa9663/models/trained_models/llama-3-PPO-604-overfit
     dataset:
         dataset_type: quality
         split_type: train

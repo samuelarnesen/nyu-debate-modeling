@@ -1261,7 +1261,6 @@ class VerbosePPOTrainer(BaseTrainer):
         vfl = vf_loss.detach()
         total = loss.detach()
         vflpgratio = vfl / abs(pgl)
-        #self.logger.warn(f"PG: {pgl} VH: {vfl} Total: {total} Ratio: {vflpgratio}")
 
         stats = dict(
             loss=dict(policy=pg_loss.detach(), value=vf_loss.detach(), total=loss.detach()),
@@ -1331,6 +1330,7 @@ class VerbosePPOTrainer(BaseTrainer):
             "ppo/mean_non_score_reward": mean_non_score_reward,
             "ppo/mean_scores": mean_scores,
             "ppo/std_scores": std_scores,
+            "ppo/scores_dist": data["scores"]
         }
 
         # Log text properties

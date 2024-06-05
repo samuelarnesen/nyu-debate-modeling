@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from data import DataRow, RawDataset, SplitType
 from debate import Debater, DebateRound, Judge, QuestionMetadata
-from models import ArbitraryAttributeModel, OpenAIModel, OfflineModel, Model, RandomModel, SpeechStructure
+from models import ArbitraryAttributeModel, Llama3Model, OpenAIModel, OfflineModel, Model, RandomModel, SpeechStructure
 from prompts import Prompt, PromptConfig, PromptLoadingConfig, PromptParser
 from train.impl import LlamaModelWithGradientCheckpointing, VerbosePPOTrainer
 from train.row_converter import RowConverter
@@ -118,6 +118,12 @@ class PPOTrainerWrapper:
         )  # make configurable
 
         """
+        self.reward_model = Llama3Model(
+            alias=PPOTrainerWrapper.DEFAULT_JUDGE_ALIAS, file_path="/vast/spa9663/models/base_models/llama3-8b-262k", is_debater=False,
+        )  # make configurable
+        """
+
+        """
         self.reward_model = ArbitraryAttributeModel(
             alias=PPOTrainerWrapper.DEFAULT_JUDGE_ALIAS, is_debater=False, feature="quote"
         )
@@ -137,7 +143,10 @@ class PPOTrainerWrapper:
             "ppo/loss/value",
             "ppo/policy/ratio",
             "ppo/val/var_explained",
-            "ppo/val/clipfrac"
+            "ppo/val/clipfrac",
+            "env/reward_dist",
+            "ppo/scores_dist",
+            "ppo/std_scores",
         ]
 
         self.logger = logger_utils.get_default_logger(__name__)
@@ -158,9 +167,9 @@ class PPOTrainerWrapper:
         score_texts = [sample[2] for sample in samples]
         return query_texts, response_texts, score_texts
 
-    def train(self, num_iters: int, save_frequency: int = 10):
+    def train(self, save_frequency: int = 10):
         ppo_stats = PPOStats()
-        for i in range(num_iters):
+        for i in range(self.config.training_hyperparameters.steps):
             self.train_single_batch(
                 start_idx=(i * self.config.training_hyperparameters.per_device_train_batch_size), ppo_stats=ppo_stats
             )
@@ -421,6 +430,8 @@ class PPOTrainerWrapper:
                 judge.transcripts[0].speeches,
             ):
                 self.alternate_speech = speech.content
+                self.logger.warn("OPPONENT SPEECH\n")
+                self.logger.warn(self.alternate_speech)
                 break
 
         return samples
@@ -433,6 +444,7 @@ class PPOTrainerWrapper:
             location += f"/checkpoint-{checkpoint}"
 
         self.ppo_trainer.save_pretrained(location)
+
 
     @classmethod
     def get_trainer(
@@ -465,9 +477,10 @@ class PPOTrainerWrapper:
             batch_size=config.training_hyperparameters.per_device_train_batch_size,
             gradient_accumulation_steps=config.training_hyperparameters.gradient_accumulation_steps,
             mini_batch_size=1,
-            ppo_epochs=4,
+            ppo_epochs=1,
             optimize_device_cache=True,
-            init_kl_coef=0.025,
+            #kl_penalty='abs',
+            init_kl_coef=0.10,
         )
 
         tokenizer = TrainUtils.get_tokenizer(config=config)
@@ -479,8 +492,14 @@ class PPOTrainerWrapper:
         model.pretrained_model.enable_input_require_grads()
         model.gradient_checkpointing_enable = model.pretrained_model.gradient_checkpointing_enable
 
+        optimizer = torch.optim.Adam(
+            filter(lambda p: p.requires_grad, model.parameters()),
+            lr=config.training_hyperparameters.learning_rate,
+        )
+        lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+
         ppo_trainer = PPOTrainerWrapper(
-            ppo_trainer=VerbosePPOTrainer(model=model, config=ppo_config, tokenizer=tokenizer),
+            ppo_trainer=VerbosePPOTrainer(model=model, config=ppo_config, tokenizer=tokenizer, optimizer=optimizer, lr_scheduler=lr_scheduler),
             config=config,
             dataset=raw_dataset,
             ref_model=reference_model,
