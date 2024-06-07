@@ -1,22 +1,39 @@
-Data Generation - DPO:
+Data Generation - Debate - SFT:
   batch_size: 1
   num_speeches: 1
   flip: False
   enable_self_debate: True
-  previous_run:
-    file_path: 2024-01-30_18:00:30.899060
-    replicate_topics: True
-    merge_results: False
   agents:
     debaters:
       - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-315
-          alias: "dpo"
-        best_of_n:
-          n: 8
-          opponent_n: 2
-          maxmin: False
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+          alias: "sft"
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
+Data Validation - Llama3:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-604-test/checkpoint-0
+          alias: "llama3-dpo"
+          require_quote_validation: True
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "llama3-sft"
+          require_quote_validation: True
     judge:
       model_settings:
         model_type: openai
@@ -25,7 +42,32 @@ Data Generation - DPO:
   dataset:
     dataset_type: quality
     split_type: val
-Data Generation - SFT:
+Data Validation - Llama3 - Judge:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  enable_self_debate: False
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "llama3-sft-debater"
+          require_quote_validation: True
+    judge:
+      model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/base_models/llama3-8b-262k
+          alias: "llama3-base-debater"
+          require_quote_validation: False
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Validation - SFT:
   batch_size: 1
   num_speeches: 1
   flip: False
@@ -51,7 +93,7 @@ Data Generation - SFT:
   dataset:
     dataset_type: quality
     split_type: val
-Data Generation - Human:
+Data Validation - Human:
   batch_size: 1
   num_speeches: 1
   flip: False
@@ -77,7 +119,7 @@ Data Generation - Human:
   dataset:
     dataset_type: quality
     split_type: val
-Data Generation - Llama:
+Data Validation - Llama:
   batch_size: 1
   num_speeches: 1
   flip: False
@@ -126,17 +168,21 @@ Data Generation - Consultant:
   dataset:
     dataset_type: quality
     split_type: train
-Data Validation - Consultant:
+Data Validation - SFT - Consultant:
   batch_size: 1
   num_speeches: 1
   flip: True
   enable_self_debate: True
   speech_structure: default_consultancy
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
   agents:
     debaters:
       - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-consultant-adapter
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-consultant-adapter/checkpoint-474
           alias: "sft-consultant"
         best_of_n:
           n: 8
@@ -149,7 +195,7 @@ Data Validation - Consultant:
   dataset:
     dataset_type: quality
     split_type: val
-Data Generation - DPO - Consultant:
+Data Validation - Human - Consultant:
   batch_size: 1
   num_speeches: 1
   flip: True
@@ -163,8 +209,62 @@ Data Generation - DPO - Consultant:
     debaters:
       - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-315-consultant
-          alias: "dpo-consultant"
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-consultant-adapter-human
+          alias: "human-consultant"
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: random
+        alias: "random-judge"
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Validation - Llama - Consultant:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-consultant-adapter-llama
+          alias: "human-consultant"
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: random
+        alias: "random-judge"
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Validation - DPO - Consultant - 2:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-41-consultant/checkpoint-112
+          alias: "dpo-consultant-2"
         best_of_n:
           n: 8
           opponent_n: 0
@@ -177,11 +277,12 @@ Data Generation - DPO - Consultant:
   dataset:
     dataset_type: quality
     split_type: val
-Mini Tourney:
+Data Validation - DPO - Consultant - 3:
   batch_size: 1
   num_speeches: 1
   flip: True
-  enable_self_debate: False
+  enable_self_debate: True
+  speech_structure: default_consultancy
   previous_run:
     file_path: 2024-01-30_18:00:30.899060
     replicate_topics: True
@@ -190,25 +291,26 @@ Mini Tourney:
     debaters:
       - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-315
-          alias: "dpo"
-      - model_settings:
-          model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-          alias: "sft"
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-41-consultant/checkpoint-168
+          alias: "dpo-consultant-3"
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: False
     judge:
       model_settings:
         model_type: openai
-        alias: openai-judge
+        alias: "openai-judge"
         model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
   dataset:
     dataset_type: quality
     split_type: val
-Mini Tourney - Old:
+Data Validation - DPO - Consultant:
   batch_size: 1
   num_speeches: 1
   flip: True
-  enable_self_debate: False
+  enable_self_debate: True
+  speech_structure: default_consultancy
   previous_run:
     file_path: 2024-01-30_18:00:30.899060
     replicate_topics: True
@@ -217,16 +319,17 @@ Mini Tourney - Old:
     debaters:
       - model_settings:
           model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-1
-          alias: "dpo-old"
-      - model_settings:
-          model_type: mistral
-          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
-          alias: "sft"
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-41-consultant
+          alias: "dpo-consultant"
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: False
     judge:
       model_settings:
         model_type: openai
-        alias: openai-judge
+        alias: "openai-judge"
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
   dataset:
     dataset_type: quality
     split_type: val

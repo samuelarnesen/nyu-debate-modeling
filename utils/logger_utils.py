@@ -35,4 +35,4 @@ class LoggingCallback(TrainerCallback):
         """Callback so that training updates get written using the default logger rather than print statements"""
         _ = logs.pop("total_flos", None)
         if state.is_local_process_zero:
-            get_default_logger(__name__).info(logs)
+            get_default_logger(__name__).warn(logs)

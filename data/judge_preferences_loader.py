@@ -58,7 +58,14 @@ class JudgePreferencesLoader(RawDataLoader):
     MIN_GAP = 0.00
 
     @classmethod
-    def process_row(data: dict[Any, Any]) -> list[tuple[str, str, str, float]]:
+    def process_row(cls, data: dict[Any, Any]) -> list[tuple[str, str, str, float]]:
+
+        def clean_speech(speech: str) -> str:
+            speech = speech.replace(constants.INVALID_QUOTE_TAG, constants.QUOTE_TAG).replace(
+                constants.INVALID_UNQUOTE_TAG, constants.UNQUOTE_TAG
+            )
+            return quote_utils.clean_up_quotes(speech_content=speech)
+        
         outputs = []
         for selected in filter(
             lambda x: x["speaker"] in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME],
@@ -86,12 +93,6 @@ class JudgePreferencesLoader(RawDataLoader):
         Returns:
             A JudgePreferencesDataset where each row has a chosen and a rejected speech.
         """
-
-        def clean_speech(speech: str) -> str:
-            speech = speech.replace(constants.INVALID_QUOTE_TAG, constants.QUOTE_TAG).replace(
-                constants.INVALID_UNQUOTE_TAG, constants.UNQUOTE_TAG
-            )
-            return quote_utils.clean_up_quotes(speech_content=speech)
 
         train_data = []
         input_texts = input_utils.read_file_texts(base_path=full_dataset_filepath, input_type=InputType.JSON_TRANSCRIPT)

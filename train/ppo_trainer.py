@@ -80,7 +80,9 @@ class PPOStats:
     def get_scores(self, window: int = -1):
         return (1 / 2) * (self.get_correct_scores(window=window) + self.get_incorrect_scores(window=window))
 
+
 LlamaModel.forward = LlamaModelWithGradientCheckpointing.forward
+
 
 class PPOTrainerWrapper:
     INSTRUCTION_COLUMN = "instruction"
@@ -93,7 +95,7 @@ class PPOTrainerWrapper:
     INPUT_IDS_COLUMN = "input_ids"
     EXTRA_SUFFIX_COLUMN = "extra_suffix"
     BATCH_SIZE = 1
-    DEFAULT_DEBATER_ALIAS = "mixtral-debater"
+    DEFAULT_DEBATER_ALIAS = "default-debater"
     DEFAULT_JUDGE_ALIAS = "openai-judge"
 
     def __init__(
@@ -151,7 +153,7 @@ class PPOTrainerWrapper:
 
         self.logger = logger_utils.get_default_logger(__name__)
 
-        self.alternate_speech = None # TODO: delete this
+        self.alternate_speech = None  # TODO: delete this
 
     @timer("generate batch samples")
     def get_batch_samples(self, start_idx: int, ppo_stats: PPOStats) -> tuple[list[str], list[str], list[float]]:
@@ -292,7 +294,6 @@ class PPOTrainerWrapper:
         )
         reference_model.instantiated_model = True
         reference_model.is_debater = True
-
 
         # TODO: delete this
         if self.alternate_speech:
@@ -445,7 +446,6 @@ class PPOTrainerWrapper:
 
         self.ppo_trainer.save_pretrained(location)
 
-
     @classmethod
     def get_trainer(
         cls,
@@ -479,7 +479,7 @@ class PPOTrainerWrapper:
             mini_batch_size=1,
             ppo_epochs=1,
             optimize_device_cache=True,
-            #kl_penalty='abs',
+            # kl_penalty='abs',
             init_kl_coef=0.10,
         )
 
@@ -499,7 +499,9 @@ class PPOTrainerWrapper:
         lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
         ppo_trainer = PPOTrainerWrapper(
-            ppo_trainer=VerbosePPOTrainer(model=model, config=ppo_config, tokenizer=tokenizer, optimizer=optimizer, lr_scheduler=lr_scheduler),
+            ppo_trainer=VerbosePPOTrainer(
+                model=model, config=ppo_config, tokenizer=tokenizer, optimizer=optimizer, lr_scheduler=lr_scheduler
+            ),
             config=config,
             dataset=raw_dataset,
             ref_model=reference_model,

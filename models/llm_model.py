@@ -669,7 +669,7 @@ class TokenizerStub:
             return input_ids[0, :]
         return input_ids
 
-    def decode(self, tokens: torch.tensor) -> str | list[str]:
+    def decode(self, tokens: torch.tensor, **kwargs) -> str | list[str]:
         if len(tokens.shape) == 1:
             batch_size = 1
             sequence_length = tokens.shape[0]

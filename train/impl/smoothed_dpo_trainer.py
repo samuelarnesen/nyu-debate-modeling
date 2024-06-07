@@ -153,7 +153,7 @@ class SmoothedDPOTrainer(Trainer):
         ref_model: Optional[Union[PreTrainedModel, nn.Module, str]] = None,
         beta: float = 0.1,
         label_smoothing: float = 0,
-        loss_type: Literal["sigmoid", "hinge", "ipo", "kto_pair"] = "sigmoid",
+        loss_type: Literal["sigmoid", "hinge", "ipo", "kto_pair", "bon"] = "sigmoid",
         args: Optional[TrainingArguments] = None,
         data_collator: Optional[DataCollator] = None,
         label_pad_token_id: int = -100,
@@ -871,20 +871,29 @@ class SmoothedDPOTrainer(Trainer):
         # The beta is a temperature parameter for the DPO loss, typically something in the range of 0.1 to 0.5.
         # We ignore the reference model as beta -> 0. The label_smoothing parameter encodes our uncertainty about the labels and
         # calculates a conservative DPO loss.
+        if preference:
+            preference = torch.FloatTensor(preference).to(self.accelerator.device)
+            label_smoothing = 1 - preference
+            pref = preference.item()
         if self.loss_type == "sigmoid":
             label_smoothing = self.label_smoothing
-            if preference:
-                preference = torch.FloatTensor(preference).to("cuda")
-                label_smoothing = 1 - preference
-                pref = preference.item()
-                self.logger.info(f"New label smoothing is {pref}")
             losses = (
                 -F.logsigmoid(self.beta * logits) * (1 - label_smoothing)
                 - F.logsigmoid(-self.beta * logits) * label_smoothing
             )
+        elif self.loss_type == "bon":
+            ipo_loss_pref = (logits - 1 / (2 * self.beta)) ** 2
+            ipo_sft_loss_pref = policy_chosen_logps.to(self.accelerator.device)
+            ipo_loss_pref = (0.5 * ipo_loss_pref) + (0.5 * ipo_sft_loss_pref)
+
+            ipo_loss_rej = (-logits - 1 / (2 * self.beta)) ** 2
+            ipo_sft_loss_rej = policy_rejected_logps.to(self.accelerator.device)
+            ipo_loss_rej = (0.5 * ipo_loss_rej) + (0.5 * ipo_sft_loss_rej)
+
+            losses = (preference * ipo_loss_pref) + ((1 - preference) * ipo_loss_rej)
         else:
             raise ValueError(
-                f"Unknown loss type: {self.loss_type}. Should be one of ['sigmoid', 'hinge', 'ipo', 'kto_pair']"
+                f"Unknown loss type: {self.loss_type}. Should be one of ['sigmoid', 'hinge', 'ipo', 'kto_pair', 'bon']"
             )
 
         chosen_rewards = (
@@ -972,10 +981,12 @@ class SmoothedDPOTrainer(Trainer):
         all_logps = self.get_batch_logps(
             all_logits,
             concatenated_batch["concatenated_labels"],
-            average_log_prob=self.loss_type == "ipo",
             is_encoder_decoder=self.is_encoder_decoder,
             label_pad_token_id=self.label_pad_token_id,
         )
+
+        if self.loss_type in ["ipo", "bon"]:
+            all_logps = all_logps / size_completion
 
         chosen_logps = all_logps[:len_chosen]
         rejected_logps = all_logps[len_chosen:]

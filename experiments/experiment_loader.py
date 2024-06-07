@@ -567,13 +567,17 @@ class ExperimentLoader:
                     debate_round.metadata = flipped_round.metadata
                     flipped_round.metadata = debate_round.metadata
 
+            original_first_debater = debate_round.first_debater
+            original_second_debater = debate_round.first_debater
+            original_flipped_first_debater = flipped_round.first_debater
+            original_flipped_second_debater = flipped_round.second_debater
             if experiment.agents.debaters[debater_idxs[0]].best_of_n and (
                 not first_offline_file_path or experiment.agents.debaters[debater_idxs[0]].best_of_n.recompute
             ):
                 debate_round.set_first_debater(
                     BestOfNDebater(
                         debater=debate_round.first_debater,
-                        opposing_debater=debate_round.second_debater,
+                        opposing_debater=original_second_debater,
                         judge=debate_round.judge,
                         best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                         background_text=question_metadata.background_text,
@@ -583,7 +587,7 @@ class ExperimentLoader:
                     flipped_round.set_second_debater(
                         BestOfNDebater(
                             debater=flipped_round.second_debater,
-                            opposing_debater=flipped_round.first_debater,
+                            opposing_debater=original_flipped_first_debater,
                             judge=debate_round.judge,
                             best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                             background_text=question_metadata.background_text,
@@ -595,7 +599,7 @@ class ExperimentLoader:
                 debate_round.set_second_debater(
                     BestOfNDebater(
                         debater=debate_round.second_debater,
-                        opposing_debater=debate_round.first_debater,
+                        opposing_debater=original_first_debater,
                         judge=debate_round.judge,
                         best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                         background_text=question_metadata.background_text,
@@ -605,7 +609,7 @@ class ExperimentLoader:
                     flipped_round.set_first_debater(
                         BestOfNDebater(
                             debater=flipped_round.first_debater,
-                            opposing_debater=flipped_round.second_debater,
+                            opposing_debater=original_flipped_second_debater,
                             judge=debate_round.judge,
                             best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                             background_text=question_metadata.background_text,

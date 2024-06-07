@@ -261,7 +261,7 @@ Stub_LLM_Test:
     dataset_type: quality_debates
     split_type: val
 Self_Play_Test:
-  batch_size: 8
+  batch_size: 16
   num_speeches: 1
   flip: False
   enable_self_debate: True
@@ -274,7 +274,7 @@ Self_Play_Test:
           require_quote_validation: True
         best_of_n:
           n: 8
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
           alias: sft-4
@@ -283,7 +283,7 @@ Self_Play_Test:
           require_quote_validation: True
         best_of_n:
           n: 4
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
           alias: sft-2
@@ -292,7 +292,7 @@ Self_Play_Test:
           require_quote_validation: True
         best_of_n:
           n: 2
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
           alias: sft-1
@@ -301,7 +301,7 @@ Self_Play_Test:
           require_quote_validation: True
         best_of_n:
           n: 1
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
           alias: human-8
@@ -310,7 +310,7 @@ Self_Play_Test:
           require_quote_validation: True
         best_of_n:
           n: 8
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
           alias: human-4
@@ -319,7 +319,7 @@ Self_Play_Test:
           require_quote_validation: True
         best_of_n:
           n: 4
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
           alias: human-2
@@ -328,7 +328,7 @@ Self_Play_Test:
           require_quote_validation: True
         best_of_n:
           n: 2
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
           alias: human-1
@@ -337,7 +337,7 @@ Self_Play_Test:
           require_quote_validation: True
         best_of_n:
           n: 1
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
           alias: llama-8
@@ -346,7 +346,7 @@ Self_Play_Test:
           require_quote_validation: True
         best_of_n:
           n: 8
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
           alias: llama-4
@@ -355,7 +355,7 @@ Self_Play_Test:
           require_quote_validation: True
         best_of_n:
           n: 4
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
           alias: llama-2
@@ -364,7 +364,7 @@ Self_Play_Test:
           require_quote_validation: True
         best_of_n:
           n: 2
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
           alias: llama-1
@@ -373,43 +373,203 @@ Self_Play_Test:
           require_quote_validation: True
         best_of_n:
           n: 1
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
-          alias: dpo-8
+          alias: cdpo-8
           model_type: offline
-          offline_file_path: 2024-03-17_00:25:08.985241
+          offline_file_path: 2024-04-02_00:29:22.727203
           require_quote_validation: True
         best_of_n:
           n: 8
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
-          alias: dpo-4
+          alias: cdpo-4
           model_type: offline
-          offline_file_path: 2024-03-17_00:25:08.985241
+          offline_file_path: 2024-04-02_00:29:22.727203
           require_quote_validation: True
         best_of_n:
           n: 4
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
-          alias: dpo-2
+          alias: cdpo-2
           model_type: offline
-          offline_file_path: 2024-03-17_00:25:08.985241
+          offline_file_path: 2024-04-02_00:29:22.727203
           require_quote_validation: True
         best_of_n:
           n: 2
-          opponent_n: 1
+          opponent_n: 2
           maxmin: False
       - model_settings:
-          alias: dpo-1
+          alias: cdpo-1
           model_type: offline
-          offline_file_path: 2024-03-17_00:25:08.985241
+          offline_file_path: 2024-04-02_00:29:22.727203
           require_quote_validation: True
         best_of_n:
           n: 1
-          opponent_n: 1
+          opponent_n: 2
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+  tournament:
+    tournament_type: self_play_only
+Cross_Play_Test:
+  batch_size: 16
+  num_speeches: 1
+  flip: True
+  enable_self_debate: False
+  agents:
+    debaters:
+      - model_settings:
+          alias: sft-8
+          model_type: offline
+          offline_file_path: 2024-03-11_16:29:23.846874
+          require_quote_validation: True
+        best_of_n:
+          n: 8
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: sft-4
+          model_type: offline
+          offline_file_path: 2024-03-11_16:29:23.846874
+          require_quote_validation: True
+        best_of_n:
+          n: 4
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: sft-2
+          model_type: offline
+          offline_file_path: 2024-03-11_16:29:23.846874
+          require_quote_validation: True
+        best_of_n:
+          n: 2
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: sft-1
+          model_type: offline
+          offline_file_path: 2024-03-11_16:29:23.846874
+          require_quote_validation: True
+        best_of_n:
+          n: 1
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: human-8
+          model_type: offline
+          offline_file_path: 2024-03-11_15:41:59.706196
+          require_quote_validation: True
+        best_of_n:
+          n: 8
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: human-4
+          model_type: offline
+          offline_file_path: 2024-03-11_15:41:59.706196
+          require_quote_validation: True
+        best_of_n:
+          n: 4
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: human-2
+          model_type: offline
+          offline_file_path: 2024-03-11_15:41:59.706196
+          require_quote_validation: True
+        best_of_n:
+          n: 2
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: human-1
+          model_type: offline
+          offline_file_path: 2024-03-11_15:41:59.706196
+          require_quote_validation: True
+        best_of_n:
+          n: 1
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: llama-8
+          model_type: offline
+          offline_file_path: 2024-03-11_17:09:09.595983
+          require_quote_validation: True
+        best_of_n:
+          n: 8
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: llama-4
+          model_type: offline
+          offline_file_path: 2024-03-11_17:09:09.595983
+          require_quote_validation: True
+        best_of_n:
+          n: 4
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: llama-2
+          model_type: offline
+          offline_file_path: 2024-03-11_17:09:09.595983
+          require_quote_validation: True
+        best_of_n:
+          n: 2
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: llama-1
+          model_type: offline
+          offline_file_path: 2024-03-11_17:09:09.595983
+          require_quote_validation: True
+        best_of_n:
+          n: 1
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: cdpo-8
+          model_type: offline
+          offline_file_path: 2024-04-02_00:29:22.727203
+          require_quote_validation: True
+        best_of_n:
+          n: 8
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: cdpo-4
+          model_type: offline
+          offline_file_path: 2024-04-02_00:29:22.727203
+          require_quote_validation: True
+        best_of_n:
+          n: 4
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: cdpo-2
+          model_type: offline
+          offline_file_path: 2024-04-02_00:29:22.727203
+          require_quote_validation: True
+        best_of_n:
+          n: 2
+          opponent_n: 2
+          maxmin: False
+      - model_settings:
+          alias: cdpo-1
+          model_type: offline
+          offline_file_path: 2024-04-02_00:29:22.727203
+          require_quote_validation: True
+        best_of_n:
+          n: 1
+          opponent_n: 2
           maxmin: False
     judge:
       model_settings:
@@ -420,7 +580,62 @@ Self_Play_Test:
     dataset_type: quality
     split_type: val
   tournament:
-    tournament_type: self_play_only
+    tournament_type: custom
+    custom_matchups:
+      - ["cdpo-8", "sft-8"]
+      - ["cdpo-8", "sft-4"]
+      - ["cdpo-8", "sft-2"]
+      - ["cdpo-8", "sft-1"]
+      - ["cdpo-8", "human-8"]
+      - ["cdpo-8", "human-4"]
+      - ["cdpo-8", "human-2"]
+      - ["cdpo-8", "human-1"]
+      - ["cdpo-8", "llama-8"]
+      - ["cdpo-8", "llama-4"]
+      - ["cdpo-8", "llama-2"]
+      - ["cdpo-8", "llama-1"]
+      - ["cdpo-4", "sft-8"]
+      - ["cdpo-4", "sft-4"]
+      - ["cdpo-4", "sft-2"]
+      - ["cdpo-4", "sft-1"]
+      - ["cdpo-4", "human-8"]
+      - ["cdpo-4", "human-4"]
+      - ["cdpo-4", "human-2"]
+      - ["cdpo-4", "human-1"]
+      - ["cdpo-4", "llama-8"]
+      - ["cdpo-4", "llama-4"]
+      - ["cdpo-4", "llama-2"]
+      - ["cdpo-4", "llama-1"]
+      - ["cdpo-4", "cdpo-8"]
+      - ["cdpo-2", "sft-8"]
+      - ["cdpo-2", "sft-4"]
+      - ["cdpo-2", "sft-2"]
+      - ["cdpo-2", "sft-1"]
+      - ["cdpo-2", "human-8"]
+      - ["cdpo-2", "human-4"]
+      - ["cdpo-2", "human-2"]
+      - ["cdpo-2", "human-1"]
+      - ["cdpo-2", "llama-8"]
+      - ["cdpo-2", "llama-4"]
+      - ["cdpo-2", "llama-2"]
+      - ["cdpo-2", "llama-1"]
+      - ["cdpo-2", "cdpo-8"]
+      - ["cdpo-2", "cdpo-4"]
+      - ["cdpo-1", "sft-8"]
+      - ["cdpo-1", "sft-4"]
+      - ["cdpo-1", "sft-2"]
+      - ["cdpo-1", "sft-1"]
+      - ["cdpo-1", "human-8"]
+      - ["cdpo-1", "human-4"]
+      - ["cdpo-1", "human-2"]
+      - ["cdpo-1", "human-1"]
+      - ["cdpo-1", "llama-8"]
+      - ["cdpo-1", "llama-4"]
+      - ["cdpo-1", "llama-2"]
+      - ["cdpo-1", "llama-1"]
+      - ["cdpo-1", "cdpo-8"]
+      - ["cdpo-1", "cdpo-4"]
+      - ["cdpo-1", "cdpo-2"]
 Consultancy_Test:
   batch_size: 8
   num_speeches: 1
@@ -457,7 +672,7 @@ Empty_Round_Test:
   dataset:
     dataset_type: quality
     split_type: train
-Consultancy_Test:
+Offline_Consultancy_Test:
   batch_size: 1
   num_speeches: 1
   flip: False
@@ -466,9 +681,9 @@ Consultancy_Test:
   agents:
     debaters:
       - model_settings:
-          alias: sft-consultant
+          alias: human-consultant
           model_type: offline
-          offline_file_path: /Users/samarnesen/nyu/scratch/runs/consultant-val/2024-03-13_01:16:22.051849
+          offline_file_path: 2024-04-04_01:31:37.437960
         best_of_n:
           n: 8
           opponent_n: 0
@@ -482,27 +697,8 @@ Consultancy_Test:
   dataset:
     dataset_type: quality
     split_type: val
-Operational_Test:
-  batch_size: 1
-  num_speeches: 1
-  flip: True
-  enable_self_debate: False
-  speech_structure: default_debate
-  agents:
-    debaters:
-      - model_settings:
-          alias: sft-old
-          model_type: offline
-          offline_file_path: 2024-02-23_00:57:12.575419
-    judge:
-      model_settings:
-        model_type: random
-        alias: random-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
 DPO_Test:
-  batch_size: 8
+  batch_size: 16
   num_speeches: 1
   enable_self_debate: False
   speech_structure: default_debate
@@ -510,13 +706,20 @@ DPO_Test:
   agents:
     debaters:
       - model_settings:
-          alias: sft-old
+          alias: dpo-v2.2-8
           model_type: offline
-          offline_file_path: /Users/samarnesen/Downloads/2024-01-30_18_00_30.899060 #
+          offline_file_path: 2024-04-02_00:29:22.727203
+          require_quote_validation: True
       - model_settings:
-          alias: dpo-old 
+          alias: dpo-v2.2-1
           model_type: offline
-          offline_file_path:  /Users/samarnesen/Downloads/2024-02-21_14_48_01.693701
+          offline_file_path: 2024-04-02_00:29:22.727203
+          require_quote_validation: True
+        best_of_n:
+          n: 1
+          opponent_n: 1
+          maxmin: False
+          recompute: False
     judge:
       model_settings:
         model_type: openai
@@ -525,26 +728,263 @@ DPO_Test:
   dataset:
     dataset_type: quality
     split_type: val
-Temp_Test:
-  batch_size: 8
+Rescore_Test:
+  batch_size: 1
   num_speeches: 1
-  enable_self_debate: False
+  enable_self_debate: True
   speech_structure: default_debate
-  flip: True
+  flip: False
   agents:
     debaters:
       - model_settings:
-          alias: sft-8
+          alias: dpo-v2.2
           model_type: offline
-          offline_file_path: 2024-02-29_21:17:50.435314
-      - model_settings:
-          alias: dpo-8
-          model_type: offline
-          offline_file_path: 2024-02-29_21:17:50.435314
+          offline_file_path: 2024-03-29_19:11:38.318593
+        best_of_n:
+          n: 8
+          opponent_n: 2
+          maxmin: False
+          recompute: True
     judge:
       model_settings:
         model_type: openai
         alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
   dataset:
     dataset_type: quality
     split_type: val
+Self_Play_Consultancy_Test:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          alias: dpo-8
+          model_type: offline
+          offline_file_path: 2024-04-04_00:21:08.774644
+          require_quote_validation: False
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: random
+        alias: random-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+  tournament:
+    tournament_type: self_play_only
+Double_Consultancy_Test:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          alias: dpo-8
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-dpo/2024-04-04_00:21:08.774644
+          require_quote_validation: True
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: dpo-4
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-dpo/2024-04-04_00:21:08.774644
+          require_quote_validation: True
+        best_of_n:
+          n: 4
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: dpo-2
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-dpo/2024-04-04_00:21:08.774644
+          require_quote_validation: True
+        best_of_n:
+          n: 2
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: dpo-1
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-dpo/2024-04-04_00:21:08.774644
+          require_quote_validation: True
+        best_of_n:
+          n: 1
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: sft-8
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-sft/2024-04-04_01:06:32.097238
+          require_quote_validation: True
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: sft-4
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-sft/2024-04-04_01:06:32.097238
+          require_quote_validation: True
+        best_of_n:
+          n: 4
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: sft-2
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-sft/2024-04-04_01:06:32.097238
+          require_quote_validation: True
+        best_of_n:
+          n: 2
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: sft-1
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-sft/2024-04-04_01:06:32.097238
+          require_quote_validation: True
+        best_of_n:
+          n: 1
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: llama-8
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-llama/2024-04-04_20:45:09.521845
+          require_quote_validation: True
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: llama-4
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-llama/2024-04-04_20:45:09.521845
+          require_quote_validation: True
+        best_of_n:
+          n: 4
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: llama-2
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-llama/2024-04-04_20:45:09.521845
+          require_quote_validation: True
+        best_of_n:
+          n: 2
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: llama-1
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-llama/2024-04-04_20:45:09.521845
+          require_quote_validation: True
+        best_of_n:
+          n: 1
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: human-8
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-human/2024-04-04_21:08:22.382746
+          require_quote_validation: True
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: human-4
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-human/2024-04-04_21:08:22.382746
+          require_quote_validation: True
+        best_of_n:
+          n: 4
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: human-2
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-human/2024-04-04_21:08:22.382746
+          require_quote_validation: True
+        best_of_n:
+          n: 2
+          opponent_n: 0
+          maxmin: True
+      - model_settings:
+          alias: human-1
+          model_type: offline
+          offline_file_path: /Users/samarnesen/nyu/scratch/runs/double-consultancy-human/2024-04-04_21:08:22.382746
+          require_quote_validation: True
+        best_of_n:
+          n: 1
+          opponent_n: 0
+          maxmin: True
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+  tournament:
+    tournament_type: self_play_only
+Operational_Test:
+  batch_size: 8
+  num_speeches: 1
+  flip: True
+  enable_self_debate: False
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          alias: normal
+          model_type: offline
+          offline_file_path: 2024-05-16_12:18:11.701823
+          require_quote_validation: False
+      - model_settings:
+          alias: passive
+          model_type: offline
+          offline_file_path: 2024-05-16_17:44:18.061087
+          require_quote_validation: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: gpt-4o
+  dataset:
+    dataset_type: quality
+    split_type: val
+Backup_Test:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: False
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          alias: sft-1
+          model_type: random
+      - model_settings:
+          alias: bco-4 # bco-initial
+          model_type: stub_llm
+    judge:
+      model_settings:
+        model_type: random
+        alias: random-judge
+  dataset:
+    dataset_type: quality
+    split_type: train

@@ -55,6 +55,8 @@ class ScriptUtils:
 
     @classmethod
     def set_log_level(cls, args) -> None:
+        os.environ["LOG_LEVEL"] = str(logging.INFO)
+
         requested = args.log_level.lower()
         specified = None
         if requested == "debug":
