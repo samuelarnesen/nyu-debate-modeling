@@ -27,6 +27,12 @@ class LoggingAndSavingConfig(BaseModel):
     merge_output_dir: Optional[str] = None
 
 
+class TargetModule(Enum):
+    ALL = 0
+    ATTENTION = 1
+    MLP = 2
+
+
 class TrainingHyperParameterConfig(BaseModel):
     num_train_epochs: int
     per_device_train_batch_size: int
@@ -38,7 +44,17 @@ class TrainingHyperParameterConfig(BaseModel):
     lr_scheduler_type: str = ""
     peft_type: PeftType | str = ""
     steps: Optional[int] = None
+    lora_rank: int = 64
+    kl_penalty: float = 0.1
+    target_module: TargetModule | str = TargetModule.ATTENTION
     supplemental: Optional[dict[str, Any]] = None
+
+    @field_validator("target_module", mode="before")
+    @classmethod
+    def validate_training_target(cls, target_module: str | TargetModule):
+        if isinstance(target_module, str):
+            return TargetModule[target_module.upper()]
+        return target_module
 
 
 class TrainingConfig(BaseModel):
@@ -144,14 +160,24 @@ class TrainUtils:
             return None
         peft_type = PeftType[config.training_hyperparameters.peft_type.upper()]
         llm_class = TrainUtils.get_llm_class(config=config)
+
+        targets = llm_class.TARGET_MODULES
+        if config.training_hyperparameters.target_module:
+            if config.training_hyperparameters.target_module == TargetModule.ATTENTION:
+                targets = llm_class.ATTENTION_MODULES
+            elif config.training_hyperparameters.target_module == TargetModule.MLP:
+                targets = llm_class.MLP_MODULES
+            elif config.training_hyperparameters.target_module == TargetModule.ALL:
+                targets = llm_class.ATTENTION_MODULES + llm_class.MLP_MODULES
+
         if peft_type == PeftType.LORA:
             return LoraConfig(
                 lora_alpha=16,
-                lora_dropout=0.1,
-                r=64,
+                lora_dropout=0.0,
+                r=config.training_hyperparameters.lora_rank,
                 bias="none",
                 task_type=TaskType.CAUSAL_LM,
-                target_modules=llm_class.TARGET_MODULES,
+                target_modules=targets,
                 init_lora_weights="gaussian",
             )
         elif peft_type == PeftType.PROMPT_TUNING:

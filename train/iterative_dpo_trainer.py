@@ -10,12 +10,13 @@ import utils.constants as constants
 
 from datasets import Dataset
 from pydantic import BaseModel
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
+from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
 from trl import DPOTrainer
 import pandas as pd
 import torch
 
 from typing import Optional
+import copy
 import json
 
 try:
@@ -39,7 +40,7 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
     def __init__(self, config: TrainingConfig, smooth: bool = True, is_local: bool = False):
         self.is_local = is_local
         self.tokenizer = TrainUtils.get_tokenizer(config=config, is_local=is_local)
-        self.model = TrainUtils.load_model(config=config, is_local=is_local)
+        self.model = TrainUtils.load_model(config=config, is_local=is_local, requires_value_head=False)
 
         if FLASH_ATTENTION_AVAILABLE:
             self.model = upcast_layer_for_flash_attention(self.model, torch.bfloat16)
@@ -47,7 +48,9 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
         self.peft_config = TrainUtils.get_peft_config(config=config)
 
         self.judge_model = OpenAIModel(
-            alias=IterativeDirectPreferenceTrainer.DEFAULT_JUDGE_ALIAS, is_debater=False, endpoint="ft:gpt-4-0613:nyu-arg::90NW3Tbx"
+            alias=IterativeDirectPreferenceTrainer.DEFAULT_JUDGE_ALIAS,
+            is_debater=False,
+            endpoint="ft:gpt-4-0613:nyu-arg::90NW3Tbx",
         )  # make configurable
         if is_local:
             self.judge_model = RandomModel(alias=IterativeDirectPreferenceTrainer.DEFAULT_JUDGE_ALIAS, is_debater=False)
@@ -61,36 +64,41 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
         self.logger = logger_utils.get_default_logger(__name__)
 
     def train(self, epoch_size: int = 128):
-        for epoch in range(self.config.training_hyperparameters.num_train_epochs):
+        for epoch in range(self.config.training_hyperparameters.steps):
             self.step(step_count=epoch, epoch_size=epoch_size)
 
     def step(self, step_count: int, epoch_size: int):
-        output_suffix = f"/checkpoint-{step_count}" if epoch < self.config.training_hyperparameters.num_train_epochs - 1 else ""
+        output_suffix = f"/checkpoint-{step_count}" if step_count < self.config.training_hyperparameters.steps - 1 else ""
+        output_name = f"{self.config.logging_and_saving_config.output_dir}{output_suffix}"
         training_args = TrainingArguments(
-            output_dir=f"{self.config.logging_and_saving_config.output_dir}{output_suffix}",
-            num_train_epochs=2,
+            output_dir=output_name,
+            num_train_epochs=self.config.training_hyperparameters.num_train_epochs,
             per_device_train_batch_size=self.config.training_hyperparameters.per_device_train_batch_size,
             gradient_accumulation_steps=self.config.training_hyperparameters.gradient_accumulation_steps,
             gradient_checkpointing=True,
             logging_steps=self.config.logging_and_saving_config.logging_steps,
-            save_strategy="no",
-            learning_rate=self.config.training_hyperparameters.learning_rate,
+            save_strategy="no"
+            if self.config.training_hyperparameters.steps > 1 or self.config.training_hyperparameters.num_train_epochs == 1
+            else "epoch",
+            learning_rate=self.config.training_hyperparameters.learning_rate * (0.8**step_count),
             disable_tqdm=False,
             ddp_find_unused_parameters=False,
             optim=self.config.training_hyperparameters.optim,
             lr_scheduler_type=self.config.training_hyperparameters.lr_scheduler_type,
             use_cpu=self.is_local,
         )
-        self.logger.warn(f"Generating samples for epoch {epoch}")
+        self.logger.warn(f"Generating samples for epoch {step_count}")
         train_dataset = self.get_samples(start_idx=step_count * epoch_size, epoch_size=epoch_size)
-        self.logger.warn(f"Training for epoch {epoch}")
+        self.logger.warn(f"Training for epoch {step_count}")
+
         trainer = self.trainer_cls(
             model=self.model,
             ref_model=None,
-            loss_type='bon',
+            loss_type="bon",
             max_length=16384,
             max_prompt_length=16384,
-            beta=0.5, # change depending on n
+            beta=self.config.training_hyperparameters.kl_penalty,
+            alpha=self.config.training_hyperparameters.supplemental.get("alpha", 0.005),
             args=training_args,
             train_dataset=train_dataset,
             tokenizer=self.tokenizer,
@@ -100,13 +108,20 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
         trainer.train()
         trainer.save_model()
 
+        self.model = trainer.model
+
     def get_samples(self, start_idx: int, epoch_size: int) -> Dataset:
+        if isinstance(self.dataset, JudgePreferencesDataset):
+            return DirectPreferenceTrainer.convert_dataset([self.dataset])
+
         samples = []
         for i in range(epoch_size):
             new_samples = self.generate_one_round_samples(idx=start_idx + i)
             samples.extend(new_samples)
 
-        return DirectPreferenceTrainer.convert_dataset([JudgePreferencesDataset(train_data=samples, val_data=[], test_data=[])])
+        return DirectPreferenceTrainer.convert_dataset(
+            [JudgePreferencesDataset(train_data=samples, val_data=[], test_data=[])]
+        )
 
     def generate_one_round_samples(self, idx: int):
         self.logger.warn(f"Starting round {idx}")
@@ -270,7 +285,6 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
                 maxmin=False,
             ),
             background_text=background_text,
-
         )
 
         debate_round = DebateRound(
@@ -283,5 +297,3 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
         summary = debate_round()[0]
         transcript_json = random_judge.transcripts[0].json_value()
         return JudgePreferencesLoader.process_row(transcript_json)
-
-

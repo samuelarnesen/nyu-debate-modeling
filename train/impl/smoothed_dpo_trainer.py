@@ -152,6 +152,7 @@ class SmoothedDPOTrainer(Trainer):
         model: Optional[Union[PreTrainedModel, nn.Module, str]] = None,
         ref_model: Optional[Union[PreTrainedModel, nn.Module, str]] = None,
         beta: float = 0.1,
+        alpha: float = 0.005,
         label_smoothing: float = 0,
         loss_type: Literal["sigmoid", "hinge", "ipo", "kto_pair", "bon"] = "sigmoid",
         args: Optional[TrainingArguments] = None,
@@ -183,6 +184,8 @@ class SmoothedDPOTrainer(Trainer):
         reference_free: bool = False,
         force_use_ref_model: bool = False,
     ):
+        self.logger = logger_utils.get_default_logger(__name__)
+
         if model_init_kwargs is None:
             model_init_kwargs = {}
         elif not isinstance(model, str):
@@ -217,6 +220,7 @@ class SmoothedDPOTrainer(Trainer):
         elif is_peft_available() and peft_config is not None:
             # if model is a peft model and we have a peft_config, we merge and unload it first
             if isinstance(model, PeftModel):
+                self.logger.info("Merging and unloading")
                 model = model.merge_and_unload()
 
             if ref_model is not None and not force_use_ref_model:
@@ -249,6 +253,7 @@ class SmoothedDPOTrainer(Trainer):
                     model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
 
             # get peft model with the given config
+            self.logger.info("Constructing peft model")
             model = get_peft_model(model, peft_config)
             if args.bf16 and getattr(model, "is_loaded_in_4bit", False):
                 peft_module_casting_to_bf16(model)
@@ -365,9 +370,10 @@ class SmoothedDPOTrainer(Trainer):
                 "You are using a loss type that does not support label smoothing. Ignoring label_smoothing parameter."
             )
 
+        self.alpha = alpha
         self.beta = beta
         self.label_smoothing = label_smoothing
-        self.loss_type = "sigmoid"
+        self.loss_type = loss_type
 
         self._stored_metrics = defaultdict(lambda: defaultdict(list))
 
@@ -419,8 +425,6 @@ class SmoothedDPOTrainer(Trainer):
                 self.ref_model = self._prepare_deepspeed(self.ref_model)
             else:
                 self.ref_model = self.accelerator.prepare_model(self.ref_model, evaluation_mode=True)
-
-        self.logger = logger_utils.get_default_logger(__name__)
 
     def _prepare_deepspeed(self, model: PreTrainedModelWrapper):
         # Adapted from accelerate: https://github.com/huggingface/accelerate/blob/739b135f8367becb67ffaada12fe76e3aa60fefd/src/accelerate/accelerator.py#L1473
@@ -882,15 +886,28 @@ class SmoothedDPOTrainer(Trainer):
                 - F.logsigmoid(-self.beta * logits) * label_smoothing
             )
         elif self.loss_type == "bon":
-            ipo_loss_pref = (logits - 1 / (2 * self.beta)) ** 2
-            ipo_sft_loss_pref = policy_chosen_logps.to(self.accelerator.device)
-            ipo_loss_pref = (0.5 * ipo_loss_pref) + (0.5 * ipo_sft_loss_pref)
+            """
+            ipo_loss_pref = (logits - (1 / (2 * self.beta))) ** 2
+            sft_loss_pref = -policy_chosen_logps.to(self.accelerator.device)
+            loss_pref = (0.5 * ipo_loss_pref) + (0.5 * sft_loss_pref)
 
-            ipo_loss_rej = (-logits - 1 / (2 * self.beta)) ** 2
-            ipo_sft_loss_rej = policy_rejected_logps.to(self.accelerator.device)
-            ipo_loss_rej = (0.5 * ipo_loss_rej) + (0.5 * ipo_sft_loss_rej)
+            ipo_loss_rej = (-logits - (1 / (2 * self.beta))) ** 2
+            sft_loss_rej = -policy_rejected_logps.to(self.accelerator.device)
+            loss_rej = (0.5 * ipo_loss_rej) + (0.5 * sft_loss_rej)
 
-            losses = (preference * ipo_loss_pref) + ((1 - preference) * ipo_loss_rej)
+            losses = (preference * loss_pref) + ((1 - preference) * loss_rej)
+            self.logger.warn(
+                f"ipo_pref: {ipo_loss_pref.item()}\tsft_pref: {sft_loss_pref.item()}\tipo_rej: {ipo_loss_rej.item()}\tsft_rej: {sft_loss_rej.item()}\tlosses:{losses.item()}\tpreference:{preference.item()}\tlogits_diff:{logits.item()}"
+            )
+            """
+
+            dpo_loss = (-F.logsigmoid(self.beta * logits) * preference) - (
+                F.logsigmoid(-self.beta * logits) * (1 - preference)
+            )
+            sft_loss = -policy_chosen_logps.to(self.accelerator.device)
+            losses = (self.alpha * sft_loss) + ((1 - self.alpha) * dpo_loss)
+
+            self.logger.info(f"Overall Loss: {losses.item()}\tDPO Loss: {dpo_loss.item()}\tSFT Loss: {sft_loss.item()}")
         else:
             raise ValueError(
                 f"Unknown loss type: {self.loss_type}. Should be one of ['sigmoid', 'hinge', 'ipo', 'kto_pair', 'bon']"
@@ -943,9 +960,9 @@ class SmoothedDPOTrainer(Trainer):
         per_token_logps = torch.gather(logits.log_softmax(-1), dim=2, index=labels.unsqueeze(2)).squeeze(2)
 
         if average_log_prob:
-            return (per_token_logps * loss_mask).sum(-1) / loss_mask.sum(-1)
+            return (per_token_logps * loss_mask).sum(-1) / loss_mask.sum(-1), loss_mask.sum(-1)
         else:
-            return (per_token_logps * loss_mask).sum(-1)
+            return (per_token_logps * loss_mask).sum(-1), loss_mask.sum(-1)
 
     def concatenated_forward(
         self, model: nn.Module, batch: Dict[str, Union[List, torch.LongTensor]]
@@ -978,7 +995,7 @@ class SmoothedDPOTrainer(Trainer):
             **model_kwargs,
         ).logits
 
-        all_logps = self.get_batch_logps(
+        all_logps, size_completion = self.get_batch_logps(
             all_logits,
             concatenated_batch["concatenated_labels"],
             is_encoder_decoder=self.is_encoder_decoder,

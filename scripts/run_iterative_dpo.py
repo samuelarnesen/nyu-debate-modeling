@@ -11,17 +11,9 @@ script_config = ScriptUtils.get_training_run_script_config(args, train_type=Trai
 
 config = TrainUtils.parse_config(config_name=script_config.config_name, config_filepath=script_config.config_filepath)
 trainer = IterativeDirectPreferenceTrainer(config=config, smooth=True, is_local=args.test)
+epoch_size = config.training_hyperparameters.supplemental["epoch_size"]
 
 if not args.test:
-    trainer.train(epoch_size=64)
-    trainer.save_model()
+    trainer.train(epoch_size=epoch_size)
 else:
-    samples = trainer.get_samples(start_idx=0, epoch_size=64)
-
-if config.logging_and_saving_config.merge_output_dir:
-    trainer = None
-    save_utils.save(
-        base_model_name=config.model_name,
-        adapter_name=config.logging_and_saving_config.output_dir,
-        merge_name=config.logging_and_saving_config.merge_output_dir,
-    )
+    samples = trainer.get_samples(start_idx=0, epoch_size=epoch_size)

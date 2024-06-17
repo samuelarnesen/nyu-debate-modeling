@@ -42,6 +42,8 @@ class GenerationParams(BaseModel):
 class LLModel(Model):
     INSTRUCTION_PREFIX = ""
     INSTRUCTION_SUFFIX = ""
+    ATTENTION_MODULES = []
+    MLP_MODULES = []
     TARGET_MODULES = []
     DEFAULT_GENERATION_PARAMS = GenerationParams()
     MAX_MINI_BATCH_SIZE = 8
@@ -60,6 +62,7 @@ class LLModel(Model):
         max_mini_batch_size: Optional[int] = None,
         tokenizer_file_path: Optional[str] = None,
         quantize: bool = True,
+        use_generation_penalties: bool = False,
     ):
         """
         An LLModel uses a large language model (currently Llama 2 or Mistral) to generate text.
@@ -85,6 +88,7 @@ class LLModel(Model):
         self.instantiated_model = False
         self.max_mini_batch_size = max_mini_batch_size or LLModel.MAX_MINI_BATCH_SIZE
         self.quantize = quantize
+        self.use_generation_penalties = use_generation_penalties
         if file_path or not requires_file_path:
             self.instantiated_model = True
             self.is_debater = is_debater
@@ -94,7 +98,7 @@ class LLModel(Model):
                 file_path=file_path, tokenizer_file_path=tokenizer_file_path, quantize=quantize
             )
             self.generation_config = self.create_default_generation_config(
-                is_debater=is_debater, do_sample=True, add_penalties=True
+                is_debater=is_debater, do_sample=True, add_penalties=self.use_generation_penalties 
             )
 
             if not nucleus:
@@ -381,7 +385,12 @@ class LLModel(Model):
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, nucleus: bool = False) -> LLModel:
         """Generates a deepcopy of this model"""
-        copy = LLModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, nucleus=nucleus)
+        copy = LLModel(
+            alias=alias,
+            is_debater=self.is_debater if is_debater == None else is_debater,
+            nucleus=nucleus,
+            use_generation_penalties=self.use_generation_penalties,
+        )
         copy.is_debater = self.is_debater if is_debater == None else is_debater
         copy.tokenizer = self.tokenizer
         copy.model = self.model
@@ -392,6 +401,8 @@ class LLModel(Model):
 class LlamaModel(LLModel):
     INSTRUCTION_PREFIX = "instruction:"
     INSTRUCTION_SUFFIX = "output:"
+    ATTENTION_MODULES = ["q_proj", "k_proj", "v_proj"]
+    MLP_MODULES = ["gate_proj", "up_proj", "down_proj"]
     TARGET_MODULES = ["k_proj", "v_proj", "down_proj"]
 
     def __init__(
@@ -401,6 +412,7 @@ class LlamaModel(LLModel):
         is_debater: bool = True,
         nucleus: bool = True,
         probe_hyperparams: Optional[ProbeHyperparams] = None,
+        use_generation_penalties: bool = False,
     ):
         super().__init__(
             alias=alias,
@@ -412,6 +424,7 @@ class LlamaModel(LLModel):
             requires_file_path=True,
             probe_hyperparams=probe_hyperparams,
             max_mini_batch_size=1,
+            use_generation_penalties=use_generation_penalties,
         )
 
         if self.model:
@@ -419,7 +432,12 @@ class LlamaModel(LLModel):
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, nucleus: bool = False) -> LLModel:
         """Generates a deepcopy of this model"""
-        copy = LlamaModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, nucleus=nucleus)
+        copy = LlamaModel(
+            alias=alias,
+            is_debater=self.is_debater if is_debater == None else is_debater,
+            nucleus=nucleus,
+            use_generation_penalties=self.use_generation_penalties,
+        )
         copy.is_debater = self.is_debater if is_debater == None else is_debater
         copy.tokenizer = self.tokenizer
         copy.model = self.model
@@ -430,6 +448,8 @@ class LlamaModel(LLModel):
 class MistralModel(LLModel):
     INSTRUCTION_PREFIX = "[INST]"
     INSTRUCTION_SUFFIX = "[/INST]"
+    ATTENTION_MODULES = ["q_proj", "k_proj", "v_proj"]
+    MLP_MODULES = []
     TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj"]
     LINEAR_IDXS = [31, 16]
 
@@ -440,6 +460,7 @@ class MistralModel(LLModel):
         is_debater: bool = True,
         nucleus: bool = True,
         probe_hyperparams: Optional[ProbeHyperparams] = None,
+        use_generation_penalties: bool = False,
     ):
         super().__init__(
             alias=alias,
@@ -451,6 +472,7 @@ class MistralModel(LLModel):
             requires_file_path=True,
             probe_hyperparams=probe_hyperparams,
             max_mini_batch_size=1,
+            use_generation_penalties=use_generation_penalties,
         )
 
         if self.model:
@@ -458,7 +480,12 @@ class MistralModel(LLModel):
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, nucleus: bool = False) -> LLModel:
         """Generates a deepcopy of this model"""
-        copy = MistralModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, nucleus=nucleus)
+        copy = MistralModel(
+            alias=alias,
+            is_debater=self.is_debater if is_debater == None else is_debater,
+            nucleus=nucleus,
+            use_generation_penalties=self.use_generation_penalties,
+        )
         copy.is_debater = self.is_debater if is_debater == None else is_debater
         copy.tokenizer = self.tokenizer
         copy.model = self.model
@@ -469,7 +496,9 @@ class MistralModel(LLModel):
 class Llama3Model(LLModel):
     INSTRUCTION_PREFIX = ""
     INSTRUCTION_SUFFIX = "<|start_header_id|>assistant<|end_header_id|>\n\n"
-    TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj"]
+    ATTENTION_MODULES = ["q_proj", "k_proj", "v_proj"]
+    MLP_MODULES = ["gate_proj", "up_proj", "down_proj"]
+    TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
     LINEAR_IDXS = [31, 16]
     QUANTIZE = False
 
@@ -480,6 +509,7 @@ class Llama3Model(LLModel):
         is_debater: bool = True,
         nucleus: bool = True,
         probe_hyperparams: Optional[ProbeHyperparams] = None,
+        use_generation_penalties: bool = False,
     ):
         super().__init__(
             alias=alias,
@@ -492,11 +522,17 @@ class Llama3Model(LLModel):
             probe_hyperparams=probe_hyperparams,
             max_mini_batch_size=1,
             quantize=False,
+            use_generation_penalties=use_generation_penalties,
         )
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, nucleus: bool = False) -> LLModel:
         """Generates a deepcopy of this model"""
-        copy = Llama3Model(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, nucleus=nucleus)
+        copy = Llama3Model(
+            alias=alias,
+            is_debater=self.is_debater if is_debater == None else is_debater,
+            nucleus=nucleus,
+            use_generation_penalties=self.use_generation_penalties,
+        )
         copy.is_debater = self.is_debater if is_debater == None else is_debater
         copy.tokenizer = self.tokenizer
         copy.model = self.model
@@ -521,6 +557,7 @@ class StubLLModel(LLModel):
         file_path: Optional[str] = None,
         is_debater: bool = True,
         nucleus: bool = True,
+        use_generation_penalties: bool = False,
     ):
         super().__init__(
             alias=alias,
@@ -530,11 +567,17 @@ class StubLLModel(LLModel):
             instruction_prefix="",
             instruction_suffix="",
             requires_file_path=False,
+            use_generation_penalties=use_generation_penalties,
         )
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, nucleus: bool = False) -> LLModel:
         """Generates a deepcopy of this model"""
-        return StubLLModel(alias=alias, is_debater=self.is_debater if is_debater == None else is_debater, nucleus=nucleus)
+        return StubLLModel(
+            alias=alias,
+            is_debater=self.is_debater if is_debater == None else is_debater,
+            nucleus=nucleus,
+            use_generation_penalties=self.use_generation_penalties,
+        )
 
     def instantiate_tokenizer_and_hf_model(self, file_path: str, **kwargs) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
         """Constructs the stub tokenizer and stub model"""

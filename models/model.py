@@ -72,6 +72,7 @@ class ModelSettings(BaseModel):
     served: bool = False
     probe_hyperparams: Optional[ProbeHyperparams] = None
     require_quote_validation: bool = True
+    use_generation_penalties: bool = False
 
     @model_validator(mode="before")
     def verify_custom_settings(cls, values):
