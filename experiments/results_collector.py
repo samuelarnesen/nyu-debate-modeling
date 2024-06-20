@@ -465,6 +465,67 @@ class ResultsCollector:
 
         return debater_skills
 
+    def __graph_significance(self) -> dict[str, float]:
+
+        default_value = 0.5
+
+        def get_signficance(alias_one, alias_two):
+            eligible_summaries = [s for s in filter(lambda x: x.first_debater_alias in [alias_one, alias_two] and x.second_debater_alias in [alias_one, alias_two], self.summaries)]
+            if not eligible_summaries:
+                return default_value
+            di_to_pairs = {}
+            for summary in eligible_summaries:
+                di = summary.metadata.debate_identifier
+                if di not in di_to_pairs:
+                    di_to_pairs[di] = [None, None]
+                if summary.first_debater_alias == alias_one:
+                    di_to_pairs[di][0] = summary
+                else:
+                    di_to_pairs[di][1] = summary
+
+            pairs = list(di_to_pairs.values())
+            diffs = []
+            for (first, second) in pairs:
+                diffs.append(first.first_debater_win_prob - second.first_debater_win_prob)
+                diffs.append(second.second_debater_win_prob - first.second_debater_win_prob)
+            diffs = np.asarray(diffs)
+
+            mean = np.mean(diffs)
+            std = np.std(diffs)
+            n = len(diffs)
+
+            t_value = mean / (std / np.sqrt(n))
+            p_value = (1 - scipy.stats.t.cdf(t_value, df=n-1))
+            return p_value
+
+
+        current_aliases = set([debater.model_settings.alias for debater in self.experiment.agents.debaters])
+        significance_map = {alias: {other: default_value for other in current_aliases} for alias in current_aliases}
+
+        for alias in significance_map:
+            for other in filter(lambda x: x != alias, significance_map[alias]):
+                significance_map[alias][other] = get_signficance(alias, other)
+
+        significance_matrix = []
+        for alias in significance_map:
+            significance_matrix.append([])
+            for other in significance_map:
+                significance_matrix[-1].append(significance_map[alias].get(other, default_value))
+
+        fig, (ax1) = plt.subplots(1, 1, figsize=(12, 8))
+
+        sns.heatmap(np.flip(significance_matrix, axis=0), annot=True, cmap=plt.cm.coolwarm.reversed(), cbar=False, ax=ax1)
+        ax1.set_xticklabels([alias for alias in significance_map])
+        ax1.set_yticklabels([alias for alias in significance_map])
+        ax1.set_xlabel("Better Debater")
+        ax1.set_ylabel("Worse Debater")
+        ax1.set_title("Paired Significance Test")
+        self.__save_graph("Paired_Significance_Test")
+        plt.show()
+
+        return significance_map
+
+
     def __graph_quotes(self, win_stats_dict: dict[str, WinStats]) -> dict[int, int]:
         def get_accuracy(results, name, key):
             return (
@@ -689,6 +750,7 @@ class ResultsCollector:
         all_stats = []
 
         try:
+
             bt_results = self.__graph_bradley_terry()
             all_stats.append(bt_results)
             self.logger.info(bt_results)
@@ -725,6 +787,11 @@ class ResultsCollector:
                     self.logger.info(classifier_results)
                 except Exception as e:
                     self.logger.error(e)
+
+            if self.experiment.flip:
+                significance_results = self.__graph_significance()
+                all_stats.append(significance_results)
+                self.logger.info(significance_results)
 
             if self.should_save and self.stats_path_prefix:
                 with open(f"{self.stats_path_prefix}.json", "w") as f:
