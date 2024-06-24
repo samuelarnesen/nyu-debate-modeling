@@ -58,7 +58,7 @@ class ModelUtils:
                 is_debater=is_debater,
                 nucleus=model_settings.nucleus,
                 probe_hyperparams=model_settings.probe_hyperparams,
-                use_generation_penalties=model_settings.use_generation_penalties,
+                generation_params=model_settings.generation_params,
             )
         elif model_type == ModelType.MISTRAL:
             model = MistralModel(
@@ -67,7 +67,7 @@ class ModelUtils:
                 is_debater=is_debater,
                 nucleus=model_settings.nucleus,
                 probe_hyperparams=model_settings.probe_hyperparams,
-                use_generation_penalties=model_settings.use_generation_penalties,
+                generation_params=model_settings.generation_params,
             )
         elif model_type == ModelType.LLAMA3:
             model = Llama3Model(
@@ -76,10 +76,10 @@ class ModelUtils:
                 is_debater=is_debater,
                 nucleus=model_settings.nucleus,
                 probe_hyperparams=model_settings.probe_hyperparams,
-                use_generation_penalties=model_settings.use_generation_penalties,
+                generation_params=model_settings.generation_params,
             )
         elif model_type == ModelType.STUB_LLM:
-            model = StubLLModel(alias=model_settings.alias)
+            model = StubLLModel(alias=model_settings.alias, generation_params=model_settings.generation_params)
         elif model_type == ModelType.DETERMINISTIC:
             model = DeterministicModel(alias=model_settings.alias, is_debater=is_debater)
         elif model_type == ModelType.OPENAI:

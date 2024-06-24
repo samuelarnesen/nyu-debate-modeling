@@ -200,6 +200,7 @@ class BestOfNDebater(Debater):
             model_response.bon_probabilistic_preferences = split_judge_response[i]
             if i != selection_idx:
                 best_model_response.rejected_responses.append(model_response)
+
         return [best_model_response.speech], [best_model_response]
 
     def copy(

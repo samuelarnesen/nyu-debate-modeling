@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from models.model import Model, ModelInput, ModelResponse, ProbeHyperparams, SpeechStructure
+from models.model import GenerationParams, Model, ModelInput, ModelResponse, ProbeHyperparams, SpeechStructure
 from models.openai_model import OpenAIModel
 from prompts import RoleType
 from utils import logger_utils, string_utils, timer
@@ -31,14 +31,6 @@ class LLMInput(BaseModel):
     extra_suffix: Optional[str]
 
 
-class GenerationParams(BaseModel):
-    max_new_tokens: int = 300
-    temperature: float = 0.5
-    top_p: float = 1.0
-    repetition_penalty: float = 1.2
-    do_sample: bool = True
-
-
 class LLModel(Model):
     INSTRUCTION_PREFIX = ""
     INSTRUCTION_SUFFIX = ""
@@ -62,7 +54,8 @@ class LLModel(Model):
         max_mini_batch_size: Optional[int] = None,
         tokenizer_file_path: Optional[str] = None,
         quantize: bool = True,
-        use_generation_penalties: bool = False,
+        generation_params: GenerationParams = GenerationParams(),
+        **kwargs,
     ):
         """
         An LLModel uses a large language model (currently Llama 2 or Mistral) to generate text.
@@ -88,7 +81,7 @@ class LLModel(Model):
         self.instantiated_model = False
         self.max_mini_batch_size = max_mini_batch_size or LLModel.MAX_MINI_BATCH_SIZE
         self.quantize = quantize
-        self.use_generation_penalties = use_generation_penalties
+        self.generation_params = generation_params
         if file_path or not requires_file_path:
             self.instantiated_model = True
             self.is_debater = is_debater
@@ -98,7 +91,7 @@ class LLModel(Model):
                 file_path=file_path, tokenizer_file_path=tokenizer_file_path, quantize=quantize
             )
             self.generation_config = self.create_default_generation_config(
-                is_debater=is_debater, do_sample=True, add_penalties=self.use_generation_penalties 
+                is_debater=is_debater, generation_params=self.generation_params
             )
 
             if not nucleus:
@@ -122,16 +115,14 @@ class LLModel(Model):
             self.model = None
             self.generation_config = None
 
-    def create_default_generation_config(
-        self, is_debater: bool = True, do_sample: bool = True, add_penalties: bool = False
-    ) -> GenerationConfig:
+    def create_default_generation_config(self, is_debater: bool, generation_params: GenerationParams) -> GenerationConfig:
         """Creates a default generation config so that the model can generate text"""
         config_terms = {
-            "max_new_tokens": LLModel.DEFAULT_GENERATION_PARAMS.max_new_tokens,
+            "max_new_tokens": generation_params.max_new_tokens,
             "num_return_sequences": 1,
             "output_scores": True,
             "return_dict_in_generate": True,
-            "do_sample": do_sample,
+            "do_sample": generation_params.do_sample,
             "use_cache": True,
             "pad_token_id": self.tokenizer.eos_token_id,
             "eos_token_id": [self.tokenizer.eos_token_id],
@@ -141,14 +132,14 @@ class LLModel(Model):
             "top_p": 1.0,
         }
         if is_debater:
-            if do_sample:
-                config_terms["temperature"] = LLModel.DEFAULT_GENERATION_PARAMS.temperature
-                config_terms["top_p"] = LLModel.DEFAULT_GENERATION_PARAMS.top_p
+            if generation_params.do_sample:
+                config_terms["temperature"] = generation_params.temperature
+                config_terms["top_p"] = generation_params.top_p
 
-            if add_penalties:
-                config_terms["repetition_penalty"] = LLModel.DEFAULT_GENERATION_PARAMS.repetition_penalty
+            if generation_params.use_generation_penalties:
+                config_terms["repetition_penalty"] = generation_params.repetition_penalty
                 config_terms["exponential_decay_length_penalty"] = (
-                    LLModel.DEFAULT_GENERATION_PARAMS.max_new_tokens * 2 // 3,
+                    generation_params.max_new_tokens * 2 // 3,
                     1.1,
                 )
 
@@ -389,7 +380,7 @@ class LLModel(Model):
             alias=alias,
             is_debater=self.is_debater if is_debater == None else is_debater,
             nucleus=nucleus,
-            use_generation_penalties=self.use_generation_penalties,
+            generation_params=self.generation_params,
         )
         copy.is_debater = self.is_debater if is_debater == None else is_debater
         copy.tokenizer = self.tokenizer
@@ -412,7 +403,7 @@ class LlamaModel(LLModel):
         is_debater: bool = True,
         nucleus: bool = True,
         probe_hyperparams: Optional[ProbeHyperparams] = None,
-        use_generation_penalties: bool = False,
+        generation_params: GenerationParams = GenerationParams(),
     ):
         super().__init__(
             alias=alias,
@@ -424,7 +415,7 @@ class LlamaModel(LLModel):
             requires_file_path=True,
             probe_hyperparams=probe_hyperparams,
             max_mini_batch_size=1,
-            use_generation_penalties=use_generation_penalties,
+            generation_params=generation_params,
         )
 
         if self.model:
@@ -436,7 +427,7 @@ class LlamaModel(LLModel):
             alias=alias,
             is_debater=self.is_debater if is_debater == None else is_debater,
             nucleus=nucleus,
-            use_generation_penalties=self.use_generation_penalties,
+            generation_params=self.generation_params,
         )
         copy.is_debater = self.is_debater if is_debater == None else is_debater
         copy.tokenizer = self.tokenizer
@@ -460,7 +451,7 @@ class MistralModel(LLModel):
         is_debater: bool = True,
         nucleus: bool = True,
         probe_hyperparams: Optional[ProbeHyperparams] = None,
-        use_generation_penalties: bool = False,
+        generation_params: GenerationParams = GenerationParams(),
     ):
         super().__init__(
             alias=alias,
@@ -472,7 +463,7 @@ class MistralModel(LLModel):
             requires_file_path=True,
             probe_hyperparams=probe_hyperparams,
             max_mini_batch_size=1,
-            use_generation_penalties=use_generation_penalties,
+            generation_params=generation_params,
         )
 
         if self.model:
@@ -484,7 +475,7 @@ class MistralModel(LLModel):
             alias=alias,
             is_debater=self.is_debater if is_debater == None else is_debater,
             nucleus=nucleus,
-            use_generation_penalties=self.use_generation_penalties,
+            generation_params=self.generation_params,
         )
         copy.is_debater = self.is_debater if is_debater == None else is_debater
         copy.tokenizer = self.tokenizer
@@ -509,7 +500,7 @@ class Llama3Model(LLModel):
         is_debater: bool = True,
         nucleus: bool = True,
         probe_hyperparams: Optional[ProbeHyperparams] = None,
-        use_generation_penalties: bool = False,
+        generation_params: GenerationParams = GenerationParams(),
     ):
         super().__init__(
             alias=alias,
@@ -522,7 +513,7 @@ class Llama3Model(LLModel):
             probe_hyperparams=probe_hyperparams,
             max_mini_batch_size=1,
             quantize=False,
-            use_generation_penalties=use_generation_penalties,
+            generation_params=generation_params,
         )
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, nucleus: bool = False) -> LLModel:
@@ -531,7 +522,7 @@ class Llama3Model(LLModel):
             alias=alias,
             is_debater=self.is_debater if is_debater == None else is_debater,
             nucleus=nucleus,
-            use_generation_penalties=self.use_generation_penalties,
+            generation_params=self.generation_params,
         )
         copy.is_debater = self.is_debater if is_debater == None else is_debater
         copy.tokenizer = self.tokenizer
@@ -540,11 +531,11 @@ class Llama3Model(LLModel):
         return copy
 
     def create_default_generation_config(
-        self, is_debater: bool = True, do_sample: bool = True, add_penalties: bool = False
+        self, is_debater: bool = True, generation_params: GenerationParams = GenerationParams()
     ) -> GenerationConfig:
         """Creates a default generation config so that the model can generate text"""
         generation_config = super().create_default_generation_config(
-            is_debater=is_debater, do_sample=do_sample, add_penalties=add_penalties
+            is_debater=is_debater, generation_params=generation_params
         )
         generation_config.eos_token_id = [self.tokenizer.eos_token_id, self.tokenizer.convert_tokens_to_ids("<|eot_id|>")]
         return generation_config
@@ -557,7 +548,7 @@ class StubLLModel(LLModel):
         file_path: Optional[str] = None,
         is_debater: bool = True,
         nucleus: bool = True,
-        use_generation_penalties: bool = False,
+        generation_params: GenerationParams = GenerationParams(),
     ):
         super().__init__(
             alias=alias,
@@ -567,7 +558,7 @@ class StubLLModel(LLModel):
             instruction_prefix="",
             instruction_suffix="",
             requires_file_path=False,
-            use_generation_penalties=use_generation_penalties,
+            generation_params=generation_params,
         )
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, nucleus: bool = False) -> LLModel:
@@ -576,7 +567,7 @@ class StubLLModel(LLModel):
             alias=alias,
             is_debater=self.is_debater if is_debater == None else is_debater,
             nucleus=nucleus,
-            use_generation_penalties=self.use_generation_penalties,
+            generation_params=self.generation_params,
         )
 
     def instantiate_tokenizer_and_hf_model(self, file_path: str, **kwargs) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
