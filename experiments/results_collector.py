@@ -32,6 +32,36 @@ class WinStats(BaseModel):
     first_matches: int = 0
     first_wins: int | float = 0
 
+    def get_average_reward(self):
+        return self.wins / max(self.matches, 1)
+
+    def get_average_correct_reward(self):
+        return self.correct_wins / max(self.correct_matches, 1)
+
+    def get_average_incorrect_reward(self):
+        return (self.wins - self.correct_wins) / max((self.matches - self.correct_matches), 1)
+
+    def get_average_first_wins(self):
+        return self.first_wins / max(self.first_matches, 1)
+
+    def get_average_second_wins(self):
+        return (self.wins - self.first_wins) / max((self.matches - self.first_matches), 1)
+
+    def to_json(self):
+        return {
+            "matches": self.matches,
+            "wins": self.wins,
+            "correct_matches": self.correct_matches,
+            "correct_wins": self.correct_wins,
+            "first_matches": self.first_matches,
+            "first_wins": self.first_wins,
+            "average_reward": self.get_average_reward(),
+            "average_correct_reward": self.get_average_correct_reward(),
+            "average_incorrect_reward": self.get_average_incorrect_reward(),
+            "average_first_wins": self.get_average_first_wins(),
+            "average_second_wins": self.get_average_second_wins(),
+        }
+
 
 class JudgeStats(BaseModel):
     matches: int = 0
@@ -345,11 +375,11 @@ class ResultsCollector:
         for i, alias in enumerate(alias_to_stats):
             stats = alias_to_stats[alias]
             values = [
-                stats.wins / max(stats.matches, 1),
-                stats.correct_wins / max(stats.correct_matches, 1),
-                (stats.wins - stats.correct_wins) / max((stats.matches - stats.correct_matches), 1),
-                stats.first_wins / max(stats.first_matches, 1),
-                (stats.wins - stats.first_wins) / max((stats.matches - stats.first_matches), 1),
+                stats.get_average_reward(),
+                stats.get_average_correct_reward(),
+                stats.get_average_incorrect_reward(),
+                stats.get_average_first_wins(),
+                stats.get_average_second_wins(),
             ]
 
             intervals = [
@@ -399,6 +429,7 @@ class ResultsCollector:
 
         self.__save_graph("Win_Rates")
         plt.show()
+
         return alias_to_stats
 
     def __graph_bradley_terry(self) -> dict[str, float]:
@@ -466,13 +497,19 @@ class ResultsCollector:
         return debater_skills
 
     def __graph_significance(self) -> dict[str, float]:
-
         default_value = 0.5
 
-        def get_signficance(alias_one, alias_two):
-            eligible_summaries = [s for s in filter(lambda x: x.first_debater_alias in [alias_one, alias_two] and x.second_debater_alias in [alias_one, alias_two], self.summaries)]
+        def get_significance(alias_one, alias_two):
+            eligible_summaries = [
+                s
+                for s in filter(
+                    lambda x: x.first_debater_alias in [alias_one, alias_two]
+                    and x.second_debater_alias in [alias_one, alias_two],
+                    self.summaries,
+                )
+            ]
             if not eligible_summaries:
-                return default_value
+                return default_value, default_value
             di_to_pairs = {}
             for summary in eligible_summaries:
                 di = summary.metadata.debate_identifier
@@ -484,10 +521,12 @@ class ResultsCollector:
                     di_to_pairs[di][1] = summary
 
             pairs = list(di_to_pairs.values())
+            combined_wins = 0
             diffs = []
-            for (first, second) in pairs:
+            for first, second in pairs:
                 diffs.append(first.first_debater_win_prob - second.first_debater_win_prob)
                 diffs.append(second.second_debater_win_prob - first.second_debater_win_prob)
+                combined_wins += 1 if (first.first_debater_win_prob + second.second_debater_win_prob) > 1 else 0
             diffs = np.asarray(diffs)
 
             mean = np.mean(diffs)
@@ -495,16 +534,20 @@ class ResultsCollector:
             n = len(diffs)
 
             t_value = mean / (std / np.sqrt(n))
-            p_value = (1 - scipy.stats.t.cdf(t_value, df=n-1))
-            return p_value
+            p_value = 1 - scipy.stats.t.cdf(t_value, df=n - 1)
 
+            combined_win_rate = combined_wins / len(pairs)
+            return p_value, combined_win_rate
 
         current_aliases = set([debater.model_settings.alias for debater in self.experiment.agents.debaters])
         significance_map = {alias: {other: default_value for other in current_aliases} for alias in current_aliases}
+        combined_win_rate_map = {alias: {other: default_value for other in current_aliases} for alias in current_aliases}
 
         for alias in significance_map:
             for other in filter(lambda x: x != alias, significance_map[alias]):
-                significance_map[alias][other] = get_signficance(alias, other)
+                significance, combined_win_rate = get_significance(alias, other)
+                significance_map[alias][other] = significance
+                combined_win_rate_map[alias][other] = combined_win_rate
 
         significance_matrix = []
         for alias in significance_map:
@@ -512,19 +555,33 @@ class ResultsCollector:
             for other in significance_map:
                 significance_matrix[-1].append(significance_map[alias].get(other, default_value))
 
-        fig, (ax1) = plt.subplots(1, 1, figsize=(12, 8))
+        combined_win_rate_matrix = []
+        for alias in combined_win_rate_map:
+            combined_win_rate_matrix.append([])
+            for other in combined_win_rate_map:
+                combined_win_rate_matrix[-1].append(combined_win_rate_map[alias].get(other, 0.5))
+
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
 
         sns.heatmap(np.flip(significance_matrix, axis=0), annot=True, cmap=plt.cm.coolwarm.reversed(), cbar=False, ax=ax1)
         ax1.set_xticklabels([alias for alias in significance_map])
-        ax1.set_yticklabels([alias for alias in significance_map])
-        ax1.set_xlabel("Better Debater")
-        ax1.set_ylabel("Worse Debater")
+        ax1.set_yticklabels(reversed([alias for alias in significance_map]))
+        ax1.set_xlabel("Worse Debater")
+        ax1.set_ylabel("Better Debater")
         ax1.set_title("Paired Significance Test")
+
+        sns.heatmap(np.flip(combined_win_rate_matrix, axis=0), annot=True, cmap=plt.cm.coolwarm.reversed(), cbar=False, ax=ax2)
+        ax2.set_xticklabels([alias for alias in combined_win_rate_map])
+        ax2.set_yticklabels(reversed([alias for alias in combined_win_rate_map]))
+        ax2.set_xlabel("Worse Debater")
+        ax2.set_ylabel("Better Debater")
+        ax2.set_title("Combined Win Rate")
+
         self.__save_graph("Paired_Significance_Test")
         plt.show()
 
-        return significance_map
-
+        return {"significance": significance_map, "combined_win_rate": combined_win_rate_map}
 
     def __graph_quotes(self, win_stats_dict: dict[str, WinStats]) -> dict[int, int]:
         def get_accuracy(results, name, key):
@@ -750,16 +807,16 @@ class ResultsCollector:
         all_stats = []
 
         try:
-
             bt_results = self.__graph_bradley_terry()
             all_stats.append(bt_results)
             self.logger.info(bt_results)
 
+
             plt.clf()
             win_results = self.__graph_wins()
-            converted_win_results = {key: value.dict() for key, value in win_results.items()}
+            converted_win_results = {key: value.to_json() for key, value in win_results.items()}
             all_stats.append(converted_win_results)
-            self.logger.info(win_results)
+            self.logger.info(converted_win_results)
 
             plt.clf()
             judge_results = self.__graph_judge()
@@ -796,8 +853,8 @@ class ResultsCollector:
             if self.should_save and self.stats_path_prefix:
                 with open(f"{self.stats_path_prefix}.json", "w") as f:
                     json.dump(all_stats, f)
-        except:
-            self.logger.error("huh we got an exception")
+        except Exception as e:
+            self.logger.error(e)
 
         self.__organize_into_df()
 

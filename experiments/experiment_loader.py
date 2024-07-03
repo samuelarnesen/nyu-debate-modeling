@@ -568,9 +568,10 @@ class ExperimentLoader:
                     flipped_round.metadata = debate_round.metadata
 
             original_first_debater = debate_round.first_debater
-            original_second_debater = debate_round.first_debater
+            original_second_debater = debate_round.second_debater
             original_flipped_first_debater = flipped_round.first_debater
             original_flipped_second_debater = flipped_round.second_debater
+
             if experiment.agents.debaters[debater_idxs[0]].best_of_n and (
                 not first_offline_file_path or experiment.agents.debaters[debater_idxs[0]].best_of_n.recompute
             ):
