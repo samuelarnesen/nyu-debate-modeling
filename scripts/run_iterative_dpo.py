@@ -11,7 +11,11 @@ script_config = ScriptUtils.get_training_run_script_config(args, train_type=Trai
 
 config = TrainUtils.parse_config(config_name=script_config.config_name, config_filepath=script_config.config_filepath)
 trainer = IterativeDirectPreferenceTrainer(config=config, smooth=True, is_local=args.test)
-epoch_size = config.training_hyperparameters.supplemental["epoch_size"]
+epoch_size = (
+    config.training_hyperparameters.supplemental.get("epoch_size", 2048)
+    if config.training_hyperparameters.supplemental
+    else 2048
+)
 
 if not args.test:
     trainer.train(epoch_size=epoch_size)

@@ -55,8 +55,10 @@ class Transcript:
 
     def save(self, save_file_path_prefix: str, metadata: Optional[dict[Any, Any]]) -> None:
         """Saves to the specified path"""
+        """
         with open(save_file_path_prefix + ".txt", "w") as f:
             f.write(str(self.full_string_value()))
+        """
         with open(save_file_path_prefix + ".json", "w") as f:
             json.dump(self.json_value(metadata=metadata), f)
 
@@ -133,6 +135,21 @@ class Transcript:
 
     def json_value(self, metadata: Optional[dict[Any, Any]] = None) -> str:
         """Converts the transcript into a json object that can be parsed for offline processing"""
+
+        def clean(obj):
+            if isinstance(obj, dict):
+                new_dict = {}
+                for key, val in obj.items():
+                    if isinstance(val, dict):
+                        new_dict[key] = clean(val)
+                    elif "token" in key and isinstance(val, list) and val and isinstance(val[0], int):
+                        pass
+                    elif isinstance(val, list):
+                        new_dict[key] = [clean(item) for item in val]
+                    else:
+                        new_dict[key] = val
+            return obj
+
         speeches = []
         index = 0
         for i, (speech_type, prompt_tag, _, expected_speaker) in enumerate(self.speech_format):
@@ -143,7 +160,8 @@ class Transcript:
                 if index >= len(self.speeches):
                     break
                 content = self.speeches[index].content
-                supplemental = {k: v for k, v in filter(lambda x: "token" not in x, self.speeches[index].supplemental)}
+                supplemental = clean(self.speeches[index].supplemental)
+                # supplemental = {k: v for k, v in filter(lambda x: "token" not in x, self.speeches[index].supplemental)}
                 index += 1
             speeches.append(Speech(speaker=expected_speaker or "Prompt", content=content, supplemental=supplemental).dict())
 
