@@ -1,4 +1,4 @@
-from data import DataRow, JudgePreferencesLoader, JudgePreferencesDataset, RawDataset, SplitType
+from data import DataRow, JudgePreferencesLoader, JudgePreferencesDataset, RawDataset, RewardType, SplitType
 from debate import BestOfNDebater, Debater, DebateRound, Judge, QuestionMetadata
 from models import BestOfNConfig, OpenAIModel, RandomModel
 from prompts import PromptConfig, PromptParser
@@ -57,7 +57,10 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
 
         self.random_judge_model = RandomModel(alias=IterativeDirectPreferenceTrainer.DEFAULT_JUDGE_ALIAS, is_debater=False)
 
-        self.dataset = TrainUtils.create_datasets(config=config)[0]
+        reward_type = RewardType.LOG_PROB
+        if config.training_hyperparameters.supplemental and "reward_type" in config.training_hyperparameters.supplemental:
+            reward_type = RewardType[config.training_hyperparameters.supplemental["reward_type"].upper()]
+        self.dataset = TrainUtils.create_datasets(config=config, reward_type=reward_type)[0]
 
         self.config = config
         self.trainer_cls = SmoothedDPOTrainer if smooth else DPOTrainer
@@ -79,7 +82,8 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
             logging_steps=self.config.logging_and_saving_config.logging_steps,
             save_strategy="no"
             if self.config.training_hyperparameters.steps > 1 or self.config.training_hyperparameters.num_train_epochs == 1
-            else "epoch",
+            else "steps",
+            save_steps=self.config.training_hyperparameters.supplemental.get("save_steps", 64),
             learning_rate=self.config.training_hyperparameters.learning_rate * (0.8**step_count),
             disable_tqdm=False,
             ddp_find_unused_parameters=False,

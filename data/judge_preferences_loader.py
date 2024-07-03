@@ -3,8 +3,16 @@ from data.quality_loader import QualityLoader
 from utils import InputType, input_utils, quote_utils
 import utils.constants as constants
 
+from enum import Enum, auto
 from typing import Any, Optional
-import json, random
+import json, math, random
+
+class RewardType(Enum):
+    LOG_PROB = auto()
+    PROB = auto()
+    LOGIT = auto()
+    SIGMOID = auto()
+    BINARY = auto()
 
 
 class JudgePreferencesDataset(RawDataset):
@@ -58,14 +66,36 @@ class JudgePreferencesLoader(RawDataLoader):
     MIN_GAP = 0.00
 
     @classmethod
-    def process_row(cls, data: dict[Any, Any]) -> list[tuple[str, str, str, float]]:
-
+    def process_row(cls, data: dict[Any, Any], reward_type: RewardType = RewardType.LOG_PROB) -> list[tuple[str, str, str, float]]:
         def clean_speech(speech: str) -> str:
             speech = speech.replace(constants.INVALID_QUOTE_TAG, constants.QUOTE_TAG).replace(
                 constants.INVALID_UNQUOTE_TAG, constants.UNQUOTE_TAG
             )
             return quote_utils.clean_up_quotes(speech_content=speech)
-        
+
+        def get_preference(selected: dict, rejected: dict) -> float:
+            selected_pref = selected["supplemental"]["preference"]
+            rejected_pref = rejected["preference"]
+            if reward_type == RewardType.LOGIT:
+                selected_over_rejected = selected_pref * (1 - rejected_pref)
+                rejected_over_selected = rejected_pref * (1 - selected_pref)
+                return selected_over_rejected / (selected_over_rejected + rejected_over_selected)
+            elif reward_type == RewardType.PROB:
+                multiplier = 5.75
+                return math.exp(multiplier * selected_pref) / (math.exp(multiplier * selected_pref) + math.exp(multiplier * rejected_pref))
+            elif reward_type == RewardType.SIGMOID:
+                multiplier = 5
+                temperature = 0.125
+                mean = 0.5
+                selected_reward = multiplier / (1 + math.exp(-((selected_pref - mean)/ temperature)))
+                rejected_reward = multiplier / (1 + math.exp(-((rejected_pref - mean)/ temperature)))
+                return math.exp(selected_reward) / (math.exp(selected_reward) + math.exp(rejected_reward))
+            elif reward_type == RewardType.BINARY:
+                return 1.0
+            else:
+                multiplier = 2.25
+                return (selected_pref**multiplier) / ((rejected_pref**multiplier) + (selected_pref**multiplier))
+
         outputs = []
         for selected in filter(
             lambda x: x["speaker"] in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME],
@@ -76,14 +106,14 @@ class JudgePreferencesLoader(RawDataLoader):
             if selected["supplemental"]["preference"] - rejected["preference"] > JudgePreferencesLoader.MIN_GAP:
                 selected_speech = clean_speech(selected["content"])
                 rejected_speech = clean_speech(rejected["speech"])
-                preference = selected["supplemental"]["preference"] / (
-                    rejected["preference"] + selected["supplemental"]["preference"]
-                )
+                preference = get_preference(selected, rejected)
                 outputs.append((instruction, selected_speech, rejected_speech, preference))
         return outputs
 
     @classmethod
-    def load(cls, full_dataset_filepath: str | list[str], **kwargs) -> JudgePreferencesDataset:
+    def load(
+        cls, full_dataset_filepath: str | list[str], reward_type: RewardType = RewardType.LOG_PROB, **kwargs
+    ) -> JudgePreferencesDataset:
         """
         Constructs a JudgePreferencesDataset.
 
@@ -97,7 +127,7 @@ class JudgePreferencesLoader(RawDataLoader):
         train_data = []
         input_texts = input_utils.read_file_texts(base_path=full_dataset_filepath, input_type=InputType.JSON_TRANSCRIPT)
         for text in input_texts:
-            train_data.extend(JudgePreferencesLoader.process_row(json.loads(text)))
+            train_data.extend(JudgePreferencesLoader.process_row(json.loads(text), reward_type=reward_type))
 
         return JudgePreferencesDataset(
             train_data=train_data,

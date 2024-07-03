@@ -47,7 +47,7 @@ class TrainingHyperParameterConfig(BaseModel):
     lora_rank: int = 64
     kl_penalty: float = 0.1
     target_module: TargetModule | str = TargetModule.ATTENTION
-    supplemental: Optional[dict[str, Any]] = None
+    supplemental: Optional[dict[str, Any]] = {}
 
     @field_validator("target_module", mode="before")
     @classmethod

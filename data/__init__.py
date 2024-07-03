@@ -15,7 +15,7 @@ from .dataset import (
     SpeechData,
     SplitType,
 )
-from .judge_preferences_loader import JudgePreferencesLoader, JudgePreferencesDataset, JudgePreferencesLoader
+from .judge_preferences_loader import JudgePreferencesLoader, JudgePreferencesDataset, JudgePreferencesLoader, RewardType
 from .quality_debates_loader import (
     QualityDebatesDataset,
     QualityConsultancyLoader,
