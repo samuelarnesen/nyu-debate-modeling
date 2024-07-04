@@ -561,7 +561,6 @@ class ResultsCollector:
             for other in combined_win_rate_map:
                 combined_win_rate_matrix[-1].append(combined_win_rate_map[alias].get(other, 0.5))
 
-
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
 
         sns.heatmap(np.flip(significance_matrix, axis=0), annot=True, cmap=plt.cm.coolwarm.reversed(), cbar=False, ax=ax1)
@@ -571,7 +570,9 @@ class ResultsCollector:
         ax1.set_ylabel("Better Debater")
         ax1.set_title("Paired Significance Test")
 
-        sns.heatmap(np.flip(combined_win_rate_matrix, axis=0), annot=True, cmap=plt.cm.coolwarm.reversed(), cbar=False, ax=ax2)
+        sns.heatmap(
+            np.flip(combined_win_rate_matrix, axis=0), annot=True, cmap=plt.cm.coolwarm.reversed(), cbar=False, ax=ax2
+        )
         ax2.set_xticklabels([alias for alias in combined_win_rate_map])
         ax2.set_yticklabels(reversed([alias for alias in combined_win_rate_map]))
         ax2.set_xlabel("Worse Debater")
@@ -810,7 +811,6 @@ class ResultsCollector:
             bt_results = self.__graph_bradley_terry()
             all_stats.append(bt_results)
             self.logger.info(bt_results)
-
 
             plt.clf()
             win_results = self.__graph_wins()

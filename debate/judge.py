@@ -158,6 +158,14 @@ class BranchedJudge(Judge):
         self.received_speeches = [None for i in range(self.max_expected_speeches)]
         self.completed_transcripts = []
 
+    def copy(self, transcripts: Optional[list[Transcript]] = None, prompts: Optional[list[Prompt] | Prompt] = None) -> Judge:
+        """Deep copies everything except the underlying model"""
+        return BranchedJudge(
+            judge=self.internal_judge.copy(transcripts=transcripts, prompts=prompts),
+            debater_one=self.debater_one.copy(),
+            debater_two=self.debater_two.copy(),
+        )
+
     def post_speech_processing(self):
         if not self.internal_judge.get_next_expected_speaker():
             self.completed_transcripts.append(copy.deepcopy(self.internal_judge.transcripts[0]))
@@ -204,11 +212,11 @@ class BranchedJudge(Judge):
     def __get_speeches_for_transcript(self, transcript_idx: int):
         first = transcript_idx // 8
         second = 2 if transcript_idx % 8 < 4 else 3
-        third = (transcript_idx // 4)
-        segment_start = ((transcript_idx// 4) * 4) + 4
+        third = transcript_idx // 4
+        segment_start = ((transcript_idx // 4) * 4) + 4
         third = segment_start if transcript_idx % 4 < 2 else segment_start + 1
         fourth = segment_start + (2 if transcript_idx % 2 == 0 else 3)
-    
+
         return [first, second, third, fourth]
 
     def __reset_agent_transcript(self, agent: Agent, blank_transcript: Transcript, idx: int):
