@@ -98,7 +98,8 @@ class Transcript:
                     if self.speeches[index].speaker != self.name or index < len(self.speeches)
                     else RoleType.ASSISTANT
                 )
-                add_to_model_inputs(model_inputs, ModelInput(role=role, content=self.speeches[index].content))
+
+                add_to_model_inputs(model_inputs, ModelInput(role=role, content=str(self.speeches[index].content)))
                 index += 1
 
         return model_inputs
@@ -108,6 +109,14 @@ class Transcript:
         for i in range(len(self.speeches)):
             speech = self.speeches[len(self.speeches) - i - 1]
             if speech.speaker != self.name:
+                return speech
+        return ""
+
+    def get_last_internal_speech(self) -> Optional[str]:
+        """Get the text of the last speech that was delivered by one self"""
+        for i in range(len(self.speeches)):
+            speech = self.speeches[len(self.speeches) - i - 1]
+            if speech.speaker == self.name:
                 return speech
         return ""
 

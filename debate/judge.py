@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from debate.agent import Agent, ScratchpadConfig
-from debate.speech_format import SpeechFormat, SpeechFormatType
+from debate.speech_format import Speech, SpeechFormat, SpeechFormatType
 from debate.transcript import SpeechFormat, SpeechType, Transcript
 from models import Model, ModelResponse, SpeechStructure
 from prompts import Prompt, PromptTag
@@ -144,6 +144,23 @@ class BranchedJudge(Judge):
         debater_two: Debater,
         setting: MultiRoundBranchingSetting = MultiRoundBranchingSetting.FULL,
     ):
+        self.setting = setting
+        self.debater_one = debater_one
+        self.debater_two = debater_two
+        self.internal_judge = judge
+        self.empty_debater_one_transcript = copy.deepcopy(debater_one.transcripts[0])
+        self.empty_debater_two_transcript = copy.deepcopy(debater_two.transcripts[0])
+        self.empty_judge_transcript = copy.deepcopy(judge.transcripts[0])
+
+        self.num_rounds = self.internal_judge.speech_format.num_speeches
+        self.num_transcripts = BranchedJudge.NUM_BRANCHES ** (2 * self.num_rounds)
+        self.transcript_idx_to_speech_idx = {i: self.__get_speeches_for_transcript(i) for i in range(self.num_transcripts)}
+        self.max_expected_speeches = max([max(val) + 1 for val in self.transcript_idx_to_speech_idx.values()])
+        self.expected_transcripts = self.__get_expected_transcripts()
+
+        self.received_speeches = [None for i in range(self.max_expected_speeches)]
+        self.completed_transcripts = []
+
         super().__init__(
             name=judge.name,
             prompt=judge.prompts,
@@ -154,24 +171,6 @@ class BranchedJudge(Judge):
             expected_saver=judge.expected_saver,
             scratchpad_config=judge.scratchpad_config,
         )
-        self.setting = setting
-        self.debater_one = debater_one
-        self.debater_two = debater_two
-        self.internal_judge = judge
-        self.empty_debater_one_transcript = copy.deepcopy(debater_one.transcripts[0])
-        self.empty_debater_two_transcript = copy.deepcopy(debater_two.transcripts[0])
-        self.empty_judge_transcript = copy.deepcopy(judge.transcripts[0])
-
-        self.num_rounds = self.speech_format.num_speeches
-        self.num_transcripts = BranchedJudge.NUM_BRANCHES ** (2 * self.num_rounds)
-        self.max_expected_speeches = max(
-            [max(self.__get_speeches_for_transcript(i)) + 1 for i in range(self.num_transcripts)]
-        )
-        self.transcript_idx_to_speech_idx = {i: self.__get_speeches_for_transcript(i) for i in range(self.num_transcripts)}
-        self.expected_transcripts = self.__get_expected_transcripts()
-
-        self.received_speeches = [None for i in range(self.max_expected_speeches)]
-        self.completed_transcripts = []
 
     def copy(self, transcripts: Optional[list[Transcript]] = None, prompts: Optional[list[Prompt] | Prompt] = None) -> Judge:
         """Deep copies everything except the underlying model"""
@@ -206,16 +205,81 @@ class BranchedJudge(Judge):
     ):
         # ok we have to set where we think the expected speech should be
         if speaker != self.name:
-            current_transcript_idx = len(self.completed_transcripts)
+            current_transcript_idx = self.expected_transcripts[len(self.completed_transcripts)]
             current_transcript_length = self.internal_judge.transcripts[0].get_external_speech_count()
-            transcript_speech_idxs = self.__get_speeches_for_transcript(current_transcript_idx)
+            transcript_speech_idxs = self.transcript_idx_to_speech_idx[current_transcript_idx]
             insertion_speech_idx = transcript_speech_idxs[current_transcript_length]
-            self.received_speeches[insertion_speech_idx] = (speaker, content, supplemental)
+            if not self.received_speeches[insertion_speech_idx]:
+                self.received_speeches[insertion_speech_idx] = Speech(
+                    speaker=speaker, content=content, supplemental=supplemental
+                )
         self.internal_judge.receive_message(speaker=speaker, content=content, idx=idx, supplemental=supplemental)
 
     def get_transcript(self, idx: int = 0) -> Transcript:
         """Returns the transcript at the specified index"""
         return self.completed_transcripts[idx]
+
+    @property
+    def transcripts(self):
+        return self.internal_judge.transcripts
+
+    @transcripts.setter
+    def transcripts(self, transcripts):
+        self.internal_judge.transcripts = transcripts
+
+    def save(self, save_file_path_prefix: str, metadata: Optional[list[dict[Any, Any]]] = None):
+        speech_to_scores = {}
+        for i, transcript_idx in enumerate(self.expected_transcripts):
+            supplemental = self.completed_transcripts[i].get_last_internal_speech().supplemental
+            winning_probability = (
+                supplemental.probabilistic_decision[constants.DEFAULT_DEBATER_A_NAME]
+                if supplemental.probabilistic_decision
+                else (1.0 if supplemental.decision == constants.DEFAULT_DEBATER_A_NAME else 0.0)
+            )
+            speech_idxs = self.transcript_idx_to_speech_idx[transcript_idx]
+            for speech_idx in speech_idxs:
+                if speech_idx not in speech_to_scores:
+                    speech_to_scores[speech_idx] = []
+                speech_to_scores[speech_idx].append(winning_probability)
+
+        pairs = []
+        for i in range(self.num_transcripts // 2):
+            first_idx = i * 2
+            second_idx = (i * 2) + 1
+            if first_idx in speech_to_scores and second_idx in speech_to_scores:
+                first_score = sum(speech_to_scores[first_idx]) / len(speech_to_scores[first_idx])
+                second_score = sum(speech_to_scores[second_idx]) / len(speech_to_scores[second_idx])
+
+                preferred_entry = (
+                    self.received_speeches[first_idx] if first_score > second_score else self.received_speeches[second_idx]
+                )
+                rejected_entry = (
+                    self.received_speeches[second_idx] if first_score > second_score else self.received_speeches[first_idx]
+                )
+
+                new_preferred_entry = Speech(
+                    speaker=preferred_entry.speaker,
+                    content=preferred_entry.content,
+                    supplemental=ModelResponse(
+                        speech=preferred_entry.content,
+                        preference=max(first_score, second_score),
+                        prompt=preferred_entry.supplemental.prompt,
+                        rejected_responses=[
+                            ModelResponse(
+                                speech=rejected_entry.content,
+                                preference=min(first_score, second_score),
+                                prompt=rejected_entry.supplemental.prompt,
+                            )
+                        ],
+                    ),
+                )
+                pairs.append(new_preferred_entry.dict())
+                assert rejected_entry.supplemental.prompt == preferred_entry.supplemental.prompt
+                # ,f"{preferred_entry.supplemental.prompt}\n\n\n===\n\n\n{rejected_entry.supplemental.prompt}"
+
+        full_paired_transcript = {"metadata": metadata, "speeches": pairs}
+        with open(save_file_path_prefix + ".json", "w") as f:
+            json.dump(full_paired_transcript, f)
 
     def __get_round_start_idx(self, round_idx: int):
         start_idx = 0
@@ -238,10 +302,12 @@ class BranchedJudge(Judge):
     def __reset_agent_transcript(self, agent: Agent, blank_transcript: Transcript, idx: int):
         transcript_to_add = copy.deepcopy(blank_transcript)
         agent.transcripts = [transcript_to_add]
-        for speech_idx in self.__get_speeches_for_transcript(idx):
+        for speech_idx in self.transcript_idx_to_speech_idx[idx]:
             if self.received_speeches[speech_idx]:
-                speaker, content, supplemental = self.received_speeches[speech_idx]
-                agent.receive_message(speaker=speaker, content=content, idx=0, supplemental=supplemental)
+                speech = self.received_speeches[speech_idx]
+                agent.receive_message(
+                    speaker=speech.speaker, content=speech.content, idx=0, supplemental=speech.supplemental
+                )
 
     def __get_expected_transcripts(self):
         if self.setting == MultiRoundBranchingSetting.FULL:

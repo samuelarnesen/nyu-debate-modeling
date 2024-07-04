@@ -635,6 +635,7 @@ class ExperimentLoader:
                 flipped_round.set_first_debater(HumanDebater(debater=flipped_round.first_debater, speeches=speeches))
 
             if experiment.multi_round_branching != MultiRoundBranchingSetting.NONE:
+                assert experiment.batch_size == 1, "Multi round branching only supports a batch size of 1"
                 debate_round.set_judge(
                     BranchedJudge(
                         judge=debate_round.judge,
@@ -657,6 +658,9 @@ class ExperimentLoader:
                 rounds.append(flipped_round)
 
         if len(rounds) <= 1:
+            return rounds, model_cache, offline_model_helper_cache
+
+        if experiment.batch_size == 1:
             return rounds, model_cache, offline_model_helper_cache
 
         # batches the debate rounds for efficient generation

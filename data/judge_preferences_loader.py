@@ -7,6 +7,7 @@ from enum import Enum, auto
 from typing import Any, Optional
 import json, math, random
 
+
 class RewardType(Enum):
     LOG_PROB = auto()
     PROB = auto()
@@ -66,7 +67,9 @@ class JudgePreferencesLoader(RawDataLoader):
     MIN_GAP = 0.00
 
     @classmethod
-    def process_row(cls, data: dict[Any, Any], reward_type: RewardType = RewardType.LOG_PROB) -> list[tuple[str, str, str, float]]:
+    def process_row(
+        cls, data: dict[Any, Any], reward_type: RewardType = RewardType.LOG_PROB
+    ) -> list[tuple[str, str, str, float]]:
         def clean_speech(speech: str) -> str:
             speech = speech.replace(constants.INVALID_QUOTE_TAG, constants.QUOTE_TAG).replace(
                 constants.INVALID_UNQUOTE_TAG, constants.UNQUOTE_TAG
@@ -82,13 +85,15 @@ class JudgePreferencesLoader(RawDataLoader):
                 return selected_over_rejected / (selected_over_rejected + rejected_over_selected)
             elif reward_type == RewardType.PROB:
                 multiplier = 5.75
-                return math.exp(multiplier * selected_pref) / (math.exp(multiplier * selected_pref) + math.exp(multiplier * rejected_pref))
+                return math.exp(multiplier * selected_pref) / (
+                    math.exp(multiplier * selected_pref) + math.exp(multiplier * rejected_pref)
+                )
             elif reward_type == RewardType.SIGMOID:
                 multiplier = 5
                 temperature = 0.125
                 mean = 0.5
-                selected_reward = multiplier / (1 + math.exp(-((selected_pref - mean)/ temperature)))
-                rejected_reward = multiplier / (1 + math.exp(-((rejected_pref - mean)/ temperature)))
+                selected_reward = multiplier / (1 + math.exp(-((selected_pref - mean) / temperature)))
+                rejected_reward = multiplier / (1 + math.exp(-((rejected_pref - mean) / temperature)))
                 return math.exp(selected_reward) / (math.exp(selected_reward) + math.exp(rejected_reward))
             elif reward_type == RewardType.BINARY:
                 return 1.0
