@@ -113,9 +113,12 @@ class DebateRound:
                     response_to_use = validated_response if agent.receive_validated_quotes else response
                     agent.receive_message(speaker=speaker.name, content=response_to_use, idx=idx, supplemental=output)
 
+            self.judge.post_speech_processing()
             next_speaker = self.judge.get_next_expected_speaker()
+
             last_output = batch_response
             last_model_output = model_output
+
         return last_output, last_model_output
 
     def record_winners(
@@ -176,59 +179,3 @@ class DebateRound:
         return self.record_winners(
             last_output=last_output, last_model_output=last_model_output, save_file_path_prefix=save_file_path_prefix
         )
-
-
-class SplittableDebateRound:
-    """
-    This class is used to generate debate rounds that need to be replayed up to a specific point in the round.
-    This is useful if one wants to see who wins if a different speech was given somewhere far into the round"""
-
-    @classmethod
-    def run_split_round(
-        cls, debate_round: DebateRound, splitting_rule: SplittingRule, save_file_path_prefix: Optional[str] = None
-    ):
-        """Splits a round at the specified point and reruns it"""
-        first_round_summary = debate_round(save_file_path_prefix=save_file_path_prefix)
-
-        truncation_index = SplittableDebateRound.__get_truncation_index(
-            splitting_rule=splitting_rule, debate_round=debate_round
-        )
-
-        second_round = DebateRound(
-            first_debater=debate_round.first_debater.copy(
-                transcripts=SplittableDebateRound.__truncate_transcript(
-                    agent=debate_round.first_debater, idx=truncation_index
-                )
-            ),
-            second_debater=debate_round.second_debater.copy(
-                transcripts=SplittableDebateRound.__truncate_transcript(
-                    agent=debate_round.second_debater, idx=truncation_index
-                )
-            ),
-            judge=debate_round.judge.copy(
-                transcripts=SplittableDebateRound.__truncate_transcript(agent=debate_round.judge, idx=truncation_index)
-            ),
-            metadata=copy.deepcopy(debate_round.metadata),
-        )
-
-        second_round_summary = second_round(save_file_path_prefix=save_file_path_prefix)
-
-        return first_round_summary, second_round_summary
-
-    @classmethod
-    def __get_truncation_index(self, splitting_rule: SplittingRule, debate_round: DebateRound):
-        if splitting_rule == SplittingRule.OPENING_ONLY:
-            return 0
-        elif splitting_rule == SplittingRule.ALL_RANDOM:
-            total_speeches = debate_round.first_debater.transcripts[0].get_speech_count(debaters_only=True)
-            if len(total_speeches) <= 2:
-                return 0
-            random_index = random.randrange(0, total_speeches - 1)
-            if random_index <= 1:
-                return 0
-            return random_index
-        raise Exception(f"Splitting rule {splitting_rule} is not recognized")
-
-    @classmethod
-    def __truncate_transcript(cls, agent: Agent, idx: int) -> list[Transcript]:
-        return [transcript.copy().truncate(idx=idx, debaters_only=True) for transcript in agent.transcripts]

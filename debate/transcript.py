@@ -171,6 +171,10 @@ class Transcript:
         """Deepcopies this objects"""
         return copy.deepcopy(self)
 
+    def get_external_speech_count(self) -> int:
+        """ Returns the number of external speeches that have been added to the transcript """
+        return len(self.speeches)
+
     def truncate(self, idx: int, debaters_only: bool = False) -> None:
         """
         Removes all the speeches after the specified index.

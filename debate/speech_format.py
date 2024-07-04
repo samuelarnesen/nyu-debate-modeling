@@ -109,17 +109,19 @@ class SpeechFormatStructure(Enum):
 
 
 class SpeechFormat:
-    def __init__(self, name: str, tokens_per_speech: int = 300):
+    def __init__(self, name: str, tokens_per_speech: int = 300, num_speeches: int = 1):
         """
         A structure corresponding to the order of speeches and prompts that are expected to be delivered.
 
         Params:
             name: The name of the debater who is using this structure.
             tokens_per_speech: The length of each speech in tokens
+            num_speeches: the number of speeches delivered by each debater/consultant in the round
         """
         self.progression = []
         self.name = name
         self.tokens_per_speech = tokens_per_speech
+        self.num_speeches = num_speeches
 
     def add(
         self,
@@ -201,12 +203,6 @@ class SpeechFormat:
             .add(prompt_tag=PromptTag.PRE_DEBATE)
         )
 
-        judge_questions = (
-            SpeechFormat(name)
-            .add(prompt_tag=PromptTag.PRE_JUDGE_QUESTIONS)
-            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
-        )
-
         scratchpad = (
             SpeechFormat(name)
             .add(prompt_tag=PromptTag.PREVIOUS_DEBATER_SCRATCHPAD, last_only_prompt_tag=PromptTag.DEBATER_SCRATCHPAD)
@@ -233,12 +229,7 @@ class SpeechFormat:
             .add_format(speech_format=opponent_speech)
         )
 
-        later_arguments = (
-            SpeechFormat(name)
-            .add_format(speech_format=judge_questions)
-            .add_format(speech_format=own_speech if name == constants.DEFAULT_DEBATER_A_NAME else opponent_speech)
-            .add_format(speech_format=opponent_speech if name == constants.DEFAULT_DEBATER_A_NAME else own_speech)
-        )
+        later_arguments = SpeechFormat(name).add_format(speech_format=own_speech).add_format(speech_format=opponent_speech)
 
         decision = (
             SpeechFormat(name)
@@ -247,7 +238,7 @@ class SpeechFormat:
         )
 
         return (
-            SpeechFormat(name=name, tokens_per_speech=300)
+            SpeechFormat(name=name, tokens_per_speech=300, num_speeches=num_speeches)
             .add_format(speech_format=pre_debate)
             .add_format(speech_format=opening_statements)
             .add_format(speech_format=later_arguments, repeats=(num_speeches - 1))
@@ -263,23 +254,8 @@ class SpeechFormat:
             .add(prompt_tag=PromptTag.PRE_DEBATE_JUDGE)
         )
 
-        opening_speech_speech_format = (
-            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-            .add(prompt_tag=PromptTag.PRE_DEBATER_A_SPEECH_JUDGE)
-            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_DEBATER_A_NAME)
-            .add(prompt_tag=PromptTag.PRE_DEBATER_B_SPEECH_JUDGE)
-            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_DEBATER_B_NAME)
-        )
-
-        judge_questions = (
-            SpeechFormat(name)
-            .add(prompt_tag=PromptTag.PRE_JUDGE_QUESTIONS)
-            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
-        )
-
         argument_speech_format = (
             SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-            .add_format(speech_format=judge_questions)
             .add(prompt_tag=PromptTag.PRE_DEBATER_A_SPEECH_JUDGE)
             .add_user_inputted_speech(expected_speaker=constants.DEFAULT_DEBATER_A_NAME)
             .add(prompt_tag=PromptTag.PRE_DEBATER_B_SPEECH_JUDGE)
@@ -298,10 +274,9 @@ class SpeechFormat:
         ).add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
 
         return (
-            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME, tokens_per_speech=150)
+            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME, tokens_per_speech=150, num_speeches=num_speeches)
             .add_format(speech_format=pre_debate_speech_format)
-            .add_format(speech_format=opening_speech_speech_format)
-            .add_format(speech_format=argument_speech_format, repeats=(num_speeches - 1))
+            .add_format(speech_format=argument_speech_format, repeats=num_speeches)
             .add_format(speech_format=decision_speech_format)
         )
 
@@ -314,12 +289,6 @@ class SpeechFormat:
             .add(prompt_tag=PromptTag.OVERALL_SYSTEM)
             .add(prompt_tag=PromptTag.DEBATER_SYSTEM)
             .add(prompt_tag=PromptTag.PRE_DEBATE)
-        )
-
-        judge_questions = (
-            SpeechFormat(name)
-            .add(prompt_tag=PromptTag.PRE_JUDGE_QUESTIONS)
-            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
         )
 
         scratchpad = (
@@ -339,7 +308,7 @@ class SpeechFormat:
             SpeechFormat(name).add(prompt_tag=PromptTag.PRE_OPENING_SPEECH).add_format(speech_format=own_speech)
         )
 
-        later_arguments = SpeechFormat(name).add_format(speech_format=judge_questions).add_format(speech_format=own_speech)
+        later_arguments = SpeechFormat(name).add_format(speech_format=own_speech)
 
         decision = (
             SpeechFormat(name)
@@ -348,7 +317,7 @@ class SpeechFormat:
         )
 
         return (
-            SpeechFormat(name=name, tokens_per_speech=300)
+            SpeechFormat(name=name, tokens_per_speech=300, num_speeches=num_speeches)
             .add_format(speech_format=pre_debate)
             .add_format(speech_format=opening_statements)
             .add_format(speech_format=later_arguments, repeats=(num_speeches - 1))
@@ -366,23 +335,8 @@ class SpeechFormat:
             .add(prompt_tag=PromptTag.PRE_DEBATE_JUDGE)
         )
 
-        judge_questions = (
-            SpeechFormat(name)
-            .add(prompt_tag=PromptTag.PRE_JUDGE_QUESTIONS)
-            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
-        )
-
-        opening_speech_speech_format = (
+        individual_round_format = (
             SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-            .add(prompt_tag=PromptTag.PRE_DEBATER_A_SPEECH_JUDGE)
-            .add_user_inputted_speech(
-                expected_speaker=constants.DEFAULT_DEBATER_A_NAME if not flipped else constants.DEFAULT_DEBATER_B_NAME
-            )
-        )
-
-        later_speech_format = (
-            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-            .add_format(speech_format=judge_questions)
             .add(prompt_tag=PromptTag.PRE_DEBATER_A_SPEECH_JUDGE)
             .add_user_inputted_speech(
                 expected_speaker=constants.DEFAULT_DEBATER_A_NAME if not flipped else constants.DEFAULT_DEBATER_B_NAME
@@ -401,9 +355,9 @@ class SpeechFormat:
         ).add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
 
         return (
-            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME, tokens_per_speech=150)
+            SpeechFormat(name=constants.DEFAULT_JUDGE_NAME, tokens_per_speech=150, num_speeches=num_speeches)
             .add_format(speech_format=pre_debate_speech_format)
-            .add_format(speech_format=opening_speech_speech_format)
+            .add_format(speech_format=individual_round_format, repeats=num_speeches)
             .add_format(speech_format=later_speech_format, repeats=(num_speeches - 1))
             .add_format(speech_format=decision_speech_format)
         )

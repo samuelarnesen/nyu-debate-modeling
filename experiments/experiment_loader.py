@@ -1,6 +1,7 @@
 from debate import (
     AgentConfig,
     BestOfNDebater,
+    BranchedJudge,
     Debater,
     DebateRound,
     HumanDebater,
@@ -80,6 +81,7 @@ class ExperimentConfig(BaseModel):
     previous_run: Optional[PreviousRunConfig] = None
     tournament: Optional[TournamentConfig] = TournamentConfig()
     speech_structure: SpeechFormatStructure = SpeechFormatStructure.DEFAULT_DEBATE
+    multi_round_branching: bool = False
 
     @field_validator("speech_structure", mode="before")
     @classmethod
@@ -623,6 +625,22 @@ class ExperimentLoader:
             if experiment.agents.debaters[debater_idxs[1]].model_settings.is_human:
                 debate_round.set_second_debater(HumanDebater(debater=debate_round.second_debater, speeches=speeches))
                 flipped_round.set_first_debater(HumanDebater(debater=flipped_round.first_debater, speeches=speeches))
+
+            if experiment.multi_round_branching:
+                debate_round.set_judge(
+                    BranchedJudge(
+                        judge=debate_round.judge,
+                        debater_one=debate_round.first_debater,
+                        debater_two=debate_round.second_debater,
+                    )
+                )
+                flipped_round.set_judge(
+                    BranchedJudge(
+                        judge=flipped_round.judge,
+                        debater_one=flipped_round.first_debater,
+                        debater_two=flipped_round.second_debater,
+                    )
+                )
 
             rounds.append(debate_round)
             if experiment.flip:

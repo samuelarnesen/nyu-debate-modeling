@@ -121,3 +121,8 @@ class Agent:
     def get_next_expected_speaker(self, idx: int = 0) -> Optional[str]:
         """Gets the name of the agent that this agent expects to deliver the next speech"""
         return self.transcripts[idx].get_next_expected_speaker()
+
+    def post_speech_processing(self) -> None:
+        """Handles any post-speech logic. This should mostly be a no-op but is needed for some multi-round
+        branching cases where the judge needs to handle speeches coming from different rounds"""
+        pass

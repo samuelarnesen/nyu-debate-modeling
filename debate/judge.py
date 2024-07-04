@@ -15,6 +15,7 @@ import json
 import os
 import random
 import re
+import sys
 
 
 class Judge(Agent):
@@ -124,3 +125,96 @@ class Judge(Agent):
         if transcripts:
             judge.transcripts = [transcript.copy() for transcript in transcripts]
         return judge
+
+
+class BranchedJudge(Judge):
+    NUM_BRANCHES = 2  # making this a class variable b/c it's not configurable at the moment
+
+    def __init__(self, judge: Judge, debater_one: Debater, debater_two: Debater):
+        super().__init__(
+            name=judge.name,
+            prompt=judge.prompts,
+            model=judge.model,
+            num_speeches=judge.num_speeches,
+            speech_format=judge.speech_format,
+            speech_structure=judge.speech_structure,
+            expected_saver=judge.expected_saver,
+            scratchpad_config=judge.scratchpad_config,
+        )
+        self.debater_one = debater_one
+        self.debater_two = debater_two
+        self.internal_judge = judge
+        self.empty_debater_one_transcript = copy.deepcopy(debater_one.transcripts[0])
+        self.empty_debater_two_transcript = copy.deepcopy(debater_two.transcripts[0])
+        self.empty_judge_transcript = copy.deepcopy(judge.transcripts[0])
+
+        self.num_rounds = self.speech_format.num_speeches
+        self.num_transcripts = BranchedJudge.NUM_BRANCHES ** (2 * self.num_rounds)
+        self.max_expected_speeches = max(
+            [max(self.__get_speeches_for_transcript(i)) + 1 for i in range(self.num_transcripts)]
+        )
+        self.transcript_idx_to_speech_idx = {i: self.__get_speeches_for_transcript(i) for i in range(self.num_transcripts)}
+
+        self.received_speeches = [None for i in range(self.max_expected_speeches)]
+        self.completed_transcripts = []
+
+    def post_speech_processing(self):
+        if not self.internal_judge.get_next_expected_speaker():
+            self.completed_transcripts.append(copy.deepcopy(self.internal_judge.transcripts[0]))
+            next_idx = len(self.completed_transcripts) % self.num_transcripts
+            self.__reset_agent_transcript(
+                agent=self.debater_one, blank_transcript=self.empty_debater_one_transcript, idx=next_idx
+            )
+            self.__reset_agent_transcript(
+                agent=self.debater_two, blank_transcript=self.empty_debater_two_transcript, idx=next_idx
+            )
+            self.__reset_agent_transcript(
+                agent=self.internal_judge, blank_transcript=self.empty_judge_transcript, idx=next_idx
+            )
+
+    def get_next_expected_speaker(self):
+        if len(self.completed_transcripts) >= self.num_transcripts:
+            return None
+        return self.internal_judge.get_next_expected_speaker()
+
+    def receive_message(
+        self, speaker: str, content: str, idx: int, supplemental: Optional[dict[Any, Any] | list[dict[Any, Any]]] = None
+    ):
+        # ok we have to set where we think the expected speech should be
+        if speaker != self.name:
+            current_transcript_idx = len(self.completed_transcripts)
+            current_transcript_length = self.internal_judge.transcripts[0].get_external_speech_count()
+            transcript_speech_idxs = self.__get_speeches_for_transcript(current_transcript_idx)
+            insertion_speech_idx = transcript_speech_idxs[current_transcript_length]
+            self.received_speeches[insertion_speech_idx] = (speaker, content, supplemental)
+        self.internal_judge.receive_message(speaker=speaker, content=content, idx=idx, supplemental=supplemental)
+
+    def get_transcript(self, idx: int = 0) -> Transcript:
+        """Returns the transcript at the specified index"""
+        return self.completed_transcripts[idx]
+
+    def __get_round_start_idx(self, round_idx: int):
+        start_idx = 0
+        current_idx = 0
+        while round_idx > current_idx:
+            current_idx += 1
+            start_idx += BranchedJudge.NUM_BRANCHES ** (2 * current_idx)
+        return start_idx
+
+    def __get_speeches_for_transcript(self, transcript_idx: int):
+        first = transcript_idx // 8
+        second = 2 if transcript_idx % 8 < 4 else 3
+        third = (transcript_idx // 4)
+        segment_start = ((transcript_idx// 4) * 4) + 4
+        third = segment_start if transcript_idx % 4 < 2 else segment_start + 1
+        fourth = segment_start + (2 if transcript_idx % 2 == 0 else 3)
+    
+        return [first, second, third, fourth]
+
+    def __reset_agent_transcript(self, agent: Agent, blank_transcript: Transcript, idx: int):
+        transcript_to_add = copy.deepcopy(blank_transcript)
+        agent.transcripts = [transcript_to_add]
+        for speech_idx in self.__get_speeches_for_transcript(idx):
+            if self.received_speeches[speech_idx]:
+                speaker, content, supplemental = self.received_speeches[speech_idx]
+                agent.receive_message(speaker=speaker, content=content, idx=0, supplemental=supplemental)
