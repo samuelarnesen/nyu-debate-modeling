@@ -6,6 +6,7 @@ from debate import (
     DebateRound,
     HumanDebater,
     Judge,
+    MultiRoundBranchingSetting,
     QuestionMetadata,
     SpeechFormatStructure,
 )
@@ -81,7 +82,7 @@ class ExperimentConfig(BaseModel):
     previous_run: Optional[PreviousRunConfig] = None
     tournament: Optional[TournamentConfig] = TournamentConfig()
     speech_structure: SpeechFormatStructure = SpeechFormatStructure.DEFAULT_DEBATE
-    multi_round_branching: bool = False
+    multi_round_branching: MultiRoundBranchingSetting = MultiRoundBranchingSetting.NONE
 
     @field_validator("speech_structure", mode="before")
     @classmethod
@@ -89,6 +90,13 @@ class ExperimentConfig(BaseModel):
         if isinstance(speech_structure, str):
             return SpeechFormatStructure[speech_structure.upper()]
         return speech_structure
+
+    @field_validator("multi_round_branching", mode="before")
+    @classmethod
+    def validate_multi_round_branching(cls, multi_round_branching: str | MultiRoundBranchingSetting):
+        if isinstance(multi_round_branching, str):
+            return MultiRoundBranchingSetting[multi_round_branching.upper()]
+        return multi_round_branching
 
 
 class ExperimentLoader:
@@ -626,12 +634,13 @@ class ExperimentLoader:
                 debate_round.set_second_debater(HumanDebater(debater=debate_round.second_debater, speeches=speeches))
                 flipped_round.set_first_debater(HumanDebater(debater=flipped_round.first_debater, speeches=speeches))
 
-            if experiment.multi_round_branching:
+            if experiment.multi_round_branching != MultiRoundBranchingSetting.NONE:
                 debate_round.set_judge(
                     BranchedJudge(
                         judge=debate_round.judge,
                         debater_one=debate_round.first_debater,
                         debater_two=debate_round.second_debater,
+                        setting=experiment.multi_round_branching,
                     )
                 )
                 flipped_round.set_judge(
@@ -639,6 +648,7 @@ class ExperimentLoader:
                         judge=flipped_round.judge,
                         debater_one=flipped_round.first_debater,
                         debater_two=flipped_round.second_debater,
+                        setting=experiment.multi_round_branching,
                     )
                 )
 

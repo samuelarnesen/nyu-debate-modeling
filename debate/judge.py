@@ -8,7 +8,7 @@ from prompts import Prompt, PromptTag
 from utils import logger_utils
 import utils.constants as constants
 
-from enum import Enum
+from enum import Enum, auto
 from typing import Any, Optional, Union
 import copy
 import json
@@ -127,10 +127,23 @@ class Judge(Agent):
         return judge
 
 
+class MultiRoundBranchingSetting(Enum):
+    NONE = auto()
+    FULL = auto()
+    HALF = auto()
+    SINGLE_RANDOM = auto()
+
+
 class BranchedJudge(Judge):
     NUM_BRANCHES = 2  # making this a class variable b/c it's not configurable at the moment
 
-    def __init__(self, judge: Judge, debater_one: Debater, debater_two: Debater):
+    def __init__(
+        self,
+        judge: Judge,
+        debater_one: Debater,
+        debater_two: Debater,
+        setting: MultiRoundBranchingSetting = MultiRoundBranchingSetting.FULL,
+    ):
         super().__init__(
             name=judge.name,
             prompt=judge.prompts,
@@ -141,6 +154,7 @@ class BranchedJudge(Judge):
             expected_saver=judge.expected_saver,
             scratchpad_config=judge.scratchpad_config,
         )
+        self.setting = setting
         self.debater_one = debater_one
         self.debater_two = debater_two
         self.internal_judge = judge
@@ -154,6 +168,7 @@ class BranchedJudge(Judge):
             [max(self.__get_speeches_for_transcript(i)) + 1 for i in range(self.num_transcripts)]
         )
         self.transcript_idx_to_speech_idx = {i: self.__get_speeches_for_transcript(i) for i in range(self.num_transcripts)}
+        self.expected_transcripts = self.__get_expected_transcripts()
 
         self.received_speeches = [None for i in range(self.max_expected_speeches)]
         self.completed_transcripts = []
@@ -164,12 +179,13 @@ class BranchedJudge(Judge):
             judge=self.internal_judge.copy(transcripts=transcripts, prompts=prompts),
             debater_one=self.debater_one.copy(),
             debater_two=self.debater_two.copy(),
+            setting=self.setting,
         )
 
     def post_speech_processing(self):
         if not self.internal_judge.get_next_expected_speaker():
             self.completed_transcripts.append(copy.deepcopy(self.internal_judge.transcripts[0]))
-            next_idx = len(self.completed_transcripts) % self.num_transcripts
+            next_idx = self.expected_transcripts[len(self.completed_transcripts) % len(self.expected_transcripts)]
             self.__reset_agent_transcript(
                 agent=self.debater_one, blank_transcript=self.empty_debater_one_transcript, idx=next_idx
             )
@@ -181,7 +197,7 @@ class BranchedJudge(Judge):
             )
 
     def get_next_expected_speaker(self):
-        if len(self.completed_transcripts) >= self.num_transcripts:
+        if len(self.completed_transcripts) >= len(self.expected_transcripts):
             return None
         return self.internal_judge.get_next_expected_speaker()
 
@@ -226,3 +242,24 @@ class BranchedJudge(Judge):
             if self.received_speeches[speech_idx]:
                 speaker, content, supplemental = self.received_speeches[speech_idx]
                 agent.receive_message(speaker=speaker, content=content, idx=0, supplemental=supplemental)
+
+    def __get_expected_transcripts(self):
+        if self.setting == MultiRoundBranchingSetting.FULL:
+            return [i for i in range(self.num_transcripts)]
+        elif self.setting == MultiRoundBranchingSetting.HALF:
+            if random.random() < 0.5:
+                return [0, 2, self.num_transcripts // 2, (self.num_transcripts // 2) + 2]
+            else:
+                return [0, 1, self.num_transcripts // 4, (self.num_transcripts // 4) + 1]
+        elif self.setting == MultiRoundBranchingSetting.SINGLE_RANDOM:
+            random_number = random.random()
+            if random_number < 0.25:
+                return [0, self.num_transcripts // 2]
+            elif random_number < 0.5:
+                return [0, self.num_transcripts // 4]
+            elif random_number < 0.75:
+                return [0, self.num_transcripts // 8]
+            else:
+                return [0, self.num_transcripts // 16]
+        else:
+            raise Exception(f"Multi round branch setting of {self.setting} was not recognized")
