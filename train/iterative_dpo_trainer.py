@@ -68,11 +68,12 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
 
     def train(self, epoch_size: int = 128):
         for epoch in range(self.config.training_hyperparameters.steps):
-            self.step(step_count=epoch, epoch_size=epoch_size)
+            self.step(epoch=epoch, epoch_size=epoch_size)
 
-    def step(self, step_count: int, epoch_size: int):
-        output_suffix = f"/checkpoint-{step_count}" if step_count < self.config.training_hyperparameters.steps - 1 else ""
+    def step(self, epoch: int, epoch_size: int):
+        output_suffix = f"/checkpoint-{epoch}" if epoch < self.config.training_hyperparameters.steps - 1 else ""
         output_name = f"{self.config.logging_and_saving_config.output_dir}{output_suffix}"
+        lr_multiplier = self.config.training_hyperparameters.supplemental.get("lr_multiplier", 1)
         training_args = TrainingArguments(
             output_dir=output_name,
             num_train_epochs=self.config.training_hyperparameters.num_train_epochs,
@@ -84,16 +85,26 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
             if self.config.training_hyperparameters.steps > 1 or self.config.training_hyperparameters.num_train_epochs == 1
             else "steps",
             save_steps=self.config.training_hyperparameters.supplemental.get("save_steps", 64),
-            learning_rate=self.config.training_hyperparameters.learning_rate * (0.8**step_count),
+            learning_rate=self.config.training_hyperparameters.learning_rate * (lr_multiplier**epoch),
             disable_tqdm=False,
             ddp_find_unused_parameters=False,
             optim=self.config.training_hyperparameters.optim,
             lr_scheduler_type=self.config.training_hyperparameters.lr_scheduler_type,
+            warmup_ratio=0 if self.config.training_hyperparameters.lr_scheduler_type == "constant" else 1 / 24,
+            max_steps=-1
+            if self.config.training_hyperparameters.lr_scheduler_type == "constant"
+            else int(
+                (2 * epoch_size * self.config.training_hyperparameters.num_train_epochs)
+                // (
+                    self.config.training_hyperparameters.per_device_train_batch_size
+                    * self.config.training_hyperparameters.gradient_accumulation_steps
+                )
+            ),
             use_cpu=self.is_local,
         )
-        self.logger.warn(f"Generating samples for epoch {step_count}")
-        train_dataset = self.get_samples(start_idx=step_count * epoch_size, epoch_size=epoch_size)
-        self.logger.warn(f"Training for epoch {step_count}")
+        self.logger.warn(f"Generating samples for epoch {epoch}")
+        train_dataset = self.get_samples(start_idx=epoch * epoch_size, epoch_size=epoch_size)
+        self.logger.warn(f"Training for epoch {epoch}")
 
         trainer = self.trainer_cls(
             model=self.model,
