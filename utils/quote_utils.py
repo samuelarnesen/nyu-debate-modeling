@@ -141,7 +141,7 @@ def replace_quotes_containing_ellipses(
     Some quotes may contain ellipses. These quotes may be marked as invalid because they contain words from
     multiple disparate sections of the text. Here, we will split up the quote based on its ellipses pattern
     and check if each subcomponent is present in the text. If the quote is partially fixed up, then we will
-    return a quote containing <passage></passage> tags. If not, then we will return None.
+    return a quote containing quote tags. If not, then we will return None.
     """
     ELLIPSES = "..."
     if ELLIPSES not in quote:
@@ -170,7 +170,7 @@ def replace_invalid_quote(
     """Tries to find the best match for a quote in the background text. This assumes that
     there is not already a direct match. If a match is found, the input quote is replaced
     with the correct text. If no match is found, the original quote is wrapped in
-    <invalid_passage></invalid_passage> tags. See find_best_match() for explanations of the
+    invalid quote tags. See find_best_match() for explanations of the
     remaining parameters."""
     logger = logger_utils.get_default_logger(__name__)
     best_replacement = find_best_match(
@@ -206,7 +206,7 @@ def validate_and_replace_quotes(speech_content: str, background_text: str) -> st
     """Tries to find the best match for a quote in the background text. If the quote can be
     found directly in the underlying text, nothing happens. If a non-identical match is found,
     the input quote is replaced with the correct text. If no match is found, the original
-    quote is wrapped in <invalid_passage></invalid_passage> tags. See find_best_match() for
+    quote is wrapped in invalid quote tags. See find_best_match() for
     explanations of the remaining parameters."""
     updated_speech_content = clean_up_quotes(speech_content)
     for quote in extract_quotes(speech_content=updated_speech_content):
@@ -265,12 +265,3 @@ def extract_quote_context(quote_text: str, background_text: str, context_size: i
 
     return None
 
-
-def replace_old_quote_tags(background_text: str) -> str:
-    """Replaces the old format of quoting (which used <quote></quote> tags with the new <passage> tags)"""
-    return (
-        background_text.replace("<quote>", constants.QUOTE_TAG)
-        .replace("</quote>", constants.UNQUOTE_TAG)
-        .replace("<invalid_quote>", constants.INVALID_QUOTE_TAG)
-        .replace("</invalid_quote>", constants.INVALID_UNQUOTE_TAG)
-    )

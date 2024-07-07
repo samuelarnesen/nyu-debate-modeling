@@ -103,7 +103,6 @@ class QualityDebatesDataset(RawDataset):
                 replacement = re.sub("\t", "", replacement)
                 replacement = re.sub("\s+", " ", replacement).strip()
                 text = re.sub(re.escape(quote), replacement, text, flags=re.DOTALL)
-        text = quote_utils.replace_old_quote_tags(text)
         return text
 
     def __fix_line_spacing(self, text: str):
