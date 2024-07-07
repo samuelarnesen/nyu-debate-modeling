@@ -126,7 +126,7 @@ def get_topic(text: str):
 
 
 def process_scratchpad(scratchpad_text: str):
-    return re.findall(r"<quote>(.*?)</quote>", scratchpad_text)
+    return re.findall(rf"{constants.QUOTE_TAG}(.*?){constants.UNQUOTE_TAG}", scratchpad_text)
 
 
 def process_model_output(output: str, a_quote_list: list[str], b_quote_list: list[str]):

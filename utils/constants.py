@@ -16,10 +16,10 @@ OVERALL = "Overall"
 BASE_MODEL_PREFIX = "base"
 DEBATER_A_IDENTIFICATION = "You are Debater_A"
 BASE_PROMPT = "Base Prompt"
-QUOTE_TAG = "<quote>"
-UNQUOTE_TAG = "</quote>"
-INVALID_QUOTE_TAG = "<invalid_quote>"
-INVALID_UNQUOTE_TAG = "</invalid_quote>"
+QUOTE_TAG = "<passage>"
+UNQUOTE_TAG = "</passage>"
+INVALID_QUOTE_TAG = "<invalid_passage>"
+INVALID_UNQUOTE_TAG = "</invalid_passage>"
 BEGIN_SPEECH_OPTIONS = [
     "Write out your speech:",
     "Now begin your speech.",
