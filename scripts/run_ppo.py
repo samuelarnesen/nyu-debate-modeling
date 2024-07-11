@@ -12,7 +12,7 @@ script_config = ScriptUtils.get_training_run_script_config(args, train_type=Trai
 config = TrainUtils.parse_config(config_name=script_config.config_name, config_filepath=script_config.config_filepath)
 
 trainer = PPOTrainerWrapper.get_trainer(config=config, is_local=args.local, is_test=args.test)
-trainer.train(num_iters=250, save_frequency=10)
+trainer.train(save_frequency=5)
 trainer.save_model()
 
 if config.logging_and_saving_config.merge_output_dir:

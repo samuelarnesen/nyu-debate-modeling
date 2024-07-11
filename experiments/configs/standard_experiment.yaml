@@ -1,8 +1,234 @@
+val - experiment 45 - 48:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: False
+  previous_run:
+    file_path: 2024-06-11_15:14:53.542294
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-709-MultiTurnClean-test/checkpoint-48
+          alias: "Experiment 45 - 48"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "Experiment SFT - 0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 45 - 96:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: False
+  previous_run:
+    file_path: 2024-06-11_15:14:53.542294
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-709-MultiTurnClean-test/checkpoint-96
+          alias: "Experiment 45 - 96"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "Experiment SFT - 0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 45 - 144:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: False
+  previous_run:
+    file_path: 2024-06-11_15:14:53.542294
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-709-MultiTurnClean-test/checkpoint-144
+          alias: "Experiment 45 - 144"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "Experiment SFT - 0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 45 - 192:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: False
+  previous_run:
+    file_path: 2024-06-11_15:14:53.542294
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-709-MultiTurnClean-test/checkpoint-192
+          alias: "Experiment 45 - 192"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "Experiment SFT - 0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 45 - 240:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: False
+  previous_run:
+    file_path: 2024-06-11_15:14:53.542294
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-709-MultiTurnClean-test
+          alias: "Experiment 45 - 240"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "Experiment SFT - 0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Generation - Llama3 - MultiRound - HalfBranched:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  multi_round_branching: half
+  previous_run:
+    file_path: 2024-06-18_11:33:33.673488
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "llama3-sft"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
+Data Generation - Llama3:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  enable_self_debate: True
+  previous_run:
+    file_path: 2024-06-18_11:33:33.673488
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "llama3-sft"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+        best_of_n:
+          n: 2
+          opponent_n: 1
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
 Data Generation - Debate - SFT:
   batch_size: 1
   num_speeches: 1
   flip: False
   enable_self_debate: True
+  previous_run:
+    file_path: 2024-06-18_11:33:33.673488
+    replicate_topics: True
+    merge_results: False
   agents:
     debaters:
       - model_settings:
@@ -17,31 +243,6 @@ Data Generation - Debate - SFT:
   dataset:
     dataset_type: quality
     split_type: train
-Data Validation - Llama3:
-  batch_size: 1
-  num_speeches: 1
-  flip: True
-  enable_self_debate: False
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-604-test/checkpoint-0
-          alias: "llama3-dpo"
-          require_quote_validation: True
-      - model_settings:
-          model_type: llama3
-          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
-          alias: "llama3-sft"
-          require_quote_validation: True
-    judge:
-      model_settings:
-        model_type: openai
-        alias: openai-judge
-        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
-  dataset:
-    dataset_type: quality
-    split_type: val
 Data Validation - Llama3 - Judge:
   batch_size: 1
   num_speeches: 1

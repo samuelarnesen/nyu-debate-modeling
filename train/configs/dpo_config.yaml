@@ -713,3 +713,725 @@ Iterative - BigBatchHiLRFixed - 21:
     dataset:
         dataset_type: judge_preferences
         full_dataset_file_path: 2024-06-13_00:31:55.325622
+Iterative - SecoundRoundFull - 22:
+    model_name: /vast/spa9663/models/trained_models/llama-3-DPO-613-replica-test/checkpoint-512
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 3
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 8
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-617-SecondRoundFull-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: 2024-06-14_23:59:32.271859
+Iterative - NewDataFull - 23:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 3
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 8
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-619-NewDataFull-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: 2024-06-18_11:33:33.673488
+Iterative - NewDataReplica - 24:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 3
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 8
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 64
+        kl_penalty: 0.5
+        steps: 1
+        target_module: attention
+        supplemental:
+            epoch_size: 1024
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-619-NewDataReplica-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: 2024-06-18_11:33:33.673488
+Iterative - LoLRLong - 25:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 8
+        optim: paged_adamw_32bit
+        learning_rate: 5e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 64
+        kl_penalty: 0.5
+        steps: 1
+        target_module: attention
+        supplemental:
+            epoch_size: 1024
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-619-LoLRLong-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: 2024-06-18_11:33:33.673488
+Iterative - NormalLRLong - 26:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 8
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 64
+        kl_penalty: 0.5
+        steps: 1
+        target_module: attention
+        supplemental:
+            epoch_size: 1024
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-619-NormalLong-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: 2024-06-18_11:33:33.673488
+Iterative - CleanedAndFixed - 27:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 8
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-623-CleanedAndFixed-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-06-22_18:02:18.766775
+Iterative - SharpPreference - 28:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 8
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-623-SharpPreference-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-06-22_18:02:18.766775
+Iterative - SharpPreferenceBigBatch - 29:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            reward_type: logit
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-624-SharpPreferenceBigBatch-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-06-22_18:02:18.766775
+Iterative - SPR2 - 30:
+    model_name: /vast/spa9663/models/trained_models/llama-3-DPO-623-SharpPreference-test/checkpoint-256
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            reward_type: logit
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-625-SPR2-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-06-24_11:47:00.207725
+Iterative - ProbReward - 31:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 8
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            reward_type: prob
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-626-ProbReward-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-06-22_18:02:18.766775
+Iterative - SigmoidReward - 32:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 8
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 64
+            reward_type: sigmoid
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-628-SigmoidReward-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-06-22_18:02:18.766775
+Iterative - SPR3 - 33:
+    model_name: /vast/spa9663/models/trained_models/llama-3-DPO-625-SPR2-test/checkpoint-160
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            reward_type: logit
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-625-SPR3-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-06-27_18:00:48.062786
+Iterative - LogProbMultiplier - 34:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            reward_type: log_prob
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-630-LogProbMultiplier-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-06-22_18:02:18.766775
+Iterative - ProbMultiplier - 35:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            reward_type: prob
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-630-ProbMultiplier-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-06-22_18:02:18.766775
+Iterative - ProbLowTemp - 36:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            reward_type: prob
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-701-ProbLowTemp-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-07-01_03:30:33.701924
+Iterative - LogProbLowTemp - 37:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            reward_type: log_prob
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-701-LogProbLowTemp-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-07-01_03:30:33.701924
+Iterative - LogitLowTemp - 38:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            reward_type: logit
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-701-LogitLowTemp-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-07-01_03:30:33.701924
+Iterative - TraditionalDPO - 39:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 6
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            alpha: 0.0
+            reward_type: binary
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-702-TraditionalDPO-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-07-01_03:30:33.701924
+Iterative - ProbLRSchedule - 40:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 3
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: linear
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            reward_type: prob
+            lr_multiplier: 0.5
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-704-ProbLRSchedule-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-07-01_03:30:33.701924
+Iterative - PassageProb - 41:
+    model_name: /vast/spa9663/models/trained_models/llama-3-passage
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 3
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            reward_type: prob
+            lr_multiplier: 0.5
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-706-PassageProb-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-07-05_20:03:46.570770
+Iterative - BonIPO - 42:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 3
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: linear
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            reward_type: prob
+            lr_multiplier: 0.5
+            loss_type: bon-ipo
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-704-BonIPO-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-07-01_03:30:33.701924
+Iterative - HiSFT - 43:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 3
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: linear
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            reward_type: prob
+            lr_multiplier: 0.5
+            loss_type: bon
+            alpha: 0.05
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-706-HiSFT-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-07-01_03:30:33.701924
+Iterative - MultiTurn - 44:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 3
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            reward_type: prob
+            loss_type: bon
+            alpha: 0.05
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-709-MultiTurn-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-07-08_02:57:32.513524
+Iterative - MultiTurnClean - 45:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 3
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            reward_type: prob
+            loss_type: bon
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-709-MultiTurnClean-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-07-08_02:57:32.513524
+Iterative - MultiTurnHighMultiplier - 46:
+    model_name: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    target: debater
+    llm_type: llama3
+    opening_speeches_only: True
+    training_hyperparameters:
+        num_train_epochs: 3
+        per_device_train_batch_size: 1
+        gradient_accumulation_steps: 32
+        optim: paged_adamw_32bit
+        learning_rate: 10e-5
+        max_grad_norm: 0.3
+        warmup_ratio: 0.03
+        lr_scheduler_type: constant
+        peft_type: lora
+        lora_rank: 128
+        kl_penalty: 0.5
+        steps: 1
+        target_module: all
+        supplemental:
+            epoch_size: 1024
+            save_steps: 16
+            reward_type: prob
+            loss_type: bon
+            multiplier: 11.5
+    logging_and_saving_config:
+        logging_steps: 1
+        output_dir: /vast/spa9663/models/trained_models/llama-3-DPO-709-MultiTurnHighMultiplier-test
+    dataset:
+        dataset_type: judge_preferences
+        full_dataset_file_path: /vast/spa9663/outputs/transcripts/2024-07-08_02:57:32.513524

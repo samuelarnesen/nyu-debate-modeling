@@ -27,7 +27,7 @@ Train - Experiment:
     training_hyperparameters:
         num_train_epochs: 4
         per_device_train_batch_size: 64
-        gradient_accumulation_steps: 1
+        gradient_accumulation_steps: 64
         optim: paged_adamw_32bit
         learning_rate: 3e-5
         max_grad_norm: 0.3
