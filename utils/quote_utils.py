@@ -264,4 +264,3 @@ def extract_quote_context(quote_text: str, background_text: str, context_size: i
         return matched_text
 
     return None
-

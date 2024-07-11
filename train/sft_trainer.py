@@ -81,7 +81,7 @@ class SupervisedTrainer:
                                     tokenizer=tokenizer,
                                     speech_structure=output_structure,
                                 ),
-                                "output": speech + tokenizer.eos_token,
+                                "output": speech,
                             }
                         )
             else:
@@ -105,7 +105,7 @@ class SupervisedTrainer:
                                 tokenizer=tokenizer,
                                 speech_structure=output_structure,
                             ),
-                            "output": row["output"] + tokenizer.eos_token,
+                            "output": row["output"],
                         }
                     )
 

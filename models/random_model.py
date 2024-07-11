@@ -52,11 +52,14 @@ class RandomModel(Model):
         """
 
         def generate_random_text():
-            return " ".join(
-                [
-                    "".join(random.choices(self.alphabet, k=random.randrange(1, 8)))
-                    for i in range(random.randrange(1, max_new_tokens))
-                ]
+            return (
+                " ".join(
+                    [
+                        "".join(random.choices(self.alphabet, k=random.randrange(1, 8)))
+                        for i in range(random.randrange(1, max_new_tokens))
+                    ]
+                )
+                + f"{constants.QUOTE_TAG} This is not real {constants.UNQUOTE_TAG}."
             )
 
         def generate_random_decision():
