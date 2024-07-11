@@ -908,6 +908,12 @@ class SmoothedDPOTrainer(Trainer):
             losses = (self.alpha * sft_loss) + ((1 - self.alpha) * dpo_loss)
 
             self.logger.info(f"Overall Loss: {losses.item()}\tDPO Loss: {dpo_loss.item()}\tSFT Loss: {sft_loss.item()}")
+        elif self.loss_type == "bon-ipo":
+            dpo_loss = (logits - (pref / (2 * self.beta))) ** 2
+            sft_loss = -policy_chosen_logps.to(self.accelerator.device)
+            losses = (self.alpha * sft_loss) + ((1 - self.alpha) * dpo_loss)
+
+            self.logger.info(f"Overall Loss: {losses.item()}\tDPO Loss: {dpo_loss.item()}\tSFT Loss: {sft_loss.item()}")
         else:
             raise ValueError(
                 f"Unknown loss type: {self.loss_type}. Should be one of ['sigmoid', 'hinge', 'ipo', 'kto_pair', 'bon']"
@@ -1002,7 +1008,7 @@ class SmoothedDPOTrainer(Trainer):
             label_pad_token_id=self.label_pad_token_id,
         )
 
-        if self.loss_type in ["ipo", "bon"]:
+        if self.loss_type in ["ipo", "bon", "bon-ipo"]:
             all_logps = all_logps / size_completion
 
         chosen_logps = all_logps[:len_chosen]

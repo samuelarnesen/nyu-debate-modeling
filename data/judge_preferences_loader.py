@@ -68,7 +68,7 @@ class JudgePreferencesLoader(RawDataLoader):
 
     @classmethod
     def process_row(
-        cls, data: dict[Any, Any], reward_type: RewardType = RewardType.LOG_PROB
+        cls, data: dict[Any, Any], reward_type: RewardType = RewardType.LOG_PROB, **kwargs
     ) -> list[tuple[str, str, str, float]]:
         def clean_speech(speech: str) -> str:
             speech = speech.replace(constants.INVALID_QUOTE_TAG, constants.QUOTE_TAG).replace(
@@ -84,13 +84,13 @@ class JudgePreferencesLoader(RawDataLoader):
                 rejected_over_selected = rejected_pref * (1 - selected_pref)
                 return selected_over_rejected / (selected_over_rejected + rejected_over_selected)
             elif reward_type == RewardType.PROB:
-                multiplier = 5.75
+                multiplier = kwargs.get("multiplier", 5.75)
                 return math.exp(multiplier * selected_pref) / (
                     math.exp(multiplier * selected_pref) + math.exp(multiplier * rejected_pref)
                 )
             elif reward_type == RewardType.SIGMOID:
-                multiplier = 5
-                temperature = 0.125
+                multiplier = kwargs.get("multiplier", 5)
+                temperature = kwargs.get("temperature", 0.125)
                 mean = 0.5
                 selected_reward = multiplier / (1 + math.exp(-((selected_pref - mean) / temperature)))
                 rejected_reward = multiplier / (1 + math.exp(-((rejected_pref - mean) / temperature)))
@@ -98,7 +98,7 @@ class JudgePreferencesLoader(RawDataLoader):
             elif reward_type == RewardType.BINARY:
                 return 1.0
             else:
-                multiplier = 2.25
+                multiplier = kwargs.get("multiplier", 2.25)
                 return (selected_pref**multiplier) / ((rejected_pref**multiplier) + (selected_pref**multiplier))
 
         outputs = []
@@ -132,7 +132,7 @@ class JudgePreferencesLoader(RawDataLoader):
         train_data = []
         input_texts = input_utils.read_file_texts(base_path=full_dataset_filepath, input_type=InputType.JSON_TRANSCRIPT)
         for text in input_texts:
-            train_data.extend(JudgePreferencesLoader.process_row(json.loads(text), reward_type=reward_type))
+            train_data.extend(JudgePreferencesLoader.process_row(json.loads(text), reward_type=reward_type, **kwargs))
 
         return JudgePreferencesDataset(
             train_data=train_data,

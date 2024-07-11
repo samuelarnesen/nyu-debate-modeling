@@ -60,7 +60,14 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
         reward_type = RewardType.LOG_PROB
         if config.training_hyperparameters.supplemental and "reward_type" in config.training_hyperparameters.supplemental:
             reward_type = RewardType[config.training_hyperparameters.supplemental["reward_type"].upper()]
-        self.dataset = TrainUtils.create_datasets(config=config, reward_type=reward_type)[0]
+
+        reward_type_args = {}
+        if config.training_hyperparameters.supplemental:
+            eligible_params = ["multiplier", "temperature"]
+            for param in filter(lambda x: x in config.training_hyperparameters.supplemental, eligible_params):
+                reward_type_args[param] = config.training_hyperparameters.supplemental[param]
+
+        self.dataset = TrainUtils.create_datasets(config=config, reward_type=reward_type, **reward_type_args)[0]
 
         self.config = config
         self.trainer_cls = SmoothedDPOTrainer if smooth else DPOTrainer
@@ -74,6 +81,7 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
         output_suffix = f"/checkpoint-{epoch}" if epoch < self.config.training_hyperparameters.steps - 1 else ""
         output_name = f"{self.config.logging_and_saving_config.output_dir}{output_suffix}"
         lr_multiplier = self.config.training_hyperparameters.supplemental.get("lr_multiplier", 1)
+        loss_type = self.config.training_hyperparameters.supplemental.get("loss_type", "bon")
         training_args = TrainingArguments(
             output_dir=output_name,
             num_train_epochs=self.config.training_hyperparameters.num_train_epochs,
@@ -104,12 +112,12 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
         )
         self.logger.warn(f"Generating samples for epoch {epoch}")
         train_dataset = self.get_samples(start_idx=epoch * epoch_size, epoch_size=epoch_size)
-        self.logger.warn(f"Training for epoch {epoch}")
+        self.logger.warn(f"Training for epoch {epoch} with loss type {loss_type}")
 
         trainer = self.trainer_cls(
             model=self.model,
             ref_model=None,
-            loss_type="bon",
+            loss_type=loss_type,
             max_length=16384,
             max_prompt_length=16384,
             beta=self.config.training_hyperparameters.kl_penalty,
