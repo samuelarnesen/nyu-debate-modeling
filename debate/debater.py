@@ -46,7 +46,7 @@ class Debater(Agent):
             prompt=prompt,
             model=model,
             num_speeches=num_speeches,
-            receive_validated_quotes=False,
+            receive_validated_quotes=True,
             quotes_require_validation=quotes_require_validation,
             speech_format=speech_format
             if speech_format

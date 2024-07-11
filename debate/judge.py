@@ -250,11 +250,19 @@ class BranchedJudge(Judge):
                 first_score = sum(speech_to_scores[first_idx]) / len(speech_to_scores[first_idx])
                 second_score = sum(speech_to_scores[second_idx]) / len(speech_to_scores[second_idx])
 
+                speaker = self.received_speeches[first_idx].speaker
+                first_score_to_use = first_score if speaker == constants.DEFAULT_DEBATER_A_NAME else second_score
+                second_score_to_use = second_score if speaker == constants.DEFAULT_DEBATER_A_NAME else first_score
+
                 preferred_entry = (
-                    self.received_speeches[first_idx] if first_score > second_score else self.received_speeches[second_idx]
+                    self.received_speeches[first_idx]
+                    if first_score_to_use > second_score_to_use
+                    else self.received_speeches[second_idx]
                 )
                 rejected_entry = (
-                    self.received_speeches[second_idx] if first_score > second_score else self.received_speeches[first_idx]
+                    self.received_speeches[second_idx]
+                    if first_score_to_use > second_score_to_use
+                    else self.received_speeches[first_idx]
                 )
 
                 new_preferred_entry = Speech(
@@ -262,20 +270,21 @@ class BranchedJudge(Judge):
                     content=preferred_entry.content,
                     supplemental=ModelResponse(
                         speech=preferred_entry.content,
-                        preference=max(first_score, second_score),
+                        preference=max(first_score_to_use, second_score_to_use),
                         prompt=preferred_entry.supplemental.prompt,
                         rejected_responses=[
                             ModelResponse(
                                 speech=rejected_entry.content,
-                                preference=min(first_score, second_score),
+                                preference=min(first_score_to_use, second_score_to_use),
                                 prompt=rejected_entry.supplemental.prompt,
                             )
                         ],
                     ),
                 )
                 pairs.append(new_preferred_entry.dict())
-                assert rejected_entry.supplemental.prompt == preferred_entry.supplemental.prompt
-                # ,f"{preferred_entry.supplemental.prompt}\n\n\n===\n\n\n{rejected_entry.supplemental.prompt}"
+                assert (
+                    rejected_entry.supplemental.prompt == preferred_entry.supplemental.prompt
+                ), f"{preferred_entry.supplemental.prompt}\n\n\n===\n\n\n{rejected_entry.supplemental.prompt}"
 
         full_paired_transcript = {"metadata": metadata, "speeches": pairs}
         with open(save_file_path_prefix + ".json", "w") as f:
