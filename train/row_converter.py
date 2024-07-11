@@ -118,6 +118,7 @@ class RowConverter:
                         name=constants.DEFAULT_JUDGE_NAME, num_speeches=(rounds - 1), use_scratchpad=False, flipped=False
                     )
                 ),
+                alternate_prompts=True,
             )
 
             if rounds > 1:  # this conditional lets us handle the simultaneity of the first round
@@ -177,6 +178,7 @@ class RowConverter:
                         name=constants.DEFAULT_JUDGE_NAME, num_speeches=0, use_scratchpad=False, flipped=False
                     )
                 ),
+                alternate_prompts=True,
             )
 
             speech_text = "Debater_A | 100%" if row.correct_index == 0 else "Debater_B | 100%"

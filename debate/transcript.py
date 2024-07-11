@@ -15,11 +15,7 @@ import json
 
 class Transcript:
     def __init__(
-        self,
-        name: str,
-        prompt: Prompt,
-        speech_format: SpeechFormat,
-        index: int = 0,
+        self, name: str, prompt: Prompt, speech_format: SpeechFormat, index: int = 0, alternate_prompts: bool = False
     ):
         """
         An abstraction that tracks the commands and speeches delivered in the round. This can then
@@ -30,11 +26,14 @@ class Transcript:
             prompt: The prompt that is used to generate commands.
             speech_format: The order of speeches and commands that the debater expects to receive.
             index: The index corresponding to which element in the batch this transcript is being used for.
+            alternate_prompts: False if the default prompts should always be used (good for validation). True if one wants to
+                mix in alternate prompts (good for training)
         """
         self.prompt = prompt
         self.name = name
         self.speeches = []
         self.speech_format = speech_format
+        self.alternate_prompts = alternate_prompts
 
     def reset(self) -> None:
         """Removes all the given speeches"""
@@ -81,13 +80,12 @@ class Transcript:
                     prompt_tag if (index < len(self.speeches) or not last_only_prompt_tag) else last_only_prompt_tag
                 )
 
+                content_idx = index % len(self.prompt.messages[prompt_tag_to_use].content) if self.alternate_prompts else 0
                 add_to_model_inputs(
                     model_inputs,
                     ModelInput(
                         role=RoleType.SYSTEM if i < 2 else RoleType.USER,
-                        content=self.prompt.messages[prompt_tag_to_use].content[
-                            index % len(self.prompt.messages[prompt_tag_to_use].content)
-                        ],
+                        content=self.prompt.messages[prompt_tag_to_use].content[content_idx],
                     ),
                 )
             else:
