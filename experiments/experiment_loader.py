@@ -642,6 +642,7 @@ class ExperimentLoader:
                         debater_one=debate_round.first_debater,
                         debater_two=debate_round.second_debater,
                         setting=experiment.multi_round_branching,
+                        speeches_per_round=experiment.speech_structure.num_participants,
                     )
                 )
                 flipped_round.set_judge(
@@ -650,6 +651,7 @@ class ExperimentLoader:
                         debater_one=flipped_round.first_debater,
                         debater_two=flipped_round.second_debater,
                         setting=experiment.multi_round_branching,
+                        speeches_per_round=experiment.speech_structure.num_participants,
                     )
                 )
 

@@ -143,6 +143,7 @@ class BranchedJudge(Judge):
         debater_one: Debater,
         debater_two: Debater,
         setting: MultiRoundBranchingSetting = MultiRoundBranchingSetting.FULL,
+        speeches_per_round: int = 2,
     ):
         self.setting = setting
         self.debater_one = debater_one
@@ -152,8 +153,11 @@ class BranchedJudge(Judge):
         self.empty_debater_two_transcript = copy.deepcopy(debater_two.transcripts[0])
         self.empty_judge_transcript = copy.deepcopy(judge.transcripts[0])
 
+        self.speeches_per_round = speeches_per_round
         self.num_rounds = self.internal_judge.speech_format.num_speeches
-        self.num_transcripts = BranchedJudge.NUM_BRANCHES ** (2 * self.num_rounds)
+        self.num_transcripts = (
+            BranchedJudge.NUM_BRANCHES ** (2 * (self.num_rounds - (1 if self.speeches_per_round == 1 else 0)))
+        )
         self.transcript_idx_to_speech_idx = {i: self.__get_speeches_for_transcript(i) for i in range(self.num_transcripts)}
         self.max_expected_speeches = max([max(val) + 1 for val in self.transcript_idx_to_speech_idx.values()])
         self.expected_transcripts = self.__get_expected_transcripts()
@@ -179,6 +183,7 @@ class BranchedJudge(Judge):
             debater_one=self.debater_one.copy(),
             debater_two=self.debater_two.copy(),
             setting=self.setting,
+            speeches_per_round=self.speeches_per_round,
         )
 
     def post_speech_processing(self):
@@ -251,18 +256,14 @@ class BranchedJudge(Judge):
                 second_score = sum(speech_to_scores[second_idx]) / len(speech_to_scores[second_idx])
 
                 speaker = self.received_speeches[first_idx].speaker
-                first_score_to_use = first_score if speaker == constants.DEFAULT_DEBATER_A_NAME else second_score
-                second_score_to_use = second_score if speaker == constants.DEFAULT_DEBATER_A_NAME else first_score
+                first_score = first_score if speaker == constants.DEFAULT_DEBATER_A_NAME else 1 - first_score
+                second_score = second_score if speaker == constants.DEFAULT_DEBATER_A_NAME else 1 - second_score
 
                 preferred_entry = (
-                    self.received_speeches[first_idx]
-                    if first_score_to_use > second_score_to_use
-                    else self.received_speeches[second_idx]
+                    self.received_speeches[first_idx] if first_score > second_score else self.received_speeches[second_idx]
                 )
                 rejected_entry = (
-                    self.received_speeches[second_idx]
-                    if first_score_to_use > second_score_to_use
-                    else self.received_speeches[first_idx]
+                    self.received_speeches[second_idx] if first_score > second_score else self.received_speeches[first_idx]
                 )
 
                 new_preferred_entry = Speech(
@@ -270,12 +271,12 @@ class BranchedJudge(Judge):
                     content=preferred_entry.content,
                     supplemental=ModelResponse(
                         speech=preferred_entry.content,
-                        preference=max(first_score_to_use, second_score_to_use),
+                        preference=max(first_score, second_score),
                         prompt=preferred_entry.supplemental.prompt,
                         rejected_responses=[
                             ModelResponse(
                                 speech=rejected_entry.content,
-                                preference=min(first_score_to_use, second_score_to_use),
+                                preference=min(first_score, second_score),
                                 prompt=rejected_entry.supplemental.prompt,
                             )
                         ],
@@ -299,14 +300,21 @@ class BranchedJudge(Judge):
         return start_idx
 
     def __get_speeches_for_transcript(self, transcript_idx: int):
-        first = transcript_idx // 8
-        second = 2 if transcript_idx % 8 < 4 else 3
-        third = transcript_idx // 4
-        segment_start = ((transcript_idx // 4) * 4) + 4
-        third = segment_start if transcript_idx % 4 < 2 else segment_start + 1
-        fourth = segment_start + (2 if transcript_idx % 2 == 0 else 3)
+        if self.speeches_per_round == 2:
+            first = transcript_idx // 8
+            second = 2 if transcript_idx % 8 < 4 else 3
+            third = transcript_idx // 4
+            segment_start = ((transcript_idx // 4) * 4) + 4
+            third = segment_start if transcript_idx % 4 < 2 else segment_start + 1
+            fourth = segment_start + (2 if transcript_idx % 2 == 0 else 3)
+            return [first, second, third, fourth]
+        elif self.speeches_per_round == 1:
+            first = transcript_idx // 2
+            second = (2 + (first * 2)) + (1 if transcript_idx % 1 == 1 else 0)
+            return [first, second]
+        else:
+            raise Exception("Unprocessable number of speeches per round")
 
-        return [first, second, third, fourth]
 
     def __reset_agent_transcript(self, agent: Agent, blank_transcript: Transcript, idx: int):
         transcript_to_add = copy.deepcopy(blank_transcript)

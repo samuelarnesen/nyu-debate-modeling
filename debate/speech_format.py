@@ -337,7 +337,7 @@ class SpeechFormat:
 
         individual_round_format = (
             SpeechFormat(name=constants.DEFAULT_JUDGE_NAME)
-            .add(prompt_tag=PromptTag.PRE_DEBATER_A_SPEECH_JUDGE)
+            .add(prompt_tag=PromptTag.PRE_DEBATER_A_SPEECH_JUDGE)  # this works even if the round is flipped
             .add_user_inputted_speech(
                 expected_speaker=constants.DEFAULT_DEBATER_A_NAME if not flipped else constants.DEFAULT_DEBATER_B_NAME
             )
@@ -358,7 +358,6 @@ class SpeechFormat:
             SpeechFormat(name=constants.DEFAULT_JUDGE_NAME, tokens_per_speech=150, num_speeches=num_speeches)
             .add_format(speech_format=pre_debate_speech_format)
             .add_format(speech_format=individual_round_format, repeats=num_speeches)
-            .add_format(speech_format=later_speech_format, repeats=(num_speeches - 1))
             .add_format(speech_format=decision_speech_format)
         )
 
