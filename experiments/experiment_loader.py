@@ -454,9 +454,7 @@ class ExperimentLoader:
             )
 
             flipped_question_metadata = QuestionMetadata(
-                first_debater_correct=correct_index == 0
-                if not experiment.speech_structure.flip_position_order
-                else correct_index != 0,
+                first_debater_correct=correct_index == 0,
                 question_idx=i,
                 background_text=background_text,
                 question=topic,

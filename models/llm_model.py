@@ -6,6 +6,7 @@ from prompts import RoleType
 from utils import logger_utils, string_utils, timer
 import utils.constants as constants
 
+from peft import PeftModel
 from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig
 import numpy as np
@@ -55,6 +56,7 @@ class LLModel(Model):
         tokenizer_file_path: Optional[str] = None,
         quantize: bool = True,
         generation_params: GenerationParams = GenerationParams(),
+        peft_base_model: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -88,7 +90,10 @@ class LLModel(Model):
             self.tokenizer_file_path = tokenizer_file_path or file_path
 
             self.tokenizer, self.model = self.instantiate_tokenizer_and_hf_model(
-                file_path=file_path, tokenizer_file_path=tokenizer_file_path, quantize=quantize
+                file_path=file_path,
+                tokenizer_file_path=tokenizer_file_path,
+                quantize=quantize,
+                peft_base_model=peft_base_model,
             )
             self.generation_config = self.create_default_generation_config(
                 is_debater=is_debater, generation_params=self.generation_params
@@ -168,12 +173,17 @@ class LLModel(Model):
 
     @classmethod
     def instantiate_hf_model(
-        self, file_path: str, requires_token: bool = False, use_cache: bool = True, quantize: bool = True
+        self,
+        file_path: str,
+        requires_token: bool = False,
+        use_cache: bool = True,
+        quantize: bool = True,
+        peft_base_model: Optional[str] = None,
     ) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
         local_rank = int(os.environ.get("LOCAL_RANK", "0"))
         device_map = {"": local_rank}
-        return AutoModelForCausalLM.from_pretrained(
-            pretrained_model_name_or_path=file_path,
+        model = AutoModelForCausalLM.from_pretrained(
+            pretrained_model_name_or_path=peft_base_model or file_path,
             device_map=device_map,
             trust_remote_code=True,
             use_flash_attention_2=True,
@@ -183,12 +193,25 @@ class LLModel(Model):
             torch_dtype=None if quantize else torch.bfloat16,
         )
 
+        if peft_base_model:
+            model = PeftModel.from_pretrained(model=model, model_id=file_path, adapter_name="default", is_trainable=False)
+            model = model.merge_and_unload()
+
+        return model
+
     def instantiate_tokenizer_and_hf_model(
-        self, file_path: str, requires_token: bool = False, tokenizer_file_path: Optional[str] = "", quantize: bool = True
+        self,
+        file_path: str,
+        requires_token: bool = False,
+        tokenizer_file_path: Optional[str] = "",
+        quantize: bool = True,
+        peft_base_model: Optional[str] = None,
     ) -> tuple[AutoTokenizer, AutoModelForCausalLM]:
         """Constructs the tokenizer and huggingface model at the specified filepath"""
         tokenizer = LLModel.instantiate_tokenizer(file_path=tokenizer_file_path or file_path, requires_token=requires_token)
-        hf_model = LLModel.instantiate_hf_model(file_path=file_path, requires_token=requires_token, quantize=quantize)
+        hf_model = LLModel.instantiate_hf_model(
+            file_path=file_path, requires_token=requires_token, quantize=quantize, peft_base_model=peft_base_model
+        )
         return tokenizer, hf_model
 
     @classmethod
@@ -404,6 +427,7 @@ class LlamaModel(LLModel):
         nucleus: bool = True,
         probe_hyperparams: Optional[ProbeHyperparams] = None,
         generation_params: GenerationParams = GenerationParams(),
+        peft_base_model: Optional[str] = None,
     ):
         super().__init__(
             alias=alias,
@@ -416,6 +440,7 @@ class LlamaModel(LLModel):
             probe_hyperparams=probe_hyperparams,
             max_mini_batch_size=1,
             generation_params=generation_params,
+            peft_base_model=peft_base_model,
         )
 
         if self.model:
@@ -452,6 +477,7 @@ class MistralModel(LLModel):
         nucleus: bool = True,
         probe_hyperparams: Optional[ProbeHyperparams] = None,
         generation_params: GenerationParams = GenerationParams(),
+        peft_base_model: Optional[str] = None,
     ):
         super().__init__(
             alias=alias,
@@ -464,6 +490,7 @@ class MistralModel(LLModel):
             probe_hyperparams=probe_hyperparams,
             max_mini_batch_size=1,
             generation_params=generation_params,
+            peft_base_model=peft_base_model,
         )
 
         if self.model:
@@ -501,6 +528,7 @@ class Llama3Model(LLModel):
         nucleus: bool = True,
         probe_hyperparams: Optional[ProbeHyperparams] = None,
         generation_params: GenerationParams = GenerationParams(),
+        peft_base_model: Optional[str] = None,
     ):
         super().__init__(
             alias=alias,
@@ -514,6 +542,7 @@ class Llama3Model(LLModel):
             max_mini_batch_size=1,
             quantize=False,
             generation_params=generation_params,
+            peft_base_model=peft_base_model,
         )
 
     def copy(self, alias: str, is_debater: Optional[bool] = None, nucleus: bool = False) -> LLModel:

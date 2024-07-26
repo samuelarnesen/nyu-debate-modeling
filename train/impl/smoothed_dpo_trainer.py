@@ -183,6 +183,7 @@ class SmoothedDPOTrainer(Trainer):
         ref_adapter_name: Optional[str] = None,
         reference_free: bool = False,
         force_use_ref_model: bool = False,
+        ignore_peft: bool = False,
     ):
         self.logger = logger_utils.get_default_logger(__name__)
 
@@ -220,8 +221,11 @@ class SmoothedDPOTrainer(Trainer):
         elif is_peft_available() and peft_config is not None:
             # if model is a peft model and we have a peft_config, we merge and unload it first
             if isinstance(model, PeftModel):
-                self.logger.info("Merging and unloading")
-                model = model.merge_and_unload()
+                if ignore_peft:
+                    self.logger.info("Ignoring new peft config since existing model is already a PeftModel")
+                else:
+                    self.logger.info("Merging and unloading")
+                    model = model.merge_and_unload()
 
             if ref_model is not None and not force_use_ref_model:
                 raise ValueError(
@@ -253,8 +257,11 @@ class SmoothedDPOTrainer(Trainer):
                     model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
 
             # get peft model with the given config
-            self.logger.info("Constructing peft model")
-            model = get_peft_model(model, peft_config)
+            if ignore_peft:
+                self.logger.info("NOT constructing peft model")
+            else:
+                self.logger.info("Constructing peft model")
+                model = get_peft_model(model, peft_config)
             if args.bf16 and getattr(model, "is_loaded_in_4bit", False):
                 peft_module_casting_to_bf16(model)
                 # If args.bf16 we need to explicitly call `generate` with torch amp autocast context manager

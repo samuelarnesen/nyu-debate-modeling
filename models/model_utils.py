@@ -59,6 +59,7 @@ class ModelUtils:
                 nucleus=model_settings.nucleus,
                 probe_hyperparams=model_settings.probe_hyperparams,
                 generation_params=model_settings.generation_params,
+                peft_base_model=model_settings.peft_base_model,
             )
         elif model_type == ModelType.MISTRAL:
             model = MistralModel(
@@ -68,6 +69,7 @@ class ModelUtils:
                 nucleus=model_settings.nucleus,
                 probe_hyperparams=model_settings.probe_hyperparams,
                 generation_params=model_settings.generation_params,
+                peft_base_model=model_settings.peft_base_model,
             )
         elif model_type == ModelType.LLAMA3:
             model = Llama3Model(
@@ -77,6 +79,7 @@ class ModelUtils:
                 nucleus=model_settings.nucleus,
                 probe_hyperparams=model_settings.probe_hyperparams,
                 generation_params=model_settings.generation_params,
+                peft_base_model=model_settings.peft_base_model,
             )
         elif model_type == ModelType.STUB_LLM:
             model = StubLLModel(alias=model_settings.alias, generation_params=model_settings.generation_params)

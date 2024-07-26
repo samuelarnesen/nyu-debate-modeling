@@ -12,6 +12,7 @@ from enum import Enum, auto
 from typing import Any, Optional, Union
 import copy
 import json
+import math
 import os
 import random
 import re
@@ -155,8 +156,8 @@ class BranchedJudge(Judge):
 
         self.speeches_per_round = speeches_per_round
         self.num_rounds = self.internal_judge.speech_format.num_speeches
-        self.num_transcripts = (
-            BranchedJudge.NUM_BRANCHES ** (2 * (self.num_rounds - (1 if self.speeches_per_round == 1 else 0)))
+        self.num_transcripts = BranchedJudge.NUM_BRANCHES ** (
+            2 * (self.num_rounds - (1 if self.speeches_per_round == 1 else 0))
         )
         self.transcript_idx_to_speech_idx = {i: self.__get_speeches_for_transcript(i) for i in range(self.num_transcripts)}
         self.max_expected_speeches = max([max(val) + 1 for val in self.transcript_idx_to_speech_idx.values()])
@@ -248,9 +249,8 @@ class BranchedJudge(Judge):
                 speech_to_scores[speech_idx].append(winning_probability)
 
         pairs = []
-        for i in range(self.num_transcripts // 2):
-            first_idx = i * 2
-            second_idx = (i * 2) + 1
+        for first_idx in filter(lambda x: x % 2 == 0, sorted(list(speech_to_scores.keys()))):
+            second_idx = first_idx + 1
             if first_idx in speech_to_scores and second_idx in speech_to_scores:
                 first_score = sum(speech_to_scores[first_idx]) / len(speech_to_scores[first_idx])
                 second_score = sum(speech_to_scores[second_idx]) / len(speech_to_scores[second_idx])
@@ -310,11 +310,10 @@ class BranchedJudge(Judge):
             return [first, second, third, fourth]
         elif self.speeches_per_round == 1:
             first = transcript_idx // 2
-            second = (2 + (first * 2)) + (1 if transcript_idx % 1 == 1 else 0)
+            second = (2 + (first * 2)) + (1 if transcript_idx % 2 == 1 else 0)
             return [first, second]
         else:
             raise Exception("Unprocessable number of speeches per round")
-
 
     def __reset_agent_transcript(self, agent: Agent, blank_transcript: Transcript, idx: int):
         transcript_to_add = copy.deepcopy(blank_transcript)
@@ -330,7 +329,7 @@ class BranchedJudge(Judge):
         if self.setting == MultiRoundBranchingSetting.FULL:
             return [i for i in range(self.num_transcripts)]
         elif self.setting == MultiRoundBranchingSetting.HALF:
-            if random.random() < 0.5:
+            if random.random() < 0:  # change this
                 return [0, 2, self.num_transcripts // 2, (self.num_transcripts // 2) + 2]
             else:
                 return [0, 1, self.num_transcripts // 4, (self.num_transcripts // 4) + 1]

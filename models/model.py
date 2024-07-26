@@ -82,6 +82,7 @@ class ModelSettings(BaseModel):
     probe_hyperparams: Optional[ProbeHyperparams] = None
     require_quote_validation: bool = True
     generation_params: GenerationParams = GenerationParams()
+    peft_base_model: Optional[str] = None
 
     @model_validator(mode="before")
     def verify_custom_settings(cls, values):

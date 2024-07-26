@@ -4,7 +4,7 @@ from models import LLMType, LLModel, ModelStub, TokenizerStub
 from prompts import PromptLoadingConfig
 import utils.constants as constants
 
-from peft import LoraConfig, PeftConfig, PeftType, PromptTuningInit, PromptTuningConfig, TaskType
+from peft import LoraConfig, PeftConfig, PeftModel, PeftType, PromptTuningInit, PromptTuningConfig, TaskType
 from pydantic import BaseModel, ConfigDict, model_validator, field_validator
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from trl import AutoModelForCausalLMWithValueHead
@@ -55,6 +55,13 @@ class TrainingHyperParameterConfig(BaseModel):
         if isinstance(target_module, str):
             return TargetModule[target_module.upper()]
         return target_module
+
+    @field_validator("peft_type", mode="before")
+    @classmethod
+    def validate_peft_type(cls, peft_type: str | PeftType):
+        if peft_type and isinstance(peft_type, str):
+            return PeftType[peft_type.upper()]
+        return peft_type
 
 
 class TrainingConfig(BaseModel):
@@ -156,9 +163,9 @@ class TrainUtils:
     @classmethod
     def get_peft_config(cls, config: TrainingConfig) -> Optional[PeftConfig]:
         """Gets the configuration from parameter efficient fine tuning"""
-        if not config.training_hyperparameters.peft_type.upper():
+        peft_type = config.training_hyperparameters.peft_type
+        if not peft_type:
             return None
-        peft_type = PeftType[config.training_hyperparameters.peft_type.upper()]
         llm_class = TrainUtils.get_llm_class(config=config)
 
         targets = llm_class.TARGET_MODULES
@@ -191,7 +198,11 @@ class TrainUtils:
 
     @classmethod
     def load_model(
-        cls, config: TrainingConfig, is_local: bool = False, requires_value_head: bool = False
+        cls,
+        config: TrainingConfig,
+        is_local: bool = False,
+        requires_value_head: bool = False,
+        load_as_peft_model: bool = False,
     ) -> AutoModelForCausalLM:
         """
         Loads a model using the specified configuration.
@@ -207,10 +218,19 @@ class TrainUtils:
         """
 
         if not is_local:
+            peft_config = TrainUtils.get_peft_config(config=config)
             llm_cls = TrainUtils.get_llm_class(config)
+            model_name = config.model_name if not load_as_peft_model else config.reference_model_name
             model = LLModel.instantiate_hf_model(
-                file_path=config.model_name, requires_token=config.requires_token, use_cache=False, quantize=llm_cls.QUANTIZE
+                file_path=model_name, requires_token=config.requires_token, use_cache=False, quantize=llm_cls.QUANTIZE
             )
+
+            if load_as_peft_model:
+                adapter_path = config.model_name
+                model = PeftModel.from_pretrained(
+                    model=model, model_id=adapter_path, adapter_name="default", is_trainable=True
+                )
+
             if requires_value_head:
                 local_rank = int(os.environ.get("LOCAL_RANK", "0"))
                 device_map = {"": local_rank}
@@ -219,7 +239,7 @@ class TrainUtils:
                     trust_remote_code=True,
                     use_flash_attention_2=True,
                     use_cache=False,
-                    peft_config=TrainUtils.get_peft_config(config=config),
+                    peft_config=peft_config,
                     quantization_config=LLModel.get_bnb_config() if llm_cls.QUANTIZE else None,
                     torch_dtype=None if llm_cls.QUANTIZE else torch.bfloat16,
                 )

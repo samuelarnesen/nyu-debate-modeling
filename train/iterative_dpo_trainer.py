@@ -40,7 +40,12 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
     def __init__(self, config: TrainingConfig, smooth: bool = True, is_local: bool = False):
         self.is_local = is_local
         self.tokenizer = TrainUtils.get_tokenizer(config=config, is_local=is_local)
-        self.model = TrainUtils.load_model(config=config, is_local=is_local, requires_value_head=False)
+        self.model = TrainUtils.load_model(
+            config=config,
+            is_local=is_local,
+            requires_value_head=False,
+            load_as_peft_model=bool(config.training_hyperparameters.supplemental.get("force_sft_as_reference", False)),
+        )
 
         if FLASH_ATTENTION_AVAILABLE:
             self.model = upcast_layer_for_flash_attention(self.model, torch.bfloat16)
@@ -70,7 +75,6 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
         self.dataset = TrainUtils.create_datasets(config=config, reward_type=reward_type, **reward_type_args)[0]
 
         self.config = config
-        self.trainer_cls = SmoothedDPOTrainer if smooth else DPOTrainer
         self.logger = logger_utils.get_default_logger(__name__)
 
     def train(self, epoch_size: int = 128):
@@ -114,7 +118,7 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
         train_dataset = self.get_samples(start_idx=epoch * epoch_size, epoch_size=epoch_size)
         self.logger.warn(f"Training for epoch {epoch} with loss type {loss_type}")
 
-        trainer = self.trainer_cls(
+        trainer = SmoothedDPOTrainer(
             model=self.model,
             ref_model=None,
             loss_type=loss_type,
@@ -127,6 +131,7 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
             tokenizer=self.tokenizer,
             peft_config=self.peft_config,
             callbacks=[LoggingCallback],
+            ignore_peft=bool(self.config.training_hyperparameters.supplemental.get("force_sft_as_reference", False)),
         )
         trainer.train()
         trainer.save_model()
@@ -220,7 +225,8 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
             debate_identifier=debate_identifier,
         )
 
-        num_speeches = 1  # change this later
+        num_speeches = int(self.config.supplemental.get("num_speeches", 1))
+
         original_debater_a = Debater(
             name=constants.DEFAULT_DEBATER_A_NAME,
             prompt=prompt_a,
@@ -245,19 +251,6 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
                 use_scratchpad=False,
             ),
             quotes_require_validation=True,
-        )
-
-        best_of_n_judge = Judge(
-            name=constants.DEFAULT_JUDGE_NAME,
-            prompt=prompt_judge,
-            model=self.judge_model,
-            speech_format=self.config.speech_structure[0].judge_format.get_speech_format(
-                name=constants.DEFAULT_JUDGE_NAME,
-                num_speeches=num_speeches,
-                use_scratchpad=False,
-                flipped=False,
-            ),
-            num_speeches=num_speeches,
         )
 
         random_judge = Judge(
