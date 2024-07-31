@@ -38,6 +38,7 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
     DEFAULT_JUDGE_ALIAS = "default-judge"
 
     def __init__(self, config: TrainingConfig, smooth: bool = True, is_local: bool = False):
+        self.logger = logger_utils.get_default_logger(__name__)
         self.is_local = is_local
         self.tokenizer = TrainUtils.get_tokenizer(config=config, is_local=is_local)
         self.model = TrainUtils.load_model(
@@ -72,10 +73,13 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
             for param in filter(lambda x: x in config.training_hyperparameters.supplemental, eligible_params):
                 reward_type_args[param] = config.training_hyperparameters.supplemental[param]
 
-        self.dataset = TrainUtils.create_datasets(config=config, reward_type=reward_type, **reward_type_args)[0]
+        datasets = TrainUtils.create_datasets(config=config, reward_type=reward_type, **reward_type_args)
+        self.dataset = datasets[0]
+        if len(datasets) > 1:
+            for other in datasets[1:]:
+                self.dataset.merge(other)
 
         self.config = config
-        self.logger = logger_utils.get_default_logger(__name__)
 
     def train(self, epoch_size: int = 128):
         for epoch in range(self.config.training_hyperparameters.steps):
@@ -86,15 +90,20 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
         output_name = f"{self.config.logging_and_saving_config.output_dir}{output_suffix}"
         lr_multiplier = self.config.training_hyperparameters.supplemental.get("lr_multiplier", 1)
         loss_type = self.config.training_hyperparameters.supplemental.get("loss_type", "bon")
+        num_train_epochs = (
+            self.config.training_hyperparameters.num_train_epochs
+            if not self.config.training_hyperparameters.supplemental.get("continue_training", False)
+            else self.config.training_hyperparameters.num_train_epochs + 1
+        )
         training_args = TrainingArguments(
             output_dir=output_name,
-            num_train_epochs=self.config.training_hyperparameters.num_train_epochs,
+            num_train_epochs=num_train_epochs,
             per_device_train_batch_size=self.config.training_hyperparameters.per_device_train_batch_size,
             gradient_accumulation_steps=self.config.training_hyperparameters.gradient_accumulation_steps,
             gradient_checkpointing=True,
             logging_steps=self.config.logging_and_saving_config.logging_steps,
             save_strategy="no"
-            if self.config.training_hyperparameters.steps > 1 or self.config.training_hyperparameters.num_train_epochs == 1
+            if self.config.training_hyperparameters.steps > 1 and self.config.training_hyperparameters.num_train_epochs == 1
             else "steps",
             save_steps=self.config.training_hyperparameters.supplemental.get("save_steps", 64),
             learning_rate=self.config.training_hyperparameters.learning_rate * (lr_multiplier**epoch),
@@ -118,22 +127,28 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
         train_dataset = self.get_samples(start_idx=epoch * epoch_size, epoch_size=epoch_size)
         self.logger.warn(f"Training for epoch {epoch} with loss type {loss_type}")
 
-        trainer = SmoothedDPOTrainer(
-            model=self.model,
-            ref_model=None,
-            loss_type=loss_type,
-            max_length=16384,
-            max_prompt_length=16384,
-            beta=self.config.training_hyperparameters.kl_penalty,
-            alpha=self.config.training_hyperparameters.supplemental.get("alpha", 0.005),
-            args=training_args,
-            train_dataset=train_dataset,
-            tokenizer=self.tokenizer,
-            peft_config=self.peft_config,
-            callbacks=[LoggingCallback],
-            ignore_peft=bool(self.config.training_hyperparameters.supplemental.get("force_sft_as_reference", False)),
-        )
-        trainer.train()
+        dpo_train_args = {
+            "model": self.model,
+            "ref_model": None,
+            "loss_type": loss_type,
+            "max_length": 16384,
+            "max_prompt_length": 16384,
+            "beta": self.config.training_hyperparameters.kl_penalty,
+            "alpha": self.config.training_hyperparameters.supplemental.get("alpha", 0.005),
+            "args": training_args,
+            "train_dataset": train_dataset,
+            "tokenizer": self.tokenizer,
+            "peft_config": self.peft_config,
+            "callbacks": [LoggingCallback],
+            "ignore_peft": bool(self.config.training_hyperparameters.supplemental.get("force_sft_as_reference", False)),
+        }
+
+        trainer = SmoothedDPOTrainer(**dpo_train_args)
+
+        if self.config.training_hyperparameters.supplemental.get("continue_training", False):
+            trainer.train(resume_from_checkpoint=self.config.model_name)
+        else:
+            trainer.train()
         trainer.save_model()
 
         self.model = trainer.model

@@ -30,14 +30,6 @@ class JudgePreferencesDataset(RawDataset):
         }
         self.idxs = {SplitType.TRAIN: 0, SplitType.VAL: 0, SplitType.TEST: 0}
 
-        correct_prefs = []
-        incorrect_prefs = []
-        for row in self.data[SplitType.TRAIN]:
-            if row.chosen:
-                correct_prefs.append(row.preference)
-            else:
-                incorrect_prefs.append(row.preference)
-
     def get_data(self, split: SplitType = SplitType.TRAIN) -> list[JudgePreferenceDataRow]:
         """Returns all the data for a given split"""
         if split not in self.data:
@@ -55,6 +47,11 @@ class JudgePreferencesDataset(RawDataset):
     def get_example(self, split: SplitType = SplitType.TRAIN, idx: int = 0) -> JudgePreferenceDataRow:
         """Returns an individual row in the dataset"""
         return self.data[split][idx % len(self.data[split])]
+
+    def merge(self, other: RawDataset):
+        """Combines the data from two datasets"""
+        for key in filter(lambda x: x in other.data, self.data):
+            self.data[key] += other.data[key]
 
     def __convert_batch_to_rows(self, train_data: list[tuple[str, str, str, float]]):
         return [

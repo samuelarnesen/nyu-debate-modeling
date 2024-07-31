@@ -135,6 +135,10 @@ class RawDataset(ABC):
         """Gets the name of the dataset"""
         return self.dataset_type
 
+    def merge(self, other):
+        """Combines the data from two datasets"""
+        pass
+
 
 class RawDataLoader(ABC):
     @classmethod
