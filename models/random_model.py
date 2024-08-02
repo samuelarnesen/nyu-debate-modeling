@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from models.model import Model, ModelInput, ModelResponse, SpeechStructure
 import utils.constants as constants
+from utils import logger_utils
 
 from typing import Union, Optional
 import random
@@ -19,6 +20,7 @@ class RandomModel(Model):
         """
         super().__init__(alias=alias, is_debater=is_debater)
         self.alphabet = "abcdefghijklmnopqrstuvwxyz"
+        self.logger = logger_utils.get_default_logger(__name__)
 
     def predict(
         self,
@@ -66,6 +68,7 @@ class RandomModel(Model):
             a_odds = random.random()
             b_odds = 1 - a_odds
             decision = constants.DEFAULT_DEBATER_A_NAME if a_odds > 0.5 else constants.DEFAULT_DEBATER_B_NAME
+            self.logger.debug(f"Debater A's odds: {a_odds}, Debater B's odds: {b_odds}")
             return decision, (a_odds, b_odds)
 
         if len(inputs) > 1 and num_return_sequences > 1:
