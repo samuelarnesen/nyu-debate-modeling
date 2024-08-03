@@ -36,9 +36,10 @@ class DatasetConfig(BaseModel):
     train_file_path: Optional[str] = None
     val_file_path: Optional[str] = None
     test_file_path: Optional[str] = None
-    supplemental_file_paths: dict[str, str] = {}
+    supplemental_file_paths: dict[str, str | list[str]] = {}
     split_type: SplitType = SplitType.TRAIN
     combine_train_and_val: bool = False
+    flip_sides: bool = False
 
     @field_validator("split_type", mode="before")
     @classmethod

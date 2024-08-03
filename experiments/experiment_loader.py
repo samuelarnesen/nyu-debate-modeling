@@ -74,6 +74,7 @@ class ExperimentConfig(BaseModel):
     batch_size: int
     num_speeches: int
     flip: bool = False
+    alternate: bool = False
     prompt_config: PromptLoadingConfig = PromptLoadingConfig()
     agents: AgentsConfig
     dataset: DatasetConfig
@@ -97,6 +98,12 @@ class ExperimentConfig(BaseModel):
         if isinstance(multi_round_branching, str):
             return MultiRoundBranchingSetting[multi_round_branching.upper()]
         return multi_round_branching
+
+    @model_validator(mode="after")
+    def check_fields(cls, config):
+        if config.flip and config.alternate:
+            raise ValueError("flip and alternate cannot both be True at the same time")
+        return config
 
 
 class ExperimentLoader:
@@ -165,6 +172,7 @@ class ExperimentLoader:
             test_filepath=dataset_config.test_file_path,
             supplemental_file_paths=dataset_config.supplemental_file_paths,
             combine_train_and_val=dataset_config.combine_train_and_val,
+            flip_sides=dataset_config.flip_sides,
         )
 
     @classmethod
@@ -267,7 +275,8 @@ class ExperimentLoader:
         ):
             file_paths = [first_offline_file_path, second_offline_file_path] + (
                 experiment.previous_run.file_path
-                if experiment.previous_run and experiment.previous_run.replicate_topics
+                if experiment.previous_run
+                and (experiment.previous_run.replicate_topics or experiment.previous_run.exclude_topics)
                 else []
             )
             offline_model_helpers = []
@@ -289,7 +298,7 @@ class ExperimentLoader:
             elif offline_model_helpers:
                 count = offline_model_helpers[0].get_size() * abs(count)
             else:
-                count = len(dataset.get_data()) * abs(count)
+                count = len(dataset.get_data(experiment.dataset.split_type)) * abs(count)
 
         logger.info(f"Creating {count} rounds between {first_alias} and {second_alias}")
 
@@ -525,7 +534,7 @@ class ExperimentLoader:
                     positions=(position, opponent_position),
                     best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                 )
-                if experiment.flip:
+                if experiment.flip or experiment.alternate:
                     flipped_round.second_debater.model = helper.create_offline_model(
                         alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
                         debater_name=debate_round.second_debater.name,
@@ -554,7 +563,7 @@ class ExperimentLoader:
                     positions=(position, opponent_position),
                     best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                 )
-                if experiment.flip:
+                if experiment.flip or experiment.alternate:
                     flipped_round.first_debater.model = helper.create_offline_model(
                         alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
                         debater_name=flipped_round.first_debater.name,
@@ -592,7 +601,7 @@ class ExperimentLoader:
                         background_text=question_metadata.background_text,
                     )
                 )
-                if experiment.flip:
+                if experiment.flip or experiment.alternate:
                     flipped_round.set_second_debater(
                         BestOfNDebater(
                             debater=flipped_round.second_debater,
@@ -614,7 +623,7 @@ class ExperimentLoader:
                         background_text=question_metadata.background_text,
                     )
                 )
-                if experiment.flip:
+                if experiment.flip or experiment.alternate:
                     flipped_round.set_first_debater(
                         BestOfNDebater(
                             debater=flipped_round.first_debater,
@@ -641,6 +650,7 @@ class ExperimentLoader:
                         debater_two=debate_round.second_debater,
                         setting=experiment.multi_round_branching,
                         speeches_per_round=experiment.speech_structure.num_participants,
+                        flip_first_debater=True
                     )
                 )
                 flipped_round.set_judge(
@@ -650,11 +660,13 @@ class ExperimentLoader:
                         debater_two=flipped_round.second_debater,
                         setting=experiment.multi_round_branching,
                         speeches_per_round=experiment.speech_structure.num_participants,
+                        flip_first_debater=False,
                     )
                 )
 
-            rounds.append(debate_round)
-            if experiment.flip:
+            if not experiment.alternate or i % 2 == 0:
+                rounds.append(debate_round)
+            if experiment.flip or (experiment.alternate and i % 2 == 1):
                 rounds.append(flipped_round)
 
         if len(rounds) <= 1:
@@ -668,7 +680,7 @@ class ExperimentLoader:
         current_normal_batch = []
         current_flipped_batch = []
         for i, debate_round in enumerate(rounds):
-            if i % 2 == 0 or not experiment.flip:
+            if i % 2 == 0 or (not experiment.flip and not experiment.alternate):
                 current_normal_batch.append(debate_round)
                 if len(current_normal_batch) == experiment.batch_size:
                     batched_rounds.append(ExperimentLoader.merge_debate_rounds(current_normal_batch))

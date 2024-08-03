@@ -3,6 +3,7 @@ from data.quality_debates_loader import (
     QualityDebatesDataset,
     QualityConsultancyLoader,
     QualityDebatesLoader,
+    QualityModelBasedDebateLoader,
     QualityTranscriptsLoader,
 )
 import utils.constants as constants
@@ -24,7 +25,8 @@ class QualityDataset(RawDataset):
         test_data: list[dict[str, Any]],
         override_type: Optional[DatasetType] = None,
         allow_multiple_positions_per_question: bool = False,
-        dedupe_dataset: Optional[list[QualityDebatesDataset]] = None,
+        dedupe_dataset: Optional[list[tuple[QualityDebatesDataset, bool]]] = None,
+        flip_sides: bool = False,
     ):
         """
         Dataset where each row contains a question and positions from the Quality dataset
@@ -39,10 +41,13 @@ class QualityDataset(RawDataset):
                 a separate row for every single combination of positions
             dedupe_dataset: The dataset to dedupe from. This is used because the NYU Human Debate experiments used
                 questions from the Quality dataset so if one trained on that data, then one needs to remove those
-                rows from the validation set.
+                rows from the validation set. Each entry is a dataset and a boolean indicating if one should dedupe
+                all questions that share the same story (True) or not (False).
+            flip_sides: Whether the ordering of the positions should be flipped (aka two rounds per question)
         """
         super().__init__(override_type or DatasetType.QUALITY)
         self.allow_multiple_positions_per_question = allow_multiple_positions_per_question
+        self.flip_sides = flip_sides
         self.data = {
             SplitType.TRAIN: self.__convert_batch_to_rows(train_data),
             SplitType.VAL: self.__dedupe_rows(self.__convert_batch_to_rows(val_data), dedupe_dataset),
@@ -130,8 +135,11 @@ class QualityDataset(RawDataset):
                         question["options"][second],
                     ),
                     story_title=entry["title"],
+                    debate_id="_".join([entry["title"], question["question"]]),
                 )
             )
+            if not self.flip_sides:
+                break
         return rows
 
     def __split_validation_and_test_sets(self):
@@ -151,12 +159,21 @@ class QualityDataset(RawDataset):
     def __dedupe_rows(self, rows: list[DataRow], dedupe_dataset: Optional[list[QualityDebatesDataset]] = None) -> None:
         if not dedupe_dataset:
             return rows
-        used_stories = []
-        for ds in dedupe_dataset:
-            for other_split in SplitType:
-                used_stories += [row.story_title for row in ds.get_data(split=other_split)]
 
-        return [row for row in filter(lambda x: x.story_title not in used_stories, rows)]
+        used_stories = []
+        used_debate_identifiers = []
+        for ds, dedupe_stories in dedupe_dataset:
+            for other_split in SplitType:
+                if dedupe_stories:
+                    used_stories += [row.story_title for row in ds.get_data(split=other_split)]
+                used_debate_identifiers += [row.debate_id for row in ds.get_data(split=other_split)]
+
+        return [
+            row
+            for row in filter(
+                lambda x: x.story_title not in used_stories and x.debate_id not in used_debate_identifiers, rows
+            )
+        ]
 
     def __reorder(self, rows: list[DataRow]) -> list[DataRow]:
         if len(rows) == 0:
@@ -217,6 +234,7 @@ class QualityLoader(RawDataLoader):
         allow_multiple_positions_per_question: bool = False,
         deduplicate_with_quality_debates: bool = True,
         supplemental_file_paths: Optional[dict[str, str]] = None,
+        flip_sides: bool = False,
         **kwargs,
     ) -> QualityDataset:
         """Constructs a QualityDataset"""
@@ -224,6 +242,7 @@ class QualityLoader(RawDataLoader):
             train_filepath=train_filepath, val_filepath=val_filepath, test_filepath=test_filepath
         )
 
+        dedupe_datasets = None
         if deduplicate_with_quality_debates:
             quality_debates_filepath = (supplemental_file_paths or {}).get(
                 "quality_debates_file_path", QualityTranscriptsLoader.DEFAULT_FILE_PATH
@@ -234,12 +253,22 @@ class QualityLoader(RawDataLoader):
             quality_consultancy_dataset = QualityConsultancyLoader.load(
                 full_dataset_filepath=quality_debates_filepath, deduplicate=True
             )
+            dedupe_datasets = [(quality_debates_dataset, True), (quality_consultancy_dataset, True)]
+
+        if supplemental_file_paths and "previous_runs" in supplemental_file_paths:
+            dedupe_datasets = [] if not dedupe_datasets else dedupe_datasets
+            previous_runs = (
+                supplemental_file_paths["previous_runs"]
+                if isinstance(supplemental_file_paths["previous_runs"], list)
+                else [supplemental_file_paths["previous_runs"]]
+            )
+            for fp in previous_runs:
+                dedupe_datasets.append((QualityModelBasedDebateLoader.load(full_dataset_filepath=fp), False))
         return QualityDataset(
             train_data=train_split,
             val_data=val_split,
             test_data=test_split,
             allow_multiple_positions_per_question=allow_multiple_positions_per_question,
-            dedupe_dataset=[quality_debates_dataset, quality_consultancy_dataset]
-            if deduplicate_with_quality_debates
-            else None,
+            dedupe_dataset=dedupe_datasets,
+            flip_sides=flip_sides,
         )

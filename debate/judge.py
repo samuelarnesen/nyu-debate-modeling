@@ -145,6 +145,7 @@ class BranchedJudge(Judge):
         debater_two: Debater,
         setting: MultiRoundBranchingSetting = MultiRoundBranchingSetting.FULL,
         speeches_per_round: int = 2,
+        flip_first_debater: bool = True
     ):
         self.setting = setting
         self.debater_one = debater_one
@@ -153,6 +154,7 @@ class BranchedJudge(Judge):
         self.empty_debater_one_transcript = copy.deepcopy(debater_one.transcripts[0])
         self.empty_debater_two_transcript = copy.deepcopy(debater_two.transcripts[0])
         self.empty_judge_transcript = copy.deepcopy(judge.transcripts[0])
+        self.flip_first_debater = flip_first_debater
 
         self.speeches_per_round = speeches_per_round
         self.num_rounds = self.internal_judge.speech_format.num_speeches
@@ -329,7 +331,7 @@ class BranchedJudge(Judge):
         if self.setting == MultiRoundBranchingSetting.FULL:
             return [i for i in range(self.num_transcripts)]
         elif self.setting == MultiRoundBranchingSetting.HALF:
-            if random.random() < 0:  # change this
+            if self.flip_first_debater:
                 return [0, 2, self.num_transcripts // 2, (self.num_transcripts // 2) + 2]
             else:
                 return [0, 1, self.num_transcripts // 4, (self.num_transcripts // 4) + 1]

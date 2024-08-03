@@ -20,6 +20,8 @@ from .quality_debates_loader import (
     QualityDebatesDataset,
     QualityConsultancyLoader,
     QualityDebatesLoader,
+    QualityModelBasedDebateDataset,
+    QualityModelBasedDebateLoader,
     QualityTranscriptsLoader,
 )
 from .quality_judging_loader import QualityJudgingDataset, QualityJudgingLoader

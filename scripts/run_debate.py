@@ -11,7 +11,7 @@ from datetime import datetime
 
 args = ScriptUtils.get_args()
 config = ScriptUtils.get_debate_round_script_config(args)
-start_time = str(datetime.now()).replace(" ", "_")
+start_time = str(datetime.now()).replace(" ", "_") if not args.start_time else args.start_time
 logger = logger_utils.get_default_logger(__name__)
 should_save_transcripts = not args.local
 should_save_results = not args.local

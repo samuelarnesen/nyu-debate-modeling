@@ -1,5 +1,5 @@
 from data.dataset import DataRow, DatasetType, RawDataLoader, RawDataset, SpeakerType, SpeechData, SplitType
-from utils import quote_utils
+from utils import input_utils, quote_utils
 import utils.constants as constants
 
 from typing import Any, Callable, Optional, Type
@@ -56,8 +56,16 @@ class QualityDebatesDataset(RawDataset):
         return self.data[split][idx % len(self.data[split])]
 
     def convert_batch_to_rows(self, batch: list[dict[str, Any]]):
-        return [self.__example_to_row(entry) for entry in batch]
+        rows = []
+        for entry in batch:
+            if isinstance(entry, dict):
+                rows.append(self.example_to_row(entry))
+            elif isinstance(entry, list):
+                for mini in entry:
+                    rows.append(self.example_to_row(mini))
+        return rows
 
+    @classmethod
     def __get_correct_answer(self, entry: dict[str, Any]) -> int:
         # the GPT debates don't have judge probabilities but do have the correct answer marked
         if "correctAnswer" in entry and "answers" in entry and entry["correctAnswer"] in entry["answers"]:
@@ -77,14 +85,14 @@ class QualityDebatesDataset(RawDataset):
             else 1
         )
 
-    def __example_to_row(self, entry: dict[str, Any]) -> tuple[str, Any]:
+    def example_to_row(self, entry: dict[str, Any]) -> tuple[str, Any]:
         return DataRow(
-            background_text=self.__fix_line_spacing(entry["story"]),
+            background_text=self.fix_line_spacing(entry["story"]),
             question=entry["question"].replace("\n", " "),
             positions=[x.replace("\n", " ") for x in entry["answers"]],
             speeches=[
                 SpeechData(
-                    text=self.__clean_text(turn["text"]),
+                    text=QualityDebatesDataset.clean_text(turn["text"]),
                     position=turn["index"] if turn["role"] == "Debater" else -1,
                     speaker_type=SpeakerType.DEBATER if turn["role"] == "Debater" else SpeakerType.JUDGE,
                     probabilities=None if turn["role"] == "Debater" else turn["probabilities"],
@@ -96,7 +104,8 @@ class QualityDebatesDataset(RawDataset):
             story_title=entry["storyTitle"],
         )
 
-    def __clean_text(self, text):
+    @classmethod
+    def clean_text(cls, text):
         for quote in quote_utils.extract_quotes(text):
             if "\n" in quote:
                 replacement = re.sub("\n+", "", quote)
@@ -105,7 +114,7 @@ class QualityDebatesDataset(RawDataset):
                 text = re.sub(re.escape(quote), replacement, text, flags=re.DOTALL)
         return text
 
-    def __fix_line_spacing(self, text: str):
+    def fix_line_spacing(self, text: str):
         """
         Some stories in QuALITY are in a strange format where each line has a maximum number of words (73),
         after which there is a newline. This inconsistency in formats makes exact quoting a little trickier
@@ -116,6 +125,65 @@ class QualityDebatesDataset(RawDataset):
         if max_line_length < 100:
             text = re.sub(pattern, lambda match: " " if len(match.group(0)) == 1 else match.group(0), text)
         return text
+
+
+class QualityModelBasedDebateDataset(QualityDebatesDataset):
+    def __init__(
+        self,
+        train_data: list[str, Any],
+        val_data: list[str, Any],
+        test_data: list[str, Any],
+        override_type: Optional[DatasetType] = None,
+    ):
+        super().__init__(train_data=train_data, val_data=val_data, test_data=test_data, override_type=override_type)
+
+    def example_to_row(self, entry: dict[str, Any]) -> tuple[str, Any]:
+        return DataRow(
+            background_text=super().fix_line_spacing(entry["metadata"]["background_text"]),
+            question=entry["metadata"]["question"].replace("\n", " "),
+            positions=[entry["metadata"]["first_debater_answer"], entry["metadata"]["second_debater_answer"]],
+            speeches=[
+                SpeechData(
+                    text=QualityDebatesDataset.clean_text(speech["content"]),
+                    position=0
+                    if speech["speaker"] == constants.DEFAULT_DEBATER_A_NAME
+                    else (1 if speech["speaker"] == constants.DEFAULT_DEBATER_B_NAME else -1),
+                    speaker_type=SpeakerType.DEBATER
+                    if speech["speaker"] != constants.DEFAULT_JUDGE_NAME
+                    else SpeakerType.JUDGE,
+                    probabilities=None
+                    if speech["speaker"] != constants.DEFAULT_JUDGE_NAME
+                    else speech.get("probabilistic_decision"),
+                )
+                for speech in filter(
+                    lambda x: x["speaker"]
+                    in [constants.DEFAULT_DEBATER_A_NAME, constants.DEFAULT_DEBATER_B_NAME, constants.DEFAULT_JUDGE_NAME],
+                    entry["speeches"],
+                )
+            ],
+            correct_index=0 if entry["metadata"]["first_debater_correct"] else 1,
+            debate_id=entry["metadata"]["debate_identifier"],
+            story_title=entry["metadata"]["debate_identifier"].split("_")[0],
+        )
+
+
+class QualityModelBasedDebateLoader(RawDataLoader):
+    @classmethod
+    def get_splits(cls, file_path: str, **kwargs) -> tuple[list[dict]]:
+        text_rows = input_utils.read_file_texts(base_path=file_path, input_type=input_utils.InputType.JSON_TRANSCRIPT)
+        rows = [json.loads(row) for row in text_rows]
+        return rows, [], []
+
+    @classmethod
+    def load(cls, full_dataset_filepath: Optional[str] = None, **kwargs) -> QualityModelBasedDebateDataset:
+        """Constructs a QualityDebatesDataset"""
+        full_dataset_filepath = full_dataset_filepath or QualityTranscriptsLoader.DEFAULT_FILE_PATH
+        train, val, test = QualityModelBasedDebateLoader.get_splits(file_path=full_dataset_filepath)
+        return QualityModelBasedDebateDataset(
+            train_data=train,
+            val_data=val,
+            test_data=test,
+        )
 
 
 class QualityTranscriptsLoader:
