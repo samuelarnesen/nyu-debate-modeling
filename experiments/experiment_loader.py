@@ -47,6 +47,7 @@ class TournamentType(Enum):
     ROUND_ROBIN = auto()
     SELF_PLAY_ONLY = auto()
     CUSTOM = auto()
+    CAPPED_ROUND_ROBIN = auto()
 
 
 class TournamentConfig(BaseModel):
@@ -173,7 +174,7 @@ class ExperimentLoader:
             supplemental_file_paths=dataset_config.supplemental_file_paths,
             combine_train_and_val=dataset_config.combine_train_and_val,
             flip_sides=dataset_config.flip_sides,
-            shuffle_deterministically=dataset_config.shuffle_deterministically
+            shuffle_deterministically=dataset_config.shuffle_deterministically,
         )
 
     @classmethod
@@ -188,6 +189,7 @@ class ExperimentLoader:
         split_type: SplitType,
         debater_idxs: tuple[int, int],
         count: int,
+        start_idx: int,
         model_cache: Optional[dict[str, Model]] = None,
         offline_model_helper_cache: Optional[dict[str, OfflineModelHelper]] = None,
     ) -> tuple[list[DebateRound], dict[str, Model], dict[str, OfflineModelHelper]]:
@@ -201,6 +203,7 @@ class ExperimentLoader:
             debater_idxs: which pair of debaters from the experiment config should we be creating debate rounds for
             count: the number of rounds to create. If <0, it goes through every round in the dataset. This
                 is not recommended unless you are replaying rounds offline
+            start_idx: the index in the dataset of the first item
             model_cache: a dictionary mapping a model alias (string) to a model. This is useful so that we do not
                 instantiate the same model multiple times if this function is called multiple times in a larger
                 tournament (it is not needed if you only invoke the function on one pair of models).
@@ -316,7 +319,7 @@ class ExperimentLoader:
                 speeches = []
             else:
                 example = (
-                    dataset.get_example(idx=i, split=split_type)
+                    dataset.get_example(idx=i + start_idx, split=split_type)
                     if not offline_model_helpers
                     else offline_model_helpers[0].get_example(idx=i, split_type=split_type)
                 )
@@ -700,22 +703,42 @@ class ExperimentLoader:
         return batched_rounds, model_cache, offline_model_helper_cache
 
     @classmethod
-    def get_debater_combinations(cls, experiment: ExperimentConfig):
+    def get_debater_combinations(
+        cls, experiment: ExperimentConfig, count: int = -1, dataset: Optional[RawDataset] = None
+    ) -> list[tuple[tuple[int, int], tuple[int, int]]]:
         """Returns all the combinations of debaters that would need to debate each other in a round robin tournament"""
         if not experiment.agents or not experiment.agents.debaters or len(experiment.agents.debaters) < 1:
             raise Exception("At least 1 debater must be defined")
 
+        default_start_idxs = [(0, count) for i in range(len(experiment.agents.debaters))]
         if (
             experiment.tournament.tournament_type == TournamentType.SELF_PLAY_ONLY
             or experiment.speech_structure.num_participants == 1
         ):
-            return [(i, i) for i in range(len(experiment.agents.debaters))]
+            return zip([(i, i) for i in range(len(experiment.agents.debaters))], default_start_idxs)
         elif experiment.tournament.tournament_type == TournamentType.ROUND_ROBIN:
             all_idxs = [i for i in range(len(experiment.agents.debaters))] if len(experiment.agents.debaters) > 1 else [0, 0]
             all_debater_idxs = [elem for elem in itertools.combinations(all_idxs, r=2)]
             if experiment.enable_self_debate and len(experiment.agents.debaters) > 1:
                 all_debater_idxs += [(idx, idx) for idx in all_idxs]
-            return all_debater_idxs
+            return zip(all_debater_idxs, default_start_idxs)
+        elif experiment.tournament.tournament_type == TournamentType.CAPPED_ROUND_ROBIN:
+            all_idxs = [i for i in range(len(experiment.agents.debaters))] if len(experiment.agents.debaters) > 1 else [0, 0]
+            all_debater_idxs = [elem for elem in itertools.combinations(all_idxs, r=2)]
+            if experiment.enable_self_debate and len(experiment.agents.debaters) > 1:
+                all_debater_idxs += [(idx, idx) for idx in all_idxs]
+
+            dataset_length = len(dataset.get_data(split=experiment.dataset.split_type))
+            section_length = dataset_length // len(experiment.agents.debaters)
+            start_idxs = []
+            current = 0
+            length = len(all_idxs) - 1
+            for row in range(len(all_idxs) - 1):
+                for i in range(len(all_idxs) - row - 1):
+                    section = (current + i) % len(all_idxs)
+                    start_idxs.append((section * section_length, section_length))
+                current = (current + 2) % len(all_idxs)
+            return zip(all_debater_idxs, start_idxs)
         elif experiment.tournament.tournament_type == TournamentType.CUSTOM:
             matchup_idxs = []
             aliases_to_idxs = {debater.model_settings.alias: i for i, debater in enumerate(experiment.agents.debaters)}
@@ -725,7 +748,7 @@ class ExperimentLoader:
                 if b not in aliases_to_idxs:
                     raise Exception(f"Custom matchup for ({a} v {b}) could not be created because ({b}) was not recognized")
                 matchup_idxs.append((aliases_to_idxs[a], aliases_to_idxs[b]))
-            return matchup_idxs
+            return zip(matchup_idxs, default_start_idxs)
         else:
             raise Exception("Tournament type was not recognized")
 
@@ -753,17 +776,21 @@ class ExperimentLoader:
 
         # create dataset
         dataset = ExperimentLoader.create_dataset(experiment)
+        start_idx = 0
 
         all_rounds = []
         model_cache = {}
         offline_model_helper_cache = {}
-        for combination in ExperimentLoader.get_debater_combinations(experiment=experiment):
+        for combination, (start_idx, count_to_use) in ExperimentLoader.get_debater_combinations(
+            experiment=experiment, dataset=dataset
+        ):
             rounds, model_cache, offline_model_helper_cache = ExperimentLoader.create_debate_rounds_for_combination(
                 experiment=experiment,
                 dataset=dataset,
                 split_type=experiment.dataset.split_type,
                 debater_idxs=combination,
-                count=count,
+                count=count_to_use,
+                start_idx=start_idx,
                 model_cache=model_cache,
                 offline_model_helper_cache=offline_model_helper_cache,
             )
