@@ -173,6 +173,7 @@ class ExperimentLoader:
             supplemental_file_paths=dataset_config.supplemental_file_paths,
             combine_train_and_val=dataset_config.combine_train_and_val,
             flip_sides=dataset_config.flip_sides,
+            shuffle_deterministically=dataset_config.shuffle_deterministically
         )
 
     @classmethod
@@ -650,7 +651,7 @@ class ExperimentLoader:
                         debater_two=debate_round.second_debater,
                         setting=experiment.multi_round_branching,
                         speeches_per_round=experiment.speech_structure.num_participants,
-                        flip_first_debater=True
+                        flip_first_debater=True,
                     )
                 )
                 flipped_round.set_judge(

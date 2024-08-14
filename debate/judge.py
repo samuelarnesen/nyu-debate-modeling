@@ -145,7 +145,7 @@ class BranchedJudge(Judge):
         debater_two: Debater,
         setting: MultiRoundBranchingSetting = MultiRoundBranchingSetting.FULL,
         speeches_per_round: int = 2,
-        flip_first_debater: bool = True
+        flip_first_debater: bool = True,
     ):
         self.setting = setting
         self.debater_one = debater_one

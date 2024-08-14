@@ -27,6 +27,7 @@ class QualityDataset(RawDataset):
         allow_multiple_positions_per_question: bool = False,
         dedupe_dataset: Optional[list[tuple[QualityDebatesDataset, bool]]] = None,
         flip_sides: bool = False,
+        shuffle_deterministically: bool = False,
     ):
         """
         Dataset where each row contains a question and positions from the Quality dataset
@@ -44,8 +45,11 @@ class QualityDataset(RawDataset):
                 rows from the validation set. Each entry is a dataset and a boolean indicating if one should dedupe
                 all questions that share the same story (True) or not (False).
             flip_sides: Whether the ordering of the positions should be flipped (aka two rounds per question)
+            shuffle_deterministically: Whether to use a fixed random seed for shuffling the dataset
         """
         super().__init__(override_type or DatasetType.QUALITY)
+        if shuffle_deterministically:
+            random.seed(a=123456789)
         self.allow_multiple_positions_per_question = allow_multiple_positions_per_question
         self.flip_sides = flip_sides
         self.data = {
@@ -60,6 +64,7 @@ class QualityDataset(RawDataset):
         self.data[SplitType.TRAIN] = self.__reorder(self.data[SplitType.TRAIN])
         self.data[SplitType.VAL] = self.__reorder(self.data[SplitType.VAL])
         self.data[SplitType.TEST] = self.__reorder(self.data[SplitType.TEST])
+        self.shuffle_deterministically = shuffle_deterministically
 
     def get_data(self, split: SplitType = SplitType.TRAIN) -> list[DataRow]:
         """Returns all the data for a given split"""
@@ -235,6 +240,7 @@ class QualityLoader(RawDataLoader):
         deduplicate_with_quality_debates: bool = True,
         supplemental_file_paths: Optional[dict[str, str]] = None,
         flip_sides: bool = False,
+        shuffle_deterministically: bool = False,
         **kwargs,
     ) -> QualityDataset:
         """Constructs a QualityDataset"""
@@ -271,4 +277,5 @@ class QualityLoader(RawDataLoader):
             allow_multiple_positions_per_question=allow_multiple_positions_per_question,
             dedupe_dataset=dedupe_datasets,
             flip_sides=flip_sides,
+            shuffle_deterministically=shuffle_deterministically,
         )

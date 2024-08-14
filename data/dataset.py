@@ -40,6 +40,7 @@ class DatasetConfig(BaseModel):
     split_type: SplitType = SplitType.TRAIN
     combine_train_and_val: bool = False
     flip_sides: bool = False
+    shuffle_deterministically: bool = False
 
     @field_validator("split_type", mode="before")
     @classmethod
