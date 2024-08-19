@@ -409,6 +409,8 @@ class OfflineModelHelper:
             speech for speech in filter(lambda x: self.parser.get_speaker_name(x) == debater_name_to_use, all_speeches)
         ]
 
+        assert len(relevant_speeches) > 0, f"Missing speeches for {debater_name_to_use} at index {idx}"
+
         selected_speeches = []
         contender_speeches = []
         opponent_speeches = []

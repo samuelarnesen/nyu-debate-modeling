@@ -64,8 +64,13 @@ class TournamentConfig(BaseModel):
     @model_validator(mode="after")
     @classmethod
     def verify_custom_settings(cls, config):
-        if config.custom_matchups and config.tournament_type != TournamentType.CUSTOM:
-            raise ValueError("One cannot set custom matchups if one does not select the custom tournament type")
+        if config.custom_matchups and config.tournament_type not in [
+            TournamentType.CUSTOM,
+            TournamentType.CAPPED_ROUND_ROBIN,
+        ]:
+            raise ValueError(
+                "One cannot set custom matchups if one does not select the custom or capped round robin tournament type"
+            )
         elif not config.custom_matchups and config.tournament_type == TournamentType.CUSTOM:
             raise ValueError("One cannot set the custom tournament type without setting custom matchups")
         return config
@@ -85,6 +90,7 @@ class ExperimentConfig(BaseModel):
     tournament: Optional[TournamentConfig] = TournamentConfig()
     speech_structure: SpeechFormatStructure = SpeechFormatStructure.DEFAULT_DEBATE
     multi_round_branching: MultiRoundBranchingSetting = MultiRoundBranchingSetting.NONE
+    convert_to_double_consultancy: bool = False
 
     @field_validator("speech_structure", mode="before")
     @classmethod
@@ -104,6 +110,8 @@ class ExperimentConfig(BaseModel):
     def check_fields(cls, config):
         if config.flip and config.alternate:
             raise ValueError("flip and alternate cannot both be True at the same time")
+        if config.convert_to_double_consultancy and config.speech_structure.num_participants == 1:
+            raise ValueError("if convert_to_double_consultancy is used, then a debate format should be used")
         return config
 
 
@@ -301,6 +309,8 @@ class ExperimentLoader:
                 count = 1
             elif offline_model_helpers:
                 count = offline_model_helpers[0].get_size() * abs(count)
+                if experiment.convert_to_double_consultancy:
+                    count //= 2
             else:
                 count = len(dataset.get_data(experiment.dataset.split_type)) * abs(count)
 
@@ -308,7 +318,8 @@ class ExperimentLoader:
 
         # create debate rounds
         rounds = []
-        for i in range(count):
+        for round_idx in range(count):
+            i = round_idx if not offline_model_helpers or not experiment.convert_to_double_consultancy else (round_idx * 2)
             if experiment.prompt_config.use_hardcoded_topics:
                 topic = experiment.prompt_config.hardcoded_topic_config.topic
                 position = experiment.prompt_config.hardcoded_topic_config.positions[0]
@@ -563,7 +574,7 @@ class ExperimentLoader:
                 debate_round.second_debater.model = helper.create_offline_model(
                     alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
                     debater_name=flipped_round.second_debater.name,
-                    idx=i,
+                    idx=i if not experiment.convert_to_double_consultancy else (i + 1),
                     positions=(position, opponent_position),
                     best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                 )
@@ -571,7 +582,7 @@ class ExperimentLoader:
                     flipped_round.first_debater.model = helper.create_offline_model(
                         alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
                         debater_name=flipped_round.first_debater.name,
-                        idx=i,
+                        idx=i if not experiment.convert_to_double_consultancy else (i + 1),
                         positions=(position, opponent_position)
                         if not experiment.speech_structure.flip_position_order
                         else (opponent_position, position),
@@ -738,6 +749,23 @@ class ExperimentLoader:
                     section = (current + i) % len(all_idxs)
                     start_idxs.append((section * section_length, section_length))
                 current = (current + 2) % len(all_idxs)
+
+            if experiment.tournament.custom_matchups:
+                matchup_to_key_fn = lambda x, y: "_v_".join(sorted([str(x), str(y)]))
+                matchup_set = set([matchup_to_key_fn(a, b) for a, b in experiment.tournament.custom_matchups])
+                new_debater_idxs = []
+                new_start_idxs = []
+                for debater_idxs, start_idx in zip(all_debater_idxs, start_idxs):
+                    if (
+                        matchup_to_key_fn(
+                            experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
+                            experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
+                        )
+                        in matchup_set
+                    ):
+                        new_debater_idxs.append(debater_idxs)
+                        new_start_idxs.append(start_idx)
+                return zip(new_debater_idxs, new_start_idxs)
             return zip(all_debater_idxs, start_idxs)
         elif experiment.tournament.tournament_type == TournamentType.CUSTOM:
             matchup_idxs = []
@@ -782,7 +810,7 @@ class ExperimentLoader:
         model_cache = {}
         offline_model_helper_cache = {}
         for combination, (start_idx, count_to_use) in ExperimentLoader.get_debater_combinations(
-            experiment=experiment, dataset=dataset
+            experiment=experiment, count=count, dataset=dataset
         ):
             rounds, model_cache, offline_model_helper_cache = ExperimentLoader.create_debate_rounds_for_combination(
                 experiment=experiment,

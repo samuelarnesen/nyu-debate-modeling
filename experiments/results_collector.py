@@ -27,6 +27,7 @@ import uuid
 class WinStats(BaseModel):
     matches: int = 0
     wins: int | float = 0
+    binary_wins: int = 0
     correct_matches: int = 0
     correct_wins: int | float = 0
     first_matches: int = 0
@@ -47,10 +48,15 @@ class WinStats(BaseModel):
     def get_average_second_wins(self):
         return (self.wins - self.first_wins) / max((self.matches - self.first_matches), 1)
 
+    def get_binary_win_pct(self):
+        return self.binary_wins / max(self.matches, 1)
+
     def to_json(self):
         return {
             "matches": self.matches,
             "wins": self.wins,
+            "binary_wins": self.binary_wins,
+            "binary_win_pct": self.get_binary_win_pct(),
             "correct_matches": self.correct_matches,
             "correct_wins": self.correct_wins,
             "first_matches": self.first_matches,
@@ -354,10 +360,12 @@ class ResultsCollector:
                 alias_to_stats[summary.first_debater_alias].matches += 1
                 alias_to_stats[summary.first_debater_alias].first_matches += 1
                 alias_to_stats[summary.first_debater_alias].wins += summary.first_debater_win_prob
+                alias_to_stats[summary.first_debater_alias].binary_wins += 1 if summary.first_debater_wins else 0
                 alias_to_stats[summary.first_debater_alias].first_wins += summary.first_debater_win_prob
             if summary.second_debater_speaks:
                 alias_to_stats[summary.second_debater_alias].matches += 1
                 alias_to_stats[summary.second_debater_alias].wins += summary.second_debater_win_prob
+                alias_to_stats[summary.second_debater_alias].binary_wins += 1 if not summary.first_debater_wins else 0
 
             if summary.metadata.first_debater_correct and summary.first_debater_speaks:
                 alias_to_stats[summary.first_debater_alias].correct_matches += 1
