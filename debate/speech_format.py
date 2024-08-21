@@ -60,6 +60,13 @@ class SpeechFormatType(Enum):
 
     EMPTY_ROUND_JUDGE = (auto(), lambda **kwargs: SpeechFormat.empty_round_judge_format())
 
+    OPEN_DEBATE = (auto(), lambda name, **kwargs: SpeechFormat.open_debate_format(name=name, is_debate=True))
+
+    OPEN_DEBATE_JUDGE = (
+        auto(),
+        lambda name, flipped, **kwargs: SpeechFormat.open_debate_format(name=name, flipped=flipped, is_debate=False),
+    )
+
     def __init__(self, value: int, builder_func: Callable):
         self._value_ = value
         self.builder = builder_func
@@ -88,6 +95,8 @@ class SpeechFormatStructure(Enum):
     )
 
     EMPTY_ROUND = (3, SpeechFormatType.EMPTY_ROUND, SpeechFormatType.EMPTY_ROUND_JUDGE, "Empty Prompt", 0, True)
+
+    OPEN_DEBATE = (4, SpeechFormatType.OPEN_DEBATE, SpeechFormatType.OPEN_DEBATE_JUDGE, "Open Debate Prompt", 1, True)
 
     def __new__(
         cls,
@@ -373,5 +382,21 @@ class SpeechFormat:
             .add(prompt_tag=PromptTag.JUDGE_SYSTEM)
             .add(prompt_tag=PromptTag.PRE_DEBATE_JUDGE)
             .add(prompt_tag=PromptTag.POST_ROUND_JUDGE_WITHOUT_REASONING)
+            .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
+        )
+
+    @classmethod
+    def open_debate_format(cls, name: str, flipped: bool = False, is_debate: bool = True, **kwargs) -> SpeechFormat:
+        """Generates the order of speeches that the open debater expects to receive"""
+        name_to_use = (
+            name if is_debate else (constants.DEFAULT_DEBATER_A_NAME if not flipped else constants.DEFAULT_DEBATER_B_NAME)
+        )
+        return (
+            SpeechFormat(name, tokens_per_speech=2)
+            .add(prompt_tag=PromptTag.OVERALL_SYSTEM)
+            .add(prompt_tag=PromptTag.DEBATER_SYSTEM)
+            .add(prompt_tag=PromptTag.PRE_DEBATE)
+            .add(prompt_tag=PromptTag.PRE_SPEECH)
+            .add_user_inputted_speech(expected_speaker=name_to_use)
             .add_user_inputted_speech(expected_speaker=constants.DEFAULT_JUDGE_NAME)
         )

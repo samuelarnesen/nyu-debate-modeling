@@ -19,4 +19,5 @@ from .model import BestOfNConfig, GenerationParams, Model, ModelInput, ModelResp
 from .offline_model import OfflineDataFormat, OfflineModel, OfflineModelHelper
 from .openai_model import OpenAIModel
 from .random_model import RandomModel
+from .repetitive_model import RepetitiveModel
 from .served_model import ServedModel
