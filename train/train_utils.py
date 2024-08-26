@@ -147,6 +147,7 @@ class TrainUtils:
                 test_filepath=dataset_config.test_file_path,
                 supplemental_file_paths=dataset_config.supplemental_file_paths,
                 deduplicate=deduplicate,
+                flip_sides=dataset_config.flip_sides,
                 **kwargs,
             )
             datasets.append(dataset)

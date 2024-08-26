@@ -22,7 +22,7 @@ class RowConverter:
         """Constructs a prompt from a given speech and row in the dataset"""
         position = speech.position
         if config.target == TrainingTarget.JUDGE and speech_structure.num_participants == 1:
-            all_positions = set([speech.position for speech in row.speeches])
+            all_positions = set([speech.position for speech in row.speeches]) if row.speeches else set()
             position = 0 if 0 in all_positions else 1
 
         prompt_config = PromptParser.convert_data_row_to_default_prompt_config(
@@ -57,7 +57,8 @@ class RowConverter:
         dataset: RawDataset,
         speech_structure: SpeechFormatStructure,
         filter_empty_speeches: bool = True,
-        use_gold_labels: Optional[bool] = None,
+        use_gold_labels: bool = False,
+        use_minimal_output_format: bool = False
     ) -> list[list[ModelInput]]:
         """
         Returns a list of inputs that can be used as rows in an actual training dataset.
@@ -73,6 +74,7 @@ class RowConverter:
             speech_structure: the format that that the round should be converted to (debate or consultancy)
             use_gold_labels: whether the judge should use gold labels (True) or human judgment (False). Only applicable
                 if is_debater is False
+            use_minimal_output_format: whether the judge should output in the format of "A." (T) or "Winner: Debater_A" (F)
 
         Returns:
             llm_inputs: a list of inputs of type LLMInput (or ModelInputs) that can be easily converted into a dataset
@@ -182,7 +184,9 @@ class RowConverter:
             )
 
             speech_text = "Debater_A | 100%" if row.correct_index == 0 else "Debater_B | 100%"
-            llm_inputs.append(transcript.to_model_input())
+            if use_minimal_output_format:
+                speech_text = "A." if row.correct_index == 0 else "B."
+            llm_inputs.append((transcript.to_model_input(), speech_text))
 
         return llm_inputs
 
@@ -213,6 +217,8 @@ class RowConverter:
         dataset: RawDataset,
         speech_structure: SpeechFormatStructure,
         use_model_inputs: bool = False,
+        use_gold_labels: bool = False,
+        use_minimal_output_format: bool = False
     ) -> list[list[ModelInput]]:
         """Returns a list of inputs that can be used as rows in an actual training dataset that can be
         used to train a judge. See convert_transcript() for more details"""
@@ -223,7 +229,8 @@ class RowConverter:
             is_debater=False,
             dataset=dataset,
             speech_structure=speech_structure,
-            use_gold_labels=False,
+            use_gold_labels=use_gold_labels,
+            use_minimal_output_format=use_minimal_output_format,
         )
 
     @classmethod
@@ -234,6 +241,8 @@ class RowConverter:
         dataset: RawDataset,
         speech_structure: SpeechFormatStructure,
         target: Optional[TrainingTarget] = None,
+        use_gold_labels: bool = False,
+        use_minimal_output_format: bool = False
     ) -> list[list[ModelInput]]:
         """Returns a list of inputs that can be used as rows in an actual training dataset. See
         convert_transcript() for more details"""
@@ -243,7 +252,7 @@ class RowConverter:
             )
         elif (target and target == TrainingTarget.JUDGE) or (target is None and config.target == TrainingTarget.JUDGE):
             return RowConverter.convert_all_speeches_for_judge(
-                row=row, config=config, dataset=dataset, speech_structure=speech_structure
+                row=row, config=config, dataset=dataset, speech_structure=speech_structure, use_gold_labels=use_gold_labels, use_minimal_output_format=use_minimal_output_format,
             )
         else:
             raise Exception(

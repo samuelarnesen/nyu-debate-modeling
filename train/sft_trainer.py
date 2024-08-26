@@ -39,19 +39,26 @@ class SupervisedTrainer:
 
         def validate_structure(val: Any) -> bool:
             if not isinstance(val, list):
+                print("fail 1")
                 return False
             for item in val:
                 if not isinstance(item, list):
+                    print("fail 2")
                     return False
                 for elem in item:
                     if not isinstance(elem, tuple):
+                        print("fail 3")
+                        print(type(elem[0]))
                         return False
                     if not isinstance(elem[1], str):
+                        print("fail 4")
                         return False
                     if not isinstance(elem[0], list):
+                        print("fail 5")
                         return False
                     for x in elem[0]:
                         if not isinstance(x, ModelInput):
+                            print("fail 6")
                             return False
             return True
 
@@ -67,7 +74,14 @@ class SupervisedTrainer:
         for idx, raw_dataset in enumerate(raw_datasets):
             speech_structure = config.speech_structure[idx % len(config.speech_structure)]
             transcript_lists = [
-                RowConverter.convert_row(row=row, config=config, dataset=raw_dataset, speech_structure=speech_structure)
+                RowConverter.convert_row(
+                    row=row,
+                    config=config,
+                    dataset=raw_dataset,
+                    speech_structure=speech_structure,
+                    use_gold_labels=config.training_hyperparameters.supplemental.get("gold_labels", False),
+                    use_minimal_output_format=config.training_hyperparameters.supplemental.get("use_minimal_output_format", False),
+                )
                 for i, row in enumerate(raw_dataset.get_data(split=config.dataset[idx].split_type))
             ]
 

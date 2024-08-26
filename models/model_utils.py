@@ -5,6 +5,7 @@ from models.llm_model import LlamaModel, Llama3Model, MistralModel, StubLLModel
 from models.model import Model, ModelSettings
 from models.openai_model import OpenAIModel
 from models.random_model import RandomModel
+from models.repetitive_model import RepetitiveModel
 from models.served_model import ServedModel
 
 from pydantic import BaseModel
@@ -25,6 +26,7 @@ class ModelType(Enum):
     ARBITRARY_ATTRIBUTE = 9
     ANTHROPIC = 10
     LLAMA3 = 11
+    REPETITIVE = 12
 
 
 class ModelUtils:
@@ -93,6 +95,8 @@ class ModelUtils:
             model = AnthropicModel(
                 alias=model_settings.alias, is_debater=is_debater, endpoint=model_settings.model_file_path
             )
+        elif model_type == ModelType.REPETITIVE:
+            model = RepetitiveModel(alias=model_settings.alias, is_debater=is_debater)
         elif model_type == ModelType.OFFLINE:
             model = None  # offline models aren't directly instantiated
         elif model_type == ModelType.HUMAN:

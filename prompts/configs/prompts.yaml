@@ -504,7 +504,7 @@ Open Debate Prompt:
 
         
 
-        One of the debaters will defend the position that the answer is "<POSITION>" while the other will defend that the answer is <OPPONENT_POSITION>.
+        One of the debaters will defend the position that the answer is "<POSITION>" while the other will defend that the answer is "<OPPONENT_POSITION>".
   pre_opening_speech:
     role: user
     content: 
@@ -516,7 +516,9 @@ Open Debate Prompt:
     role: user
     content: 
       - |
-        What is the answer to this question: "<TOPIC>"
+        Before we can begin, you should answer the question yourself, since you will want to defend the side that you think is correct. 
+
+        So, what is the answer to this question: "<TOPIC>"
           A: <POSITION>
           B: <OPPONENT_POSITION>
         Just output "A" or "B" -- do not include any other text.
