@@ -2,6 +2,7 @@ from debate.transcript import SpeechFormat, Transcript
 from models import BestOfNConfig, Model, ModelSettings
 from prompts import Prompt
 from utils import logger_utils
+import utils.constants as constants
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -116,7 +117,7 @@ class Agent:
 
     def get_alias(self) -> str:
         """Gets the alias of the model underpinning the agent"""
-        return self.model.alias
+        return self.model.alias if self.model else constants.DEFAULT_ALIAS
 
     def get_next_expected_speaker(self, idx: int = 0) -> Optional[str]:
         """Gets the name of the agent that this agent expects to deliver the next speech"""

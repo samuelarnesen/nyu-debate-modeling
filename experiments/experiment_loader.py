@@ -320,6 +320,9 @@ class ExperimentLoader:
         rounds = []
         for round_idx in range(count):
             i = round_idx if not offline_model_helpers or not experiment.convert_to_double_consultancy else (round_idx * 2)
+            include_first_round = (not experiment.alternate) or i % 2 == 0
+            include_flipped_round = experiment.flip or (experiment.alternate and i % 2 == 1) 
+
             if experiment.prompt_config.use_hardcoded_topics:
                 topic = experiment.prompt_config.hardcoded_topic_config.topic
                 position = experiment.prompt_config.hardcoded_topic_config.positions[0]
@@ -542,14 +545,15 @@ class ExperimentLoader:
 
             if first_offline_file_path:
                 helper = next((x for x in offline_model_helpers if x.file_path_prefix == first_offline_file_path))
-                debate_round.first_debater.model = helper.create_offline_model(
-                    alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
-                    debater_name=debate_round.first_debater.name,
-                    idx=i,
-                    positions=(position, opponent_position),
-                    best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
-                )
-                if experiment.flip or experiment.alternate:
+                if include_first_round:
+                    debate_round.first_debater.model = helper.create_offline_model(
+                        alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
+                        debater_name=debate_round.first_debater.name,
+                        idx=i,
+                        positions=(position, opponent_position),
+                        best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
+                    )
+                if include_flipped_round:
                     flipped_round.second_debater.model = helper.create_offline_model(
                         alias=experiment.agents.debaters[debater_idxs[0]].model_settings.alias,
                         debater_name=debate_round.second_debater.name,
@@ -560,7 +564,7 @@ class ExperimentLoader:
                         best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                     )
                 elif (
-                    experiment.speech_structure.flip_position_order and not debate_round.first_debater.model.speeches
+                    experiment.speech_structure.flip_position_order and not include_first_round
                 ):  # if the first debater speeches are missing in consultancy, then we should expect B to go first
                     old_judge = debate_round.judge
                     debate_round.judge = flipped_judge
@@ -569,16 +573,19 @@ class ExperimentLoader:
                     debate_round.metadata = flipped_round.metadata
                     flipped_round.metadata = debate_round.metadata
 
+
             if second_offline_file_path:
                 helper = next((x for x in offline_model_helpers if x.file_path_prefix == second_offline_file_path))
-                debate_round.second_debater.model = helper.create_offline_model(
-                    alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
-                    debater_name=flipped_round.second_debater.name,
-                    idx=i if not experiment.convert_to_double_consultancy else (i + 1),
-                    positions=(position, opponent_position),
-                    best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
-                )
-                if experiment.flip or experiment.alternate:
+
+                if include_first_round and experiment.speech_structure.num_participants > 1:
+                    debate_round.second_debater.model = helper.create_offline_model(
+                        alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
+                        debater_name=flipped_round.second_debater.name,
+                        idx=i if not experiment.convert_to_double_consultancy else (i + 1),
+                        positions=(position, opponent_position),
+                        best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
+                    )
+                if include_flipped_round and experiment.speech_structure.num_participants > 1:
                     flipped_round.first_debater.model = helper.create_offline_model(
                         alias=experiment.agents.debaters[debater_idxs[1]].model_settings.alias,
                         debater_name=flipped_round.first_debater.name,
@@ -590,7 +597,7 @@ class ExperimentLoader:
                     )
                 elif (
                     experiment.speech_structure.flip_position_order
-                    and not debate_round.first_debater.model.speeches
+                    and not include_first_round
                     and not first_offline_file_path
                 ):
                     old_judge = debate_round.judge
@@ -603,6 +610,7 @@ class ExperimentLoader:
             original_second_debater = debate_round.second_debater
             original_flipped_first_debater = flipped_round.first_debater
             original_flipped_second_debater = flipped_round.second_debater
+
 
             if experiment.agents.debaters[debater_idxs[0]].best_of_n and (
                 not first_offline_file_path or experiment.agents.debaters[debater_idxs[0]].best_of_n.recompute
@@ -629,15 +637,16 @@ class ExperimentLoader:
             if experiment.agents.debaters[debater_idxs[1]].best_of_n and (
                 not second_offline_file_path or experiment.agents.debaters[debater_idxs[1]].best_of_n.recompute
             ):
-                debate_round.set_second_debater(
-                    BestOfNDebater(
-                        debater=debate_round.second_debater,
-                        opposing_debater=original_first_debater,
-                        judge=debate_round.judge,
-                        best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
-                        background_text=question_metadata.background_text,
+                if experiment.speech_structure.num_participants > 1:
+                    debate_round.set_second_debater(
+                        BestOfNDebater(
+                            debater=debate_round.second_debater,
+                            opposing_debater=original_first_debater,
+                            judge=debate_round.judge,
+                            best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
+                            background_text=question_metadata.background_text,
+                        )
                     )
-                )
                 if experiment.flip or experiment.alternate:
                     flipped_round.set_first_debater(
                         BestOfNDebater(
@@ -679,9 +688,9 @@ class ExperimentLoader:
                     )
                 )
 
-            if not experiment.alternate or i % 2 == 0:
+            if include_first_round:
                 rounds.append(debate_round)
-            if experiment.flip or (experiment.alternate and i % 2 == 1):
+            if include_flipped_round:
                 rounds.append(flipped_round)
 
         if len(rounds) <= 1:

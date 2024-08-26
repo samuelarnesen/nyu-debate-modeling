@@ -460,8 +460,6 @@ class ResultsCollector:
                 log_likelihood += winning_param - np.logaddexp(winning_param, losing_param)
             return -log_likelihood
 
-        init_params = np.zeros(self.num_debaters)
-
         indices = {}
         for summary in self.summaries:
             if summary.first_debater_alias not in indices:
@@ -469,7 +467,9 @@ class ResultsCollector:
             if summary.second_debater_alias not in indices:
                 indices[summary.second_debater_alias] = len(indices)
 
+
         debater_skills = {alias: 0 for alias in indices}
+        init_params = np.zeros(len(debater_skills))
         if len(indices) > 1:
             optimal_params = scipy.optimize.minimize(lambda x: log_likelihood(x, indices), init_params, method="BFGS").x
             debater_skills = {debater: math.exp(skill) for debater, skill in zip(indices, optimal_params)}
@@ -647,7 +647,7 @@ class ResultsCollector:
                         quote_length_distributions[key][name].append(total_count)
                 quote_accuracy_cdf[key][name] = [elem for elem in reversed(quote_accuracy_cdf[key][name])]
                 quote_length_distributions[key][name] = [
-                    elem / total_count for elem in reversed(quote_length_distributions[key][name])
+                    elem / max(total_count, 1) for elem in reversed(quote_length_distributions[key][name])
                 ]
 
         fig, axs = plt.subplots(3, 2, figsize=(12, 8))
@@ -863,6 +863,7 @@ class ResultsCollector:
                     json.dump(all_stats, f)
         except Exception as e:
             self.logger.error(e)
+            raise e
 
         self.__organize_into_df()
 
