@@ -58,7 +58,7 @@ class RowConverter:
         speech_structure: SpeechFormatStructure,
         filter_empty_speeches: bool = True,
         use_gold_labels: bool = False,
-        use_minimal_output_format: bool = False
+        use_minimal_output_format: bool = False,
     ) -> list[list[ModelInput]]:
         """
         Returns a list of inputs that can be used as rows in an actual training dataset.
@@ -218,7 +218,7 @@ class RowConverter:
         speech_structure: SpeechFormatStructure,
         use_model_inputs: bool = False,
         use_gold_labels: bool = False,
-        use_minimal_output_format: bool = False
+        use_minimal_output_format: bool = False,
     ) -> list[list[ModelInput]]:
         """Returns a list of inputs that can be used as rows in an actual training dataset that can be
         used to train a judge. See convert_transcript() for more details"""
@@ -242,7 +242,7 @@ class RowConverter:
         speech_structure: SpeechFormatStructure,
         target: Optional[TrainingTarget] = None,
         use_gold_labels: bool = False,
-        use_minimal_output_format: bool = False
+        use_minimal_output_format: bool = False,
     ) -> list[list[ModelInput]]:
         """Returns a list of inputs that can be used as rows in an actual training dataset. See
         convert_transcript() for more details"""
@@ -252,7 +252,12 @@ class RowConverter:
             )
         elif (target and target == TrainingTarget.JUDGE) or (target is None and config.target == TrainingTarget.JUDGE):
             return RowConverter.convert_all_speeches_for_judge(
-                row=row, config=config, dataset=dataset, speech_structure=speech_structure, use_gold_labels=use_gold_labels, use_minimal_output_format=use_minimal_output_format,
+                row=row,
+                config=config,
+                dataset=dataset,
+                speech_structure=speech_structure,
+                use_gold_labels=use_gold_labels,
+                use_minimal_output_format=use_minimal_output_format,
             )
         else:
             raise Exception(

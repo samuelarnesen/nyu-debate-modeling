@@ -240,6 +240,9 @@ class OfflineModelHelper:
         self.dataset = dataset
         self.split_type = split_type
 
+        if not self.data:
+            raise Exception(f"No data could be found at {InputType.JSON.location}/{file_path_prefix}")
+
         self.data_format = (
             OfflineDataFormat.EXPANDED
             if OfflineDataFormat.EXPANDED.get_parser().validate(self.data[0])

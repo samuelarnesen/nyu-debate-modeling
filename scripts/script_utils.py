@@ -50,6 +50,8 @@ class ScriptUtils:
         parser.add_argument("--suppress_graphs", action="store_true", default=False)
         parser.add_argument("--local_rank", type=int, default=0)  # needed for multi-GPU training
         parser.add_argument("--start_time", type=str, default="")
+        parser.add_argument("--force_save_results", action="store_true", default=False)
+        parser.add_argument("--force_save_transcripts", action="store_true", default=False)
         args = parser.parse_args()
         ScriptUtils.set_log_level(args)
         return args

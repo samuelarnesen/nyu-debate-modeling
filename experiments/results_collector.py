@@ -467,7 +467,6 @@ class ResultsCollector:
             if summary.second_debater_alias not in indices:
                 indices[summary.second_debater_alias] = len(indices)
 
-
         debater_skills = {alias: 0 for alias in indices}
         init_params = np.zeros(len(debater_skills))
         if len(indices) > 1:

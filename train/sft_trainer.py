@@ -80,7 +80,9 @@ class SupervisedTrainer:
                     dataset=raw_dataset,
                     speech_structure=speech_structure,
                     use_gold_labels=config.training_hyperparameters.supplemental.get("gold_labels", False),
-                    use_minimal_output_format=config.training_hyperparameters.supplemental.get("use_minimal_output_format", False),
+                    use_minimal_output_format=config.training_hyperparameters.supplemental.get(
+                        "use_minimal_output_format", False
+                    ),
                 )
                 for i, row in enumerate(raw_dataset.get_data(split=config.dataset[idx].split_type))
             ]

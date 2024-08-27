@@ -321,7 +321,7 @@ class ExperimentLoader:
         for round_idx in range(count):
             i = round_idx if not offline_model_helpers or not experiment.convert_to_double_consultancy else (round_idx * 2)
             include_first_round = (not experiment.alternate) or i % 2 == 0
-            include_flipped_round = experiment.flip or (experiment.alternate and i % 2 == 1) 
+            include_flipped_round = experiment.flip or (experiment.alternate and i % 2 == 1)
 
             if experiment.prompt_config.use_hardcoded_topics:
                 topic = experiment.prompt_config.hardcoded_topic_config.topic
@@ -563,16 +563,11 @@ class ExperimentLoader:
                         else (opponent_position, position),
                         best_of_n_config=experiment.agents.debaters[debater_idxs[0]].best_of_n,
                     )
-                elif (
+                if (
                     experiment.speech_structure.flip_position_order and not include_first_round
                 ):  # if the first debater speeches are missing in consultancy, then we should expect B to go first
-                    old_judge = debate_round.judge
-                    debate_round.judge = flipped_judge
-                    flipped_round.judge = old_judge
-                    old_metadata = debate_round.metadata
-                    debate_round.metadata = flipped_round.metadata
-                    flipped_round.metadata = debate_round.metadata
-
+                    for metadata in flipped_round.metadata:
+                        metadata.first_debater_correct = not metadata.first_debater_correct
 
             if second_offline_file_path:
                 helper = next((x for x in offline_model_helpers if x.file_path_prefix == second_offline_file_path))
@@ -595,22 +590,18 @@ class ExperimentLoader:
                         else (opponent_position, position),
                         best_of_n_config=experiment.agents.debaters[debater_idxs[1]].best_of_n,
                     )
-                elif (
+                if (
                     experiment.speech_structure.flip_position_order
                     and not include_first_round
                     and not first_offline_file_path
                 ):
-                    old_judge = debate_round.judge
-                    debate_round.judge = flipped_judge
-                    flipped_round.judge = old_judge
-                    debate_round.metadata = flipped_round.metadata
-                    flipped_round.metadata = debate_round.metadata
+                    for metadata in flipped_round.metadata:
+                        metadata.first_debater_correct = not metadata.first_debater_correct
 
             original_first_debater = debate_round.first_debater
             original_second_debater = debate_round.second_debater
             original_flipped_first_debater = flipped_round.first_debater
             original_flipped_second_debater = flipped_round.second_debater
-
 
             if experiment.agents.debaters[debater_idxs[0]].best_of_n and (
                 not first_offline_file_path or experiment.agents.debaters[debater_idxs[0]].best_of_n.recompute
