@@ -10,6 +10,21 @@ from enum import Enum
 from typing import Literal, Optional
 
 
+class ModelType(Enum):
+    RANDOM = 1
+    LLAMA = 2
+    DETERMINISTIC = 3
+    OPENAI = 4
+    OFFLINE = 5
+    HUMAN = 6
+    MISTRAL = 7
+    STUB_LLM = 8
+    ARBITRARY_ATTRIBUTE = 9
+    ANTHROPIC = 10
+    LLAMA3 = 11
+    REPETITIVE = 12
+
+
 class BestOfNConfig(BaseModel):
     n: int
     opponent_n: int = 0
@@ -71,7 +86,7 @@ class ProbeHyperparams(BaseModel):
 
 
 class ModelSettings(BaseModel):
-    model_type: Optional[str] = None
+    model_type: str | ModelType = ModelType.RANDOM
     model_file_path: Optional[str] = None
     alias: str
     override_prompt: Optional[str] = None
@@ -99,6 +114,13 @@ class ModelSettings(BaseModel):
     @classmethod
     def validate_alias(cls, alias: str | int):
         return str(alias)
+
+    @field_validator("model_type", mode="before")
+    @classmethod
+    def validate_model_type(cls, model_type: str | ModelType):
+        if isinstance(model_type, str):
+            return ModelType[model_type.upper()]
+        return model_type
 
 
 class SpeechStructure(Enum):

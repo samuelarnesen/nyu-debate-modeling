@@ -2,7 +2,7 @@ from models.anthropic_model import AnthropicModel
 from models.arbitrary_attribute_model import ArbitraryAttributeModel
 from models.deterministic_model import DeterministicModel
 from models.llm_model import LlamaModel, Llama3Model, MistralModel, StubLLModel
-from models.model import Model, ModelSettings
+from models.model import Model, ModelSettings, ModelType
 from models.openai_model import OpenAIModel
 from models.random_model import RandomModel
 from models.repetitive_model import RepetitiveModel
@@ -12,21 +12,6 @@ from pydantic import BaseModel
 
 from enum import Enum
 from typing import Optional
-
-
-class ModelType(Enum):
-    RANDOM = 1
-    LLAMA = 2
-    DETERMINISTIC = 3
-    OPENAI = 4
-    OFFLINE = 5
-    HUMAN = 6
-    MISTRAL = 7
-    STUB_LLM = 8
-    ARBITRARY_ATTRIBUTE = 9
-    ANTHROPIC = 10
-    LLAMA3 = 11
-    REPETITIVE = 12
 
 
 class ModelUtils:
@@ -50,7 +35,7 @@ class ModelUtils:
             Exception: Raises exception if the model type does not exist or if the model cannot be instantiated
                 directly. At the moment, neither the OfflineModel nor the HumanModel can be instantiated directly.
         """
-        model_type = ModelType[model_settings.model_type.upper()]
+        model_type = model_settings.model_type
         if model_type == ModelType.RANDOM:
             model = RandomModel(alias=model_settings.alias, is_debater=is_debater)
         elif model_type == ModelType.LLAMA:

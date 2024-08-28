@@ -13,10 +13,11 @@ from debate import (
 from data import DatasetConfig, DatasetType, loader_utils, RawDataLoader, RawDataset, SplitType
 from models import Model, ModelSettings, ModelType, ModelUtils, OfflineModelHelper, ServedModel
 from prompts import Prompt, PromptConfig, PromptLoadingConfig, PromptParser
-from utils import logger_utils
+from utils import InputType, input_utils, logger_utils
 import utils.constants as constants
 
 from pydantic import BaseModel, model_validator, field_validator
+import json
 import random
 import yaml
 
@@ -48,11 +49,13 @@ class TournamentType(Enum):
     SELF_PLAY_ONLY = auto()
     CUSTOM = auto()
     CAPPED_ROUND_ROBIN = auto()
+    REPLICATION = auto()
 
 
 class TournamentConfig(BaseModel):
     tournament_type: TournamentType = TournamentType.ROUND_ROBIN
     custom_matchups: Optional[list[tuple[str, str]]] = None
+    replication_file_paths: list[str] = []
 
     @field_validator("tournament_type", mode="before")
     @classmethod
@@ -73,6 +76,10 @@ class TournamentConfig(BaseModel):
             )
         elif not config.custom_matchups and config.tournament_type == TournamentType.CUSTOM:
             raise ValueError("One cannot set the custom tournament type without setting custom matchups")
+        elif config.replication_file_paths and config.tournament_type != TournamentType.REPLICATION:
+            raise ValueError("One cannot use a replication_file_path without using the replication tournament type")
+        elif config.tournament_type == TournamentType.REPLICATION and not config.replication_file_paths:
+            raise ValueError("One cannot set the replication tournament type without setting replication file paths")
         return config
 
 
@@ -718,7 +725,13 @@ class ExperimentLoader:
         cls, experiment: ExperimentConfig, count: int = -1, dataset: Optional[RawDataset] = None
     ) -> list[tuple[tuple[int, int], tuple[int, int]]]:
         """Returns all the combinations of debaters that would need to debate each other in a round robin tournament"""
-        if not experiment.agents or not experiment.agents.debaters or len(experiment.agents.debaters) < 1:
+        logger = logger_utils.get_default_logger(__name__)
+
+        if not experiment.agents:
+            raise Exception("A judge must be defined")
+        if (
+            not experiment.agents.debaters or len(experiment.agents.debaters) < 1
+        ) and experiment.tournament.tournament_type != TournamentType.REPLICATION:
             raise Exception("At least 1 debater must be defined")
 
         default_start_idxs = [(0, count) for i in range(len(experiment.agents.debaters))]
@@ -777,6 +790,45 @@ class ExperimentLoader:
                     raise Exception(f"Custom matchup for ({a} v {b}) could not be created because ({b}) was not recognized")
                 matchup_idxs.append((aliases_to_idxs[a], aliases_to_idxs[b]))
             return zip(matchup_idxs, default_start_idxs)
+        elif experiment.tournament.tournament_type == TournamentType.REPLICATION:
+            logger.warn('Using a "replication" tournament type will mutate the underlying experiment')
+            experiment.flip = False
+            experiment.alternate = False
+            matchup_idxs = []
+            for file_path_root in experiment.tournament.replication_file_paths:
+                files = input_utils.read_file_texts(
+                    base_path=file_path_root,
+                    input_type=InputType.JSON_TRANSCRIPT,
+                    include_full_file_path=True,
+                )
+                run = input_utils.read_file_texts(base_path=file_path_root, input_type=InputType.RUN, should_load=True)[0]
+                assert len(run) == len(files), f"Run length ({len(run)}) does not match file length ({len(files)})"
+                for (_, row), (_, path) in zip(run.iterrows(), files):
+                    first_alias = row["first_debater_alias"]
+                    second_alias = row["second_debater_alias"]
+                    experiment.agents.debaters.append(
+                        AgentConfig(
+                            model_settings=ModelSettings(
+                                model_type=ModelType.OFFLINE,
+                                offline_file_path=path,
+                                alias=first_alias,
+                                require_quote_validation=False,
+                            )
+                        )
+                    )
+                    experiment.agents.debaters.append(
+                        AgentConfig(
+                            model_settings=ModelSettings(
+                                model_type=ModelType.OFFLINE,
+                                offline_file_path=path,
+                                alias=second_alias,
+                                require_quote_validation=False,
+                            )
+                        )
+                    )
+                    matchup_idxs.append(((len(experiment.agents.debaters) - 2, len(experiment.agents.debaters) - 1), (0, 1)))
+
+            return matchup_idxs
         else:
             raise Exception("Tournament type was not recognized")
 
