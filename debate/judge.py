@@ -303,13 +303,18 @@ class BranchedJudge(Judge):
 
     def __get_speeches_for_transcript(self, transcript_idx: int):
         if self.speeches_per_round == 2:
-            first = transcript_idx // 8
-            second = 2 if transcript_idx % 8 < 4 else 3
-            third = transcript_idx // 4
-            segment_start = ((transcript_idx // 4) * 4) + 4
-            third = segment_start if transcript_idx % 4 < 2 else segment_start + 1
-            fourth = segment_start + (2 if transcript_idx % 2 == 0 else 3)
-            return [first, second, third, fourth]
+            if self.internal_judge.speech_format.num_speeches == 2:
+                first = transcript_idx // 8
+                second = 2 if transcript_idx % 8 < 4 else 3
+                third = transcript_idx // 4
+                segment_start = ((transcript_idx // 4) * 4) + 4
+                third = segment_start if transcript_idx % 4 < 2 else segment_start + 1
+                fourth = segment_start + (2 if transcript_idx % 2 == 0 else 3)
+                return [first, second, third, fourth]
+            else:
+                first = transcript_idx // 2
+                second = 2 + (transcript_idx % 2)
+                return [first, second]
         elif self.speeches_per_round == 1:
             first = transcript_idx // 2
             second = (2 + (first * 2)) + (1 if transcript_idx % 2 == 1 else 0)
@@ -332,9 +337,10 @@ class BranchedJudge(Judge):
             return [i for i in range(self.num_transcripts)]
         elif self.setting == MultiRoundBranchingSetting.HALF:
             if self.flip_first_debater:
-                return [0, 2, self.num_transcripts // 2, (self.num_transcripts // 2) + 2]
+                candidates = [0, 2, self.num_transcripts // 2, (self.num_transcripts // 2) + 2]
             else:
-                return [0, 1, self.num_transcripts // 4, (self.num_transcripts // 4) + 1]
+                candidates = [0, 1, self.num_transcripts // 4, (self.num_transcripts // 4) + 1]
+            return candidates[0:2] if self.internal_judge.speech_format.num_speeches == 1 else candidates
         elif self.setting == MultiRoundBranchingSetting.SINGLE_RANDOM:
             random_number = random.random()
             if random_number < 0.25:
