@@ -942,31 +942,25 @@ Double_Consultancy_Test:
   tournament:
     tournament_type: self_play_only
 Operational_Test:
-  batch_size: 8
+  batch_size: 1
   num_speeches: 1
-  flip: True
+  flip: False
   enable_self_debate: False
-  speech_structure: default_debate
+  speech_structure: open_debate
   agents:
     debaters:
       - model_settings:
-          model_type: offline
-          alias: "experiment-42-0.25"
+          model_type: repetitive
+          alias: "random-1"
           require_quote_validation: False
-          offline_file_path: 2024-07-07_17:44:07.520712
-      - model_settings:
-          model_type: offline
-          alias: "sft" #"logit-1"
-          require_quote_validation: False
-          offline_file_path: 2024-06-13_22:00:40.102072 
     judge:
       model_settings:
-        model_type: openai
-        alias: openai-judge
-        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+        model_type: repetitive
+        alias: repetitive-judge
   dataset:
     dataset_type: quality
     split_type: val
+    shuffle_deterministically: False
 Self_Test:
   batch_size: 8
   num_speeches: 1
@@ -1077,7 +1071,7 @@ Multi_Round_Branching_Test:
   flip: False
   enable_self_debate: True
   speech_structure: default_debate
-  multi_round_branching: full
+  multi_round_branching: single_random
   previous_run:
     file_path: 2024-07-01_03:30:33.701924
     replicate_topics: True
@@ -1095,3 +1089,477 @@ Multi_Round_Branching_Test:
   dataset:
     dataset_type: quality
     split_type: train
+Multi_Round_Consultancy_Test:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  multi_round_branching: none
+  agents:
+    debaters:
+      - model_settings:
+          alias: alias-1
+          model_type: random
+          require_quote_validation: True
+    judge:
+      model_settings:
+        model_type: random
+        alias: random-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+MultiTurn_Offline_Test:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  alternate: True
+  enable_self_debate: False
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: offline
+          alias: "Accumulated"
+          offline_file_path: 2024-07-31_14:17:36.456231
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "SavedOptimizer"
+          offline_file_path: 2024-07-31_14:17:36.456231
+          require_quote_validation: False
+    judge:
+      model_settings:
+        model_type: random
+        alias: random-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+MultiTurn_Consultancy_Offline_Test:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  alternate: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: offline
+          alias: "Accumulated"
+          offline_file_path: 2024-08-01_13:54:12.179849
+          require_quote_validation: False
+    judge:
+      model_settings:
+        model_type: random
+        alias: random-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+MultiTurn_Consultancy_Offline_SFT_Test:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  alternate: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: offline
+          alias: "SFT"
+          offline_file_path: 2024-07-27_16:54:10.618364
+          require_quote_validation: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: gpt-4o-mini
+  dataset:
+    dataset_type: quality
+    split_type: val
+Consultancy_HalfBranched_Test:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  multi_round_branching: half
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: random
+          alias: "random-model"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: random
+        alias: random-judge
+  dataset:
+    dataset_type: quality
+    split_type: train
+    flip_sides: True
+Consultancy_Double_Test:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  convert_to_double_consultancy: True
+  agents:
+    debaters:
+      - model_settings:
+          model_type: offline
+          alias: "32"
+          offline_file_path: 2024-08-15_07:22:17.318054
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "48"
+          offline_file_path: 2024-08-14_23:04:03.043977
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "80"
+          offline_file_path: 2024-08-15_03:16:21.141484
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "112"
+          offline_file_path: 2024-08-14_14:54:16.005242
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "144"
+          offline_file_path: 2024-08-14_19:07:02.708107
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "176"
+          offline_file_path: 2024-08-14_23:53:24.139738
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "208"
+          offline_file_path: 2024-08-15_02:39:41.181884
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "240"
+          offline_file_path: 2024-08-12_16:37:15.081946
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "288"
+          offline_file_path: 2024-08-15_06:50:13.342485
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "336"
+          offline_file_path: 2024-08-14_22:22:12.542108
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "384"
+          offline_file_path: 2024-08-15_01:46:08.240972
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "432"
+          offline_file_path: 2024-08-14_21:40:59.420742
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "464"
+          offline_file_path: 2024-08-12_16:35:22.488292
+          require_quote_validation: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  tournament:
+    tournament_type: self_play_only
+  dataset:
+    dataset_type: quality
+    split_type: val
+Consultancy_Double_Mini_Test:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  convert_to_double_consultancy: True
+  agents:
+    debaters:
+      - model_settings:
+          model_type: offline
+          alias: "16"
+          offline_file_path: 2024-08-19_21:03:31.345176
+          require_quote_validation: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  tournament:
+    tournament_type: self_play_only
+  dataset:
+    dataset_type: quality
+    split_type: val
+Consultancy_Cross_Judge_Replication_Test:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  alternate: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  convert_to_double_consultancy: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: offline
+          alias: "16"
+          offline_file_path: 2024-08-19_21:03:31.345176
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "32"
+          offline_file_path: 2024-08-15_23:12:09.358267
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "48"
+          offline_file_path: 2024-08-15_14:59:59.491615
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "80"
+          offline_file_path: 2024-08-15_19:06:34.994108qu
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "112"
+          offline_file_path: 2024-08-15_20:26:18.705897
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "144"
+          offline_file_path: 2024-08-16_00:30:28.128562
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "176"
+          offline_file_path: 2024-08-16_04:52:26.820155
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "208"
+          offline_file_path: 2024-08-16_01:04:07.900095
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "240"
+          offline_file_path: 2024-08-15_16:18:18.907652
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "288"
+          offline_file_path: 2024-08-16_05:25:35.829472
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "336"
+          offline_file_path: 2024-08-15_20:32:02.128989
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "384"
+          offline_file_path: 2024-08-15_20:24:29.490883
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "432"
+          offline_file_path: 2024-08-15_16:11:27.153546
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "464"
+          offline_file_path: 2024-08-15_16:07:47.509832
+          require_quote_validation: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        offline_file_path: gpt-4o
+  tournament:
+    tournament_type: self_play_only
+  dataset:
+    dataset_type: quality
+    split_type: val
+Pure_Replication_Test:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  alternate: False
+  enable_self_debate: False
+  speech_structure: default_debate
+  convert_to_double_consultancy: False
+  agents:
+    debaters: []
+    judge:
+      model_settings:
+        model_type: random
+        alias: random-judge
+  tournament:
+    tournament_type: replication
+    replication_file_paths:
+      - 2024-08-18_00:35:30.743648
+  dataset:
+    dataset_type: quality
+    split_type: val
+One_Round_Branching_Test:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  alternate: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  convert_to_double_consultancy: False
+  multi_round_branching: half
+  agents:
+    debaters:
+      - model_settings:
+          model_type: random
+          alias: "test-debater"
+          require_quote_validation: False
+    judge:
+      model_settings:
+        model_type: random
+        alias: "test-judge"
+  dataset:
+    dataset_type: quality
+    split_type: val
+    flip_sides: False
+One_Round_Branching_Consultancy_Test:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  alternate: False
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  convert_to_double_consultancy: False
+  multi_round_branching: full
+  agents:
+    debaters:
+      - model_settings:
+          model_type: random
+          alias: "test-debater"
+          require_quote_validation: False
+    judge:
+      model_settings:
+        model_type: random
+        alias: "test-judge"
+  dataset:
+    dataset_type: quality
+    split_type: val
+    flip_sides: False
+Consultancy_Double_One_Turn_Test:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  convert_to_double_consultancy: True
+  agents:
+    debaters:
+      - model_settings:
+          model_type: offline
+          alias: "0"
+          offline_file_path: 2024-09-07_14:43:26.659182
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "16"
+          offline_file_path: 2024-09-07_17:07:59.289634
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "32"
+          offline_file_path: 2024-09-07_19:24:49.406765
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "48"
+          offline_file_path: 2024-09-07_21:44:26.666933
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "64"
+          offline_file_path: 2024-09-07_23:58:40.748511
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "80"
+          offline_file_path: 2024-09-08_02:15:44.617827
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "96"
+          offline_file_path: 2024-09-08_04:33:41.743884
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "112"
+          offline_file_path: 2024-09-08_06:56:02.579992
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "128"
+          offline_file_path: 2024-09-08_09:41:34.244361
+          require_quote_validation: False
+      - model_settings:
+          model_type: offline
+          alias: "144"
+          offline_file_path: 2024-09-08_16:12:34.527394
+          require_quote_validation: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  tournament:
+    tournament_type: self_play_only
+  dataset:
+    dataset_type: quality
+    split_type: val
+Consultancy_Double_SFT_Test:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  convert_to_double_consultancy: True
+  agents:
+    debaters:
+      - model_settings:
+          model_type: offline
+          alias: "SFT"
+          offline_file_path: 2024-07-27_16:54:10.618364
+          require_quote_validation: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  tournament:
+    tournament_type: self_play_only
+  dataset:
+    dataset_type: quality
+    split_type: val

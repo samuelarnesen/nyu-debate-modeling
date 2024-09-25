@@ -1,0 +1,1498 @@
+val - small v big:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: False
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-805-FullTrainDebate-test
+          alias: "small"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-806-FullTrainDebateBigBatch-test
+          alias: "big"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+    flip_sides: False
+val - dpo v sft:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-805-FullTrainDebate-test
+          alias: "r1-dpo"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "sft"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+    flip_sides: False
+val - SFT:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "Experiment SFT"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - SFT-Consultancy:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+          alias: "Experiment SFT-Consultancy"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T-R2-Consultancy - 16:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-720-MTR2ConsultancyReal/checkpoint-16
+          alias: "Experiment 2T-R2-Consultancy - 0.17"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T-R2-Consultancy - 32:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-720-MTR2ConsultancyReal/checkpoint-32
+          alias: "Experiment 2T-R2-Consultancy - 0.33"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T-R2-Consultancy - 48:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-720-MTR2ConsultancyReal/checkpoint-48
+          alias: "Experiment 2T-R2-Consultancy - 0.5"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T-R2-Consultancy - 64:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-720-MTR2ConsultancyReal/checkpoint-64
+          alias: "Experiment 2T-R2-Consultancy - 0.67"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T-R2-Consultancy - 80:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-720-MTR2ConsultancyReal/checkpoint-80
+          alias: "Experiment 2T-R2-Consultancy - 0.83"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T-R2-Consultancy - 96:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-720-MTR2ConsultancyReal/checkpoint-96
+          alias: "Experiment 2T-R2-Consultancy - 1.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T-R1-Consultancy - 16:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-719-ConsultancyTrue-test/checkpoint-16
+          alias: "Experiment 2T-R1-Consultancy - 0.17"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T-R1-Consultancy - 32:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-719-ConsultancyTrue-test/checkpoint-32
+          alias: "Experiment 2T-R1-Consultancy - 0.33"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T-R1-Consultancy - 48:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-719-ConsultancyTrue-test/checkpoint-48
+          alias: "Experiment 2T-R1-Consultancy - 0.5"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T-R1-Consultancy - 64:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-719-ConsultancyTrue-test/checkpoint-64
+          alias: "Experiment 2T-R1-Consultancy - 0.67"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T-R1-Consultancy - 80:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-719-ConsultancyTrue-test/checkpoint-80
+          alias: "Experiment 2T-R1-Consultancy - 0.83"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T-R1-Consultancy - 96:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-719-ConsultancyTrue-test/checkpoint-96
+          alias: "Experiment 2T-R1-Consultancy - 1.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T - 112:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-729-AccumulatedAgain-test/checkpoint-112
+          alias: "Experiment 2T - 1.17"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T - 128:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-729-AccumulatedAgain-test/checkpoint-128
+          alias: "Experiment 2T - 1.32"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T - 144:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-729-AccumulatedAgain-test/checkpoint-144
+          alias: "Experiment 2T - 1.5"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T - 160:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-729-AccumulatedAgain-test/checkpoint-160
+          alias: "Experiment 2T - 1.67"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T - 176:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-729-AccumulatedAgain-test/checkpoint-176
+          alias: "Experiment 2T - 1.83"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T - 192:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-729-AccumulatedAgain-test
+          alias: "Experiment 2T - 2.00"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T - 16:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-729-AccumulatedAgain-test/checkpoint-16
+          alias: "Experiment 2T - 0.17"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T - 32:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-729-AccumulatedAgain-test/checkpoint-32
+          alias: "Experiment 2T - 0.33"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T - 48:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-729-AccumulatedAgain-test/checkpoint-48
+          alias: "Experiment 2T - 0.5"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T - 64:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-729-AccumulatedAgain-test/checkpoint-64
+          alias: "Experiment 2T - 0.67"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T - 80:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-729-AccumulatedAgain-test/checkpoint-80
+          alias: "Experiment 2T - 0.83"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment 2T - 96:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-729-AccumulatedAgain-test/checkpoint-96
+          alias: "Experiment 2T - 1.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Generation - Llama3 - MultiRound - HalfBranched - FullTrain - Consultancy:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  multi_round_branching: full
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+          alias: "llama3-sft-consultancy"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
+    flip_sides: False
+val - old v new:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: False
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-805-FullTrainDebate-test
+          alias: "new"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-701-ProbLowTemp-test/checkpoint-96
+          alias: "old"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+    flip_sides: False
+val - dpo - 1:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-805-FullTrainDebate-test
+          alias: "r1-dpo"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+    flip_sides: False
+Data Generation - Llama3 - MultiRound - HalfBranched - FullTrain:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  multi_round_branching: half
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "llama3-sft"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
+    flip_sides: False
+val - SavedOptim-Consultancy-Consultancy:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-730-ConsultancySavedOptimizer
+          alias: "Experiment SavedOptim-Consultancy"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - Accumulated-Consultancy-Mini:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: offline
+          alias: "Accumulated"
+          offline_file_path: /vast/spa9663/outputs/transcripts/2024-08-01_13:54:12.179849
+          require_quote_validation: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: gpt-4o-mini
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - Accumulated-4:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-731-ConsultancyAccumulated
+          alias: "Experiment Accumulated-Consultancy"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment accumulated:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-727-Accumulated-test
+          alias: "Experiment Accumulated"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+temp - check:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: False
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-710-MultiTurnImproved-test/checkpoint-96
+          alias: "Experiment 2T-R1 - 1.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-727-Accumulated-test
+          alias: "Experiment Alt - Final"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+val - experiment accumulated v optimizer:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: False
+  speech_structure: default_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-727-Accumulated-test
+          alias: "Accumulated"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-730-SavedOptimizer-test
+          alias: "Saved Optimizer"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: random
+        alias: random-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Generation - Llama3 - MultiRound - Consultancy:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  multi_round_branching: full
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-consultant-alt
+          alias: "llama3-consultant-53-1" # messed up on the name here but thats ok
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
+Data Generation - Llama3 - 1Round - 2Iter - Consultancy:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-722-STR1ConsultancyReal/checkpoint-64
+          alias: "llama3-57-1-consultant"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+        best_of_n:
+          n: 2
+          opponent_n: 1
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
+Data Generation - Llama3 - 1Round - 2Iter:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  enable_self_debate: True
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-701-ProbLowTemp-test/checkpoint-64
+          alias: "llama3-36-1"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+        best_of_n:
+          n: 2
+          opponent_n: 1
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
+Data Generation - Llama3 - 1Round - Consultancy:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  previous_run:
+    file_path: 2024-06-18_11:33:33.673488
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+          alias: "llama3-sft-consultant"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+        best_of_n:
+          n: 2
+          opponent_n: 1
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
+Data Generation - Llama3 - 1Round - 2Turn:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  enable_self_debate: True
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-701-ProbLowTemp-test/checkpoint-96
+          alias: "llama3-36-1"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+        best_of_n:
+          n: 2
+          opponent_n: 1
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
+Data Generation - Llama3 - MultiRound - HalfBranched - 1Epoch:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  multi_round_branching: half
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-710-MultiTurnImproved-test/checkpoint-96
+          alias: "llama3-46-1"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
+Data Generation - Llama3 - MultiRound - Consultancy - 1Epoch:
+  batch_size: 1
+  num_speeches: 2
+  flip: True
+  enable_self_debate: True
+  multi_round_branching: full
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-DPO-719-ConsultancyTrue-test/checkpoint-96
+          alias: "llama3-consultant-53-1"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
+Data Generation - Llama3 - MultiRound - HalfBranched:
+  batch_size: 1
+  num_speeches: 2
+  flip: False
+  enable_self_debate: True
+  multi_round_branching: half
+  previous_run:
+    file_path: 2024-06-18_11:33:33.673488
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "llama3-sft"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
+Data Generation - Llama3:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  enable_self_debate: True
+  previous_run:
+    file_path: 2024-06-18_11:33:33.673488
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "llama3-sft"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.5
+        best_of_n:
+          n: 2
+          opponent_n: 1
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
+Data Generation - Debate - SFT:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  enable_self_debate: True
+  previous_run:
+    file_path: 2024-06-18_11:33:33.673488
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+          alias: "sft"
+    judge:
+      model_settings:
+        model_type: openai
+        alias: openai-judge
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: train
+Data Validation - Llama3 - Judge:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  enable_self_debate: False
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "llama3-sft-debater"
+          require_quote_validation: True
+    judge:
+      model_settings:
+          model_type: llama3
+          model_file_path: /vast/spa9663/models/base_models/llama3-8b-262k
+          alias: "llama3-base-debater"
+          require_quote_validation: False
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Validation - SFT:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  enable_self_debate: True
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-unified-merged
+          alias: "sft"
+        best_of_n:
+          n: 8
+          opponent_n: 2
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: random
+        alias: "random-judge"
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Validation - Human:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  enable_self_debate: True
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b
+          alias: "sft"
+        best_of_n:
+          n: 8
+          opponent_n: 2
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: random
+        alias: "random-judge"
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Validation - Llama:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  enable_self_debate: True
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama
+          model_file_path: /vast/spa9663/models/trained_models/Llama-2-13B-32K-Merged-Full-4
+          alias: "llama"
+        best_of_n:
+          n: 8
+          opponent_n: 2
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: random
+        alias: "random-judge"
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Generation - Consultant:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-consultant-adapter
+          alias: "sft-consultant"
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: random
+        alias: "random-judge"
+  dataset:
+    dataset_type: quality
+    split_type: train
+Data Validation - SFT - Consultant:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-consultant-adapter/checkpoint-474
+          alias: "sft-consultant"
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: random
+        alias: "random-judge"
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Validation - Human - Consultant:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-consultant-adapter-human
+          alias: "human-consultant"
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: random
+        alias: "random-judge"
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Validation - Llama - Consultant:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-consultant-adapter-llama
+          alias: "human-consultant"
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: random
+        alias: "random-judge"
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Validation - DPO - Consultant - 2:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-41-consultant/checkpoint-112
+          alias: "dpo-consultant-2"
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: "openai-judge"
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Validation - DPO - Consultant - 3:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-41-consultant/checkpoint-168
+          alias: "dpo-consultant-3"
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: "openai-judge"
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
+Data Validation - DPO - Consultant:
+  batch_size: 1
+  num_speeches: 1
+  flip: True
+  enable_self_debate: True
+  speech_structure: default_consultancy
+  previous_run:
+    file_path: 2024-01-30_18:00:30.899060
+    replicate_topics: True
+    merge_results: False
+  agents:
+    debaters:
+      - model_settings:
+          model_type: mistral
+          model_file_path: /vast/spa9663/models/trained_models/mixtral-8x7b-dpo-41-consultant
+          alias: "dpo-consultant"
+        best_of_n:
+          n: 8
+          opponent_n: 0
+          maxmin: False
+    judge:
+      model_settings:
+        model_type: openai
+        alias: "openai-judge"
+        model_file_path: ft:gpt-4-0613:nyu-arg::90NW3Tbx
+  dataset:
+    dataset_type: quality
+    split_type: val
