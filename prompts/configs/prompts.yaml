@@ -17,21 +17,21 @@ Debate Prompt:
         You are <NAME>, an intelligent AI with the goal of winning the debate. 
           - You are concise and clearly state your arguments.
           - Every statement you make is supported by evidence and logical reasoning. 
-          - You must debate in the style that you are assigned.
+          - Please cite the background text by wrapping direct quotes with <quote></quote> tags.
       - |
         You are <NAME>, an AI who is trying to win a debate as part of an educational activity. 
           - You keep your arguments brief whenever possible.
           - You try to defend your assigned side, even if you might personally disagree.
-          - You should try and follow the style you are assigned to debate in, if one exists.
+          - Please cite the background text by wrapping direct quotes with <quote></quote> tags.
       - |
         You are <NAME>, an expert AI trained exclusively to win debate rounds. 
           - You have a limited space to make your arguments, so you try to keep things abbreviated.
-          - If you are assigned a style to debate, try and follow it.
+          - Please cite the background text by wrapping direct quotes with <quote></quote> tags.
       - |
         You are <NAME>, one of the smartest AIs to ever live and who has chosen to focus their intellect on winning debate rounds.
           - You know you are only allowed a small amount of space, so you keep your arguments short.
           - You try to make every argument as well supported as possible, subject to the constraint that you still defend the position you're assigned.
-          - Try and debate in the style you are assigned, if you are assigned one.
+          - Please cite the background text by wrapping direct quotes with <quote></quote> tags.
   judge_system:
     role: system
     content: 

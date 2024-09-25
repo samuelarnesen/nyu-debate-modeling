@@ -159,7 +159,7 @@ class BranchedJudge(Judge):
         self.speeches_per_round = speeches_per_round
         self.num_rounds = self.internal_judge.speech_format.num_speeches
         self.num_transcripts = BranchedJudge.NUM_BRANCHES ** (
-            2 * (self.num_rounds - (1 if self.speeches_per_round == 1 else 0))
+            max(1, 2 * (self.num_rounds - (1 if self.speeches_per_round == 1 else 0)))
         )
         self.transcript_idx_to_speech_idx = {i: self.__get_speeches_for_transcript(i) for i in range(self.num_transcripts)}
         self.max_expected_speeches = max([max(val) + 1 for val in self.transcript_idx_to_speech_idx.values()])
@@ -316,9 +316,11 @@ class BranchedJudge(Judge):
                 second = 2 + (transcript_idx % 2)
                 return [first, second]
         elif self.speeches_per_round == 1:
-            first = transcript_idx // 2
-            second = (2 + (first * 2)) + (1 if transcript_idx % 2 == 1 else 0)
-            return [first, second]
+            if self.internal_judge.speech_format.num_speeches == 2:
+                first = transcript_idx // 2
+                second = (2 + (first * 2)) + (1 if transcript_idx % 2 == 1 else 0)
+            else:
+                return [(2 * (transcript_idx // 2)) + (transcript_idx % 2)]
         else:
             raise Exception("Unprocessable number of speeches per round")
 
