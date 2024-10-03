@@ -170,9 +170,7 @@ class IterativeDirectPreferenceTrainer:
             new_samples = self.generate_one_round_samples(idx=start_idx + i)
             samples.extend(new_samples)
 
-        return self.convert_dataset(
-            [JudgePreferencesDataset(train_data=samples, val_data=[], test_data=[])]
-        )
+        return self.convert_dataset([JudgePreferencesDataset(train_data=samples, val_data=[], test_data=[])])
 
     def generate_one_round_samples(self, idx: int):
         self.logger.warn(f"Starting round {idx}")
@@ -186,7 +184,9 @@ class IterativeDirectPreferenceTrainer:
         )
         internal_model.model = self.model
         internal_model.tokenizer = self.tokenizer
-        internal_model.generation_config = internal_model.create_default_generation_config(is_debater=True, generation_params=GenerationParams())
+        internal_model.generation_config = internal_model.create_default_generation_config(
+            is_debater=True, generation_params=GenerationParams()
+        )
         internal_model.instantiated_model = True
         internal_model.is_debater = True
 

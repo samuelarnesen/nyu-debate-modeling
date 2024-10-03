@@ -147,17 +147,24 @@ if __name__ == "__main__":
             if not is_truncated:
                 gpt_debates.append(debate)
 
+    """
     with open(output_gpt_only, "w+") as f:
         for debate in gpt_debates:
             f.write(json.dumps(debate))
             f.write("\n")
+    """
 
     with open("data/datasets/quality-debates/debates-readable.jsonl", "r") as human_f:
         lines = human_f.readlines()
         human_debates = [json.loads(line) for line in lines]
 
+    """
     with open(output_combined, "w") as f:
         all_debates = human_debates + gpt_debates
         for debate in all_debates:
             f.write(json.dumps(debate))
             f.write("\n")
+    """
+
+    print(len(gpt_debates))
+    print(len(human_debates))
