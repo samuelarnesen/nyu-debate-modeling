@@ -1,9 +1,8 @@
 from data import DataRow, JudgePreferencesLoader, JudgePreferencesDataset, RawDataset, RewardType, SplitType
 from debate import BestOfNDebater, Debater, DebateRound, Judge, QuestionMetadata
-from models import BestOfNConfig, OpenAIModel, RandomModel
+from models import BestOfNConfig, GenerationParams, OpenAIModel, RandomModel
 from prompts import PromptConfig, PromptParser
 from train.impl import SmoothedDPOTrainer
-from train.dpo_trainer import DirectPreferenceTrainer
 from train.train_utils import TrainUtils, TrainingConfig, TrainingTarget
 from utils import LoggingCallback, logger_utils
 import utils.constants as constants
@@ -31,7 +30,7 @@ except ImportError as e:
     FLASH_ATTENTION_AVAILABLE = False
 
 
-class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
+class IterativeDirectPreferenceTrainer:
     """Class for iteratively training a model using Direct Preference Optimization"""
 
     DEFAULT_DEBATER_ALIAS = "default-debater"
@@ -80,6 +79,15 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
                 self.dataset.merge(other)
 
         self.config = config
+
+    def convert_dataset(self, raw_datasets: list[RawDataset]) -> Dataset:
+        """Converts a dataset (abstraction used in this codebase) into a Dataset object (abstraction
+        used by huggingface's trainer objects)"""
+        rows = []
+        for raw_dataset in raw_datasets:
+            rows += [row.dict() for row in raw_dataset.get_data(split=SplitType.TRAIN)]
+        df = pd.DataFrame(data=rows)
+        return Dataset.from_pandas(df).shuffle()
 
     def train(self, epoch_size: int = 128):
         for epoch in range(self.config.training_hyperparameters.steps):
@@ -155,14 +163,14 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
 
     def get_samples(self, start_idx: int, epoch_size: int) -> Dataset:
         if isinstance(self.dataset, JudgePreferencesDataset):
-            return DirectPreferenceTrainer.convert_dataset([self.dataset])
+            return self.convert_dataset([self.dataset])
 
         samples = []
         for i in range(epoch_size):
             new_samples = self.generate_one_round_samples(idx=start_idx + i)
             samples.extend(new_samples)
 
-        return DirectPreferenceTrainer.convert_dataset(
+        return self.convert_dataset(
             [JudgePreferencesDataset(train_data=samples, val_data=[], test_data=[])]
         )
 
@@ -178,9 +186,7 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
         )
         internal_model.model = self.model
         internal_model.tokenizer = self.tokenizer
-        internal_model.generation_config = internal_model.create_default_generation_config(
-            is_debater=True, do_sample=True, add_penalties=False
-        )
+        internal_model.generation_config = internal_model.create_default_generation_config(is_debater=True, generation_params=GenerationParams())
         internal_model.instantiated_model = True
         internal_model.is_debater = True
 
@@ -240,7 +246,7 @@ class IterativeDirectPreferenceTrainer(DirectPreferenceTrainer):
             debate_identifier=debate_identifier,
         )
 
-        num_speeches = int(self.config.supplemental.get("num_speeches", 1))
+        num_speeches = int(self.config.training_hyperparameters.supplemental.get("num_speeches", 1))
 
         original_debater_a = Debater(
             name=constants.DEFAULT_DEBATER_A_NAME,
