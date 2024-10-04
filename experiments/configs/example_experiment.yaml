@@ -19,6 +19,15 @@ MyExperiment: # The name of your experiment
         model_type: llama # The type of model that is to be used. See the README for a comprehensive list of options
         model_file_path: /path/to/llama/directory # The path to the model weights. Not needed if the model doesn't have weights
         alias: model-name # A name to identify the model. If this name is duplicated, then stats for those debaters will be aggregated
+        require_quote_validation: True # Whether quotes generated with quote tags should be validated (defaults to True)
+        generation_params: # Optional configuration that controls the LLM generations
+          max_new_tokens: 300 # Max to generate in each speech, defaults to 300
+          temperature: 0.5 # temperature for generation, defaults to 0.5
+          top_p: 1.0 # top p for generation, defaults to 1.0
+          repetition_penalty: # penalty for repetition, defaults to 1.2 (but is disabled based on the use_generation_penalties flag)
+          do_sample: True # whether to sample from the model (True) or do greedy decoding (False)
+          use_generation_penalties: False # whether to disable the repetition_penalty and exponential length penalty (False) or enable them (True)
+        peft_base_model: /path/to/peft/base_model # The path to the base model. Optional (even if one is using a peft model) but speeds up inference
     - model_settings:
         model_type: deterministic # The type of model for the second debater 
         alias: model-name-2 # Alias for the second debater
@@ -52,8 +61,7 @@ MyExperiment: # The name of your experiment
     supplemental_file_paths: null # set of additional kwargs that are specific to individual dataset
     split_type: train # the split of the data to actually use
   tournament: # a configuration that lets you specify the type of tournament you want to run. Not needed if you're using a round robin
-    tournament_type: custom # other options include round_robin (default) and self_play_only. Power pairing is still being implemented so is not supported at the moment
+    tournament_type: custom # other options include round_robin (default), capped round robin, replication, and self_play_only.
     custom_matchups: # for the custom tournament type specifically, these are the aliases that you want to debate against each other
       - ["model-name", "model-name-2"]
       - ["model-name", "random"]
-
