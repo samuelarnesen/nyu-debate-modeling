@@ -1,883 +1,3 @@
-val - experiment open debate - trained:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: False
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-open-debater
-          alias: "experiment debate - trained"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-val - experiment open debate - trained - sft base:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: False
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-open-debater-sft-base
-          alias: "experiment debate - trained - sft base"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-val - experiment open debate - base:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: False
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/base_models/llama3-8b-262k
-          alias: "experiment debate - base"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-val - experiment open debate - 0.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-mega-merged
-          alias: "experiment debate - 0.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open debate - 16.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-16
-          alias: "experiment debate - 16.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open debate - 32.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-32
-          alias: "experiment debate - 32.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open debate - 48.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-48
-          alias: "experiment debate - 48.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open debate - 80.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-80
-          alias: "experiment debate - 80.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open debate - 112.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-112
-          alias: "experiment debate - 112.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open debate - 144.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-144
-          alias: "experiment debate - 144.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open debate - 176.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-176
-          alias: "experiment debate - 176.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open debate - 208.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-208
-          alias: "experiment debate - 208.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open debate - 240.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-240
-          alias: "experiment debate - 240.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open debate - 288.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-288
-          alias: "experiment debate - 288.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open debate - 336.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-336
-          alias: "experiment debate - 336.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open debate - 384.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-384
-          alias: "experiment debate - 384.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open debate - 432.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-432
-          alias: "experiment debate - 432.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open debate - 464.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-464
-          alias: "experiment debate - 464.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 0.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-mega-consultant
-          alias: "experiment consultant - 0.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 16.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-16
-          alias: "experiment consultant - 16.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 32.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-32
-          alias: "experiment consultant - 32.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 48.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-48
-          alias: "experiment consultant - 48.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 80.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-80
-          alias: "experiment consultant - 80.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 112.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-112
-          alias: "experiment consultant - 112.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 144.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-144
-          alias: "experiment consultant - 144.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 176.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-176
-          alias: "experiment consultant - 176.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 208.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-208
-          alias: "experiment consultant - 208.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 240.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-240
-          alias: "experiment consultant - 240.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 288.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-288
-          alias: "experiment consultant - 288.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 336.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-336
-          alias: "experiment consultant - 336.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 384.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-384
-          alias: "experiment consultant - 384.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 432.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-432
-          alias: "experiment consultant - 432.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
-val - experiment open consultancy - 464.0:
-  batch_size: 1
-  num_speeches: 1
-  flip: False
-  alternate: False
-  enable_self_debate: True
-  speech_structure: open_debate
-  agents:
-    debaters:
-      - model_settings:
-          model_type: llama3
-          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-464
-          alias: "experiment consultant - 464.0"
-          require_quote_validation: True
-          generation_params:
-            temperature: 0.01
-          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
-    judge:
-      model_settings:
-        model_type: repetitive
-        alias: repetitive-judge
-  dataset:
-    dataset_type: quality
-    split_type: val
-    shuffle_deterministically: True
-  tournament:
-    tournament_type: self_play_only
 Data Generation - Llama3 - SingleRound - FullTrain - SFT:
   batch_size: 1
   num_speeches: 1
@@ -10197,3 +9317,883 @@ val - experiment consultant - untrained:
   dataset:
     dataset_type: quality
     split_type: val
+val - experiment open debate - trained:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: False
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-open-debater
+          alias: "experiment debate - trained"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+val - experiment open debate - trained - sft base:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: False
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-open-debater-sft-base
+          alias: "experiment debate - trained - sft base"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+val - experiment open debate - base:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: False
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/base_models/llama3-8b-262k
+          alias: "experiment debate - base"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+val - experiment open debate - 0.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-mega-merged
+          alias: "experiment debate - 0.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open debate - 16.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-16
+          alias: "experiment debate - 16.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open debate - 32.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-32
+          alias: "experiment debate - 32.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open debate - 48.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-48
+          alias: "experiment debate - 48.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open debate - 80.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-80
+          alias: "experiment debate - 80.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open debate - 112.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-112
+          alias: "experiment debate - 112.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open debate - 144.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-144
+          alias: "experiment debate - 144.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open debate - 176.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-176
+          alias: "experiment debate - 176.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open debate - 208.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-208
+          alias: "experiment debate - 208.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open debate - 240.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-240
+          alias: "experiment debate - 240.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open debate - 288.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-288
+          alias: "experiment debate - 288.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open debate - 336.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-336
+          alias: "experiment debate - 336.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open debate - 384.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-384
+          alias: "experiment debate - 384.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open debate - 432.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-432
+          alias: "experiment debate - 432.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open debate - 464.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-811-FullTrainDebateLowLR-test/checkpoint-464
+          alias: "experiment debate - 464.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-merged
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 0.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-mega-consultant
+          alias: "experiment consultant - 0.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 16.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-16
+          alias: "experiment consultant - 16.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 32.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-32
+          alias: "experiment consultant - 32.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 48.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-48
+          alias: "experiment consultant - 48.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 80.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-80
+          alias: "experiment consultant - 80.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 112.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-112
+          alias: "experiment consultant - 112.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 144.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-144
+          alias: "experiment consultant - 144.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 176.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-176
+          alias: "experiment consultant - 176.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 208.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-208
+          alias: "experiment consultant - 208.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 240.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-240
+          alias: "experiment consultant - 240.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 288.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-288
+          alias: "experiment consultant - 288.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 336.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-336
+          alias: "experiment consultant - 336.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 384.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-384
+          alias: "experiment consultant - 384.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 432.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-432
+          alias: "experiment consultant - 432.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only
+val - experiment open consultancy - 464.0:
+  batch_size: 1
+  num_speeches: 1
+  flip: False
+  alternate: False
+  enable_self_debate: True
+  speech_structure: open_debate
+  agents:
+    debaters:
+      - model_settings:
+          model_type: llama3
+          model_file_path:  /vast/spa9663/models/trained_models/llama-3-DPO-808-ConsultantFullTrain/checkpoint-464
+          alias: "experiment consultant - 464.0"
+          require_quote_validation: True
+          generation_params:
+            temperature: 0.01
+          peft_base_model: /vast/spa9663/models/trained_models/llama-3-mega-consultant
+    judge:
+      model_settings:
+        model_type: repetitive
+        alias: repetitive-judge
+  dataset:
+    dataset_type: quality
+    split_type: val
+    shuffle_deterministically: True
+  tournament:
+    tournament_type: self_play_only

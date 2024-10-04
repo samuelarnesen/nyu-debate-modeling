@@ -60,6 +60,7 @@ MyExperiment: # The name of your experiment
     test_file_path: null # path to a file that stores the training dataset. Not needed if the dataset is not pre-split or if defaults are used
     supplemental_file_paths: null # set of additional kwargs that are specific to individual dataset
     split_type: train # the split of the data to actually use
+    shuffle_deterministically: False # whether the order of the rounds should be shuffled (False) or fixed (defaults False) 
   tournament: # a configuration that lets you specify the type of tournament you want to run. Not needed if you're using a round robin
     tournament_type: custom # other options include round_robin (default), capped round robin, replication, and self_play_only.
     custom_matchups: # for the custom tournament type specifically, these are the aliases that you want to debate against each other

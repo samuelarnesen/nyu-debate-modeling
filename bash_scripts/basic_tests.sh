@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PYTHON_PROGRAM="scripts/run_debate.py"
-ARGUMENTS=("--configuration=Simple_Test --num_iters=1" "--configuration=Single_Test --num_iters=1" "--configuration=Batched_Test --num_iters=40" "--configuration=Quality_Test --num_iters=10" "--configuration=Offline_Test --num_iters=2" "--configuration=Quality_Test --num_iters=10" "--configuration=BoN_Test --num_iters=10" "--configuration=Previous_Run_To_Replicate_Test --num_iters=10" "--configuration=Stub_LLM_Test --num_iters=10" "--configuration=Consultancy_Test --num_iters=10" "--configuration=Empty_Round_Test --num_iters=10")
+ARGUMENTS=("--configuration=Simple_Test --num_iters=1" "--configuration=Single_Test --num_iters=1" "--configuration=Batched_Test --num_iters=40" "--configuration=Quality_Test --num_iters=10" "--configuration=Quality_Test --num_iters=10" "--configuration=BoN_Test --num_iters=10" "--configuration=Previous_Run_To_Replicate_Test --num_iters=10" "--configuration=Stub_LLM_Test --num_iters=10" "--configuration=Consultancy_Test --num_iters=10" "--configuration=Empty_Round_Test --num_iters=10")
 COMMON_ARGS=("--local --test --suppress_graphs --log_level=INFO")
 
 # Loop over each argument and run the Python program

@@ -86,9 +86,28 @@ This module controls the logic for finetuning the models using DPO, PPO, or supe
 
 ## Potential Uses
 
-### Running a Tournament
+### Running a Tournament (Data Generation / Validation)
 1. Create a new config entry under `experiments/configs`. If you're running this locally, add the entry under `test_experiment.yaml` and if you're running it remotely, add it under `standard_experiment.yaml`. 
 2. To kick off the new tournament, run `python python3 ./scripts/run_debate.py --num_iters=Number-of-Iterations --configuration='Your-New-Configuration-Name`. If you're running it locally, you'll need to a `--test` flag so it knows to look in the right place.
+
+**Examples:**
+All of the following examples can be found under `experiments/configs/standard_experiment.yaml` unless otherwise specified.
+* **Debate - Data Generation**: See the entry for `Data Generation - Llama3 - MultiRound - HalfBranched - FullTrain - DPO`. This demonstrates a single model with branched rounds.
+* **Consultancy - Data Generation**: See the entry for `Data Generation - Llama3 - MultiRound - HalfBranched - FullTrain - Consultancy`
+* **Debate - Self Play Validation**: See the entry for `val - experiment debate - 16`.
+* **Consultancy - Self Play Validation**: See the entry for `val - experiment consultant - 16`
+* **Debate - Cross Play Tournament**: See the entry for `val - cross-play - 0 - 176 - 464`. This config covers a small slice of a broader round-robin tournament. (For ease in parallelizing the cross-play tournament across multiple machines, we split up the round robin into small chunks -- note that, while only three models are used in this particular run, all of the other models are still defined so that the proper rounds are assigned to each model)
+* **Debate - Offline Judging**: See `Offline_Debate_Test` under `test_experiment.yaml`.
+* **Consultancy - Offline Judging**: See `MultiTurn_Consultancy_Offline_Test` under `test_experiment.yaml`. Note that `alternate` is set to True (this is needed only for offline consultancies).
+* **Converting Single Consultancy to Double Consultancy**: See the entry for `Consultancy_Double_Test` under `test_experiment.yaml`. Note that the speech structure is `default_debate` and that `convert_to_double_consultancy` is True.
+
+### Training a New Model
+1. Depending on how you want to train your model (SFT, DPO, PPO, etc.), add a new entry in the associated config that can be found under `train/configs/[dpo/ppo/sft]_config.yaml`.
+2. Kick off your training run by running the associated script in the `scripts` directory (e.g. `python scripts/run_sft.py --config="YourNewConfigName"`).
+
+**Examples:**
+1. **DPO Training** See `Iterative - FullTrainDebateLowLR - 77` under `train/configs/dpo_config.yaml`. Note how multiple existing datasets are concatenated together to train a single model.
+2. **SFT Training** See `Train - Llama3 - Human and GPT` under `train/configs/sft_config.yaml`
 
 ### Adding a New Dataset
 You might want to create a new dataset if you're using a data source other than QuALITY. Here are the steps to add a new dataset:
@@ -105,10 +124,6 @@ Now you should be good to reference your new dataset from a train or experiment 
 2. If your new prompt uses any unique names that do not already exist in the existing prompts (the 'names' are the titles of each individual sub-entry such as `overall_system` or `pre_opening_speech`), then go to `prompts/parser.py` and add that title as a new enum under `PromptTag`.
 3. If you require filling in a new kind of value (currently, we support filling out prompts with a debater name, opponent name, position, opponent position, topic/question, and the background text), then add that new kind of value under `PromptConfig` in `prompts/parser.py`. This new value will be inserted into the prompts as long as the exact key is referenced inside angular brackets (e.g. if you reference `<NAME>` in your prompts, then `<NAME>` will be replaced with the value associated with `name` in the PromptConfig.) 
 
-### Training a New Model
-1. Depending on how you want to train your model (SFT, DPO, PPO, etc.), add a new entry in the associated config that can be found under `train/configs/[dpo/ppo/sft]_config.yaml`.
-2. Kick off your training run by running the associated script in the `scripts` directory (e.g. `python scripts/run_sft.py --config="YourNewConfigName"`).
-
 ### Creating New Speech Orders
 You might want to create new speech order if you do not want the speeches to be delivered in the same format as we have previously set.
 1. Under `debate/speech_format.py`, create a new method in the `SpeechFormat` object, following the example of `default_debate_format()` and `default_judge_format()`. 
@@ -123,6 +138,3 @@ We currently support generating speeches using Mistral or Llama. If you want to 
 2. Also under `models/llm_model.py`, create a new enum under `LLMType`.
 
 Now you should be free to reference your new model type in your configs by using the name you defined as the `LLMType` enum.
-
-
-
